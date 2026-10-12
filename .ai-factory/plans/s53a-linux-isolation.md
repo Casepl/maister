@@ -1021,6 +1021,122 @@ matches every frozen hash; the qualification phase changes only its records.
 [The R5 fix record](../patches/2026-10-09-16.42.md) binds commands, hashes,
 falsification, timings and remaining owner-push/hosted qualification.
 
+### CI-R6 — fresh batched watchdog reads and measured hosted cost (2026-10-12)
+
+[Run 37942262522](https://github.com/maister-dev/maister/actions/runs/37942262522)
+tests owner-pushed `4c2917aee0d93c7b39dcadacc96d095ae056dd9b` through merge
+`fd904426a0f3bfcc9abf9cdc99828146e5373726`, whose parents are master
+`f43ac157` and that pushed commit. Tree
+`a8bce5b47a714a149ffe40bbbd12e222ea9d1d74` matches the pushed tree. All four
+web reports and both supervisor reports pass strict original-name validation;
+Librarian browser, static and image jobs pass. Cache activation succeeds and
+the production build falls from 244.737s to 153.768s. This does not qualify
+the Intel lane: independent preflight passes 1/1 in 176.209s with zero leaks,
+but the 2340s slice exits 124 without the complete outer `fSnGbw` reporter.
+The same four owners/35 cases take 2183.691s, 39.428s longer than R5's prior
+hosted audit. Three remaining owners/15 cases remain incomplete. Final sweep
+records three leaked processes and removes one PostgreSQL container; the
+52m56s job is failed qualification despite successful containment/uploads.
+
+The remaining bottleneck is not established by these logs. Matched 33
+case/boot-count web starts take 478.400s versus 453.401s; no startup win is
+demonstrated. Sequential in-slice database setup takes 253.020s versus
+230.230s; SDK discovery is contained within startup, migrations remain six
+submissions per lineage, and 22 clones take 5.325s. Ingest wall timings
+overlap transactions, event-loop work and deliberate barriers. They cannot
+establish individual SQL latency or be added to the lane duration. No further
+database, seeding or retry-budget change follows from those measurements.
+
+A bounded real-process experiment measures the existing two native reader
+executions per owner/parent check against one explicit-PID-list execution.
+It preserves each PID's before/environment/after kernel proof, observable
+foreign/inspector identities, transitions, missing identities, helper failure,
+actual Seatbelt kernel denial and parent/owner death. Both exact Nodes pass
+20 controls, 16 alternating ABBA blocks and zero-remnant checks. For 80
+distinct-target checks, actual executions fall from 160 to 80. Per-check
+local Darwin ARM64 wall time falls from 3.107ms to 1.529ms on 24.15.0 and
+2.637ms to 1.293ms on 24.19.0; measured parent/reaped-child CPU also falls.
+The absolute saving is small. Hosted reader CPU share and sufficient budget
+recovery remain unknown; this is a verified overhead reduction, not a claim
+that the Intel gate is solved.
+
+The correction owns `process-environment.c`, the internal selected-list API
+in `process-invocation.ts`, `fixture-parent-watchdog.mjs`, and the existing
+O-identity/native fixture controls. Root owns the plan, canonical analytics
+contract and dated fix record. A nonempty explicit list must never fall into
+the global catalogue; duplicates share one fresh observation while both
+expected identities still compare separately. Preserve request order,
+missing results, every ownership/inspection flag and native diagnostics.
+Known kernel identity with unreadable environment remains observable for
+liveness with `owned:false`/`inspected:false`; it grants no signal authority.
+Do not add a stricter watchdog precondition. Snapshot discovery, group
+retirement and single-PID registration/signaling keep their existing contracts.
+
+Watchdog checks retain the 500ms cadence and existing ancestry/death rules.
+Record bounded lookup wall timings on the first successful check and every
+120 successful checks using the existing loop: observed check count, selected
+PIDs, cumulative/maximum lookup time, elapsed span and platform/invocation
+identity. These are overlapping, right-censored observations, not CPU-share
+or whole-lifetime totals. No additional polling loop, cached authority,
+product configuration, dependency or infrastructure change is introduced.
+The existing diagnostics artifact retains these records. Product APIs,
+database schema/migrations, deployment and Linux hosting remain unchanged.
+Linux uses the existing per-PID `/proc` reader in the new plural watchdog
+call. Deduplication and collection-before-classification therefore need a
+separate Linux O-identity, parent-death and runner regression before claiming
+that platform qualified; Darwin GREEN cannot satisfy that gate.
+
+- [x] Verify the exact pushed/merge tree, complete other reports, independent
+      preflight and the failed full owning/timing/containment gates.
+- [x] Measure current versus proposed real native reads on both exact Nodes;
+      retain actual two-PID CLI RED exit 64, kernel-denial/death controls,
+      execution/CPU/wall receipts and zero remnants; classify limits honestly.
+- [x] Augment O-identity before implementation; RED → GREEN → REFACTOR for
+      real selected-list behavior, missing/failed-peer handling, exact kernel
+      proofs and the reached watchdog timing receipt on both exact Nodes.
+      Preserve all owning titles; add no overlapping coverage-only case.
+- [x] Freeze the final source and run quiet Darwin independent preflight,
+      complete serial seven/50 and minimum-Node cleanup 13. Require actual
+      exits, original name sets, validateLaneReport, timings and zero leaks;
+      verify exact invocation/session/reaper resources read-only afterward.
+- [x] Complete required static/types/MCP build/format/docs/contract gates and
+      adversarial source/evidence review; commit implementation and records
+      separately. If a shared precondition changes, requalify its full consumers.
+- [ ] Owner pushes; verify the exact pushed/merge tree and hosted preflight,
+      complete original reporter, budget/headroom, all mandatory jobs and zero
+      leaks. Use actual watchdog timing records to assess hosted relevance;
+      incomplete reports, overruns and containment still fail. Revert the
+      focused correction if it introduces a behavior regression; retain failed
+      receipts and measure the next cost if the budget remains unmet.
+      S5.2/S5.3/S5.4 stay unchecked at 42/45; Linux qualification/hosting,
+      browser expansion and separate-user deployment remain independent.
+
+CI-R6 local qualification freezes 112 executable/recipe/dependency files on
+base `4c2917a`. All hashes match implementation commit
+`fcc9676db075cafdde51c9dad198deae6b7e741f`; the record phase changes no executable
+source. Actual focused O-identity RED/refactor reports and fix-removal failures
+on both exact Nodes remain distinct from complete owning qualification.
+
+| Quiet Darwin ARM64 owner | Node | Suites/cases | Lane (s) | Cleanup (ms) | Leaks |
+|---|---|---|---|---|---|
+| Separate preflight | 24.19.0 | 1/1 | 5.123 | 174 | 0 |
+| Full isolation | 24.19.0 | 7/50 | 782.647 | 332 | 0 |
+| Cleanup owner | 24.15.0 | 1/13 | 88.935 | 124 | 0 |
+
+Every original full-name set matches the prior qualified reports and strict
+validateLaneReport succeeds. The unchanged 2340s wrapper exits 0 in 783.011s.
+The prior local full lane was 785.294s; this difference does not establish a
+whole-lane speedup. All five outer setup/owning commands and 12 static gates
+exit 0. The two fresh private qualification caches are removed. Independent
+read-only checks find no container across 33 invocation/session/reaper queries
+and no owned live process across 31 fresh exact-tag kernel snapshots.
+Telemetry reconstructs 91 records/71 windows/22 periodic records, bound to
+the final log invocations; 89 rows match scanned ledger identities and two
+lack a scanned match without an inferred ancestry classification. Adversarial
+source and evidence review passes. The [dated fix record](../patches/2026-10-12-17.30.md)
+binds commands, original inventories, hashes, actual exits, limits and the
+still-unchecked owner-push/hosted Intel/Linux gates.
+
 ## Commit Plan
 
 Implementation commits preserve focused, qualified trees; no remote visibility before owner push.
@@ -1039,6 +1155,8 @@ The second hosted-audit correction uses disjoint local phase groups:
 | CI-R4b | Owning plan and timestamped fix patch; exact-source receipts, remaining hosted qualification and owner-push gate | `docs(test): record macOS isolation setup qualification` |
 | CI-R5a | Private compile-cache setup, actual workflow wiring/control and canonical lifetime contract; full local owner qualification | `perf(ci): reuse verified Node compilation in macOS isolation` |
 | CI-R5b | Owning plan and timestamped fix patch; measured disabled/cold/warm evidence, exact-source reporters and remaining hosted gate | `docs(test): record measured macOS compile-cache qualification` |
+| CI-R6a | Fresh selected-list native reader, existing watchdog/API/control and canonical inspection contract; exact identity and full local owning qualification | `perf(test): batch fresh watchdog identity reads` |
+| CI-R6b | Owning plan and dated fix record; exact-source measured reader/hosted failure receipts, completed local qualification and remaining hosted gate | `docs(test): record watchdog inspection qualification` |
 
 
 | Checkpoint | Tasks / required green gate | Suggested conventional commit |
