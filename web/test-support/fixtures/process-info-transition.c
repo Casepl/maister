@@ -34,12 +34,17 @@ enum transition_control {
   CONTROL_SELECTED_CATALOGUE,
   CONTROL_SNAPSHOT_CATALOGUE,
   CONTROL_SELECTED_INSPECTOR,
-  CONTROL_SNAPSHOT_INSPECTOR
+  CONTROL_SNAPSHOT_INSPECTOR,
+  CONTROL_BATCH_STATUS,
+  CONTROL_BATCH_ENVIRONMENT,
+  CONTROL_BATCH_CATALOGUE,
+  CONTROL_BATCH_INSPECTOR
 };
 
 static const char *const control_names[] = {
   "status", "environment", "selected-catalogue", "snapshot-catalogue",
-  "selected-inspector", "snapshot-inspector"
+  "selected-inspector", "snapshot-inspector", "batch-status",
+  "batch-environment", "batch-catalogue", "batch-inspector"
 };
 
 static int scheduled_proc_listpids(uint32_t type, uint32_t typeinfo, void *buffer, int buffersize) {
@@ -134,8 +139,8 @@ int main(int argc, char **argv) {
       signal(SIGTERM, contain_on_signal) == SIG_ERR ||
       signal(SIGINT, contain_on_signal) == SIG_ERR) return 70;
   alarm(5);
-  release_after_first_info = control == CONTROL_ENVIRONMENT;
-  deny_catalogue = control == CONTROL_SELECTED_CATALOGUE || control == CONTROL_SNAPSHOT_CATALOGUE;
+  release_after_first_info = control == CONTROL_ENVIRONMENT || control == CONTROL_BATCH_ENVIRONMENT;
+  deny_catalogue = control == CONTROL_SELECTED_CATALOGUE || control == CONTROL_SNAPSHOT_CATALOGUE || control == CONTROL_BATCH_CATALOGUE;
   int release[2], ready[2];
   if (pipe(release) != 0 || pipe(ready) != 0) return 70;
   target_pid = fork();
@@ -146,7 +151,7 @@ int main(int argc, char **argv) {
     close(ready[0]);
     snprintf(release_number, sizeof(release_number), "%d", release[0]);
     snprintf(ready_number, sizeof(ready_number), "%d", ready[1]);
-    if ((control == CONTROL_SELECTED_INSPECTOR || control == CONTROL_SNAPSHOT_INSPECTOR) &&
+    if ((control == CONTROL_SELECTED_INSPECTOR || control == CONTROL_SNAPSHOT_INSPECTOR || control == CONTROL_BATCH_INSPECTOR) &&
         setenv("MAISTER_TEST_PROCESS_INSPECTOR", argv[1], 1) != 0) _exit(70);
     execl(argv[0], argv[0], "--child", release_number, ready_number, release_after_first_info ? "exit" : "stop", NULL);
     _exit(70);
@@ -163,9 +168,12 @@ int main(int argc, char **argv) {
   close(ready[0]);
   char pid_number[32];
   snprintf(pid_number, sizeof(pid_number), "%d", target_pid);
-  char *reader_args[] = {argv[0], argv[1], pid_number, NULL};
+  char parent_number[32];
+  snprintf(parent_number, sizeof(parent_number), "%d", getppid());
+  char *reader_args[] = {argv[0], argv[1], pid_number, pid_number, parent_number, NULL};
   int snapshot = control == CONTROL_ENVIRONMENT || control == CONTROL_SNAPSHOT_CATALOGUE || control == CONTROL_SNAPSHOT_INSPECTOR;
-  int result = native_reader_main(snapshot ? 2 : 3, reader_args);
+  int batch = control >= CONTROL_BATCH_STATUS;
+  int result = native_reader_main(snapshot ? 2 : (batch ? 5 : 3), reader_args);
   fprintf(stderr, "{\"event\":\"native-transition-control\",\"pid\":%d,\"infoReads\":%u,\"firstStatus\":%u,\"secondStatus\":%u,\"catalogueCalls\":%u,\"catalogueDenied\":%d}\n", target_pid, info_reads, first_status, second_status, catalogue_calls, deny_catalogue);
   if (!child_released) release_child();
   close(release_fd);

@@ -918,6 +918,28 @@ identity never authorizes signaling it. A watchdog inspection failure writes
 its invocation, expected identities and bounded native/cause diagnostics
 synchronously before terminating itself. Unknown identity still fails closed.
 
+Each watchdog tick batches its distinct owner/parent PIDs into one fresh
+Darwin reader execution, retaining the before/environment/after proof for
+each requested PID. The internal selected-list API refuses an empty list;
+duplicates share an observation while each expected identity still compares
+separately. A missing peer or failed kernel-identity read must not become
+healthy because another PID was observed. Single-PID callers, full resource
+snapshots and group retirement retain their existing paths and authority. A revalidated kernel
+identity with unreadable environment remains observable for liveness with
+`owned:false` and `inspected:false`; registration and signaling still refuse
+that incomplete ownership proof.
+
+The watchdog keeps its 500ms cadence. Its existing loop records bounded
+lookup wall timings on the first successful check and every 120 successful
+checks, together with selected PIDs, check count, elapsed span and
+platform/invocation identity. Diagnostics retain the records. These samples
+overlap application work and can end before the fixture's lifetime ends;
+cumulative lookup wall time is neither CPU share nor an additive lane cost.
+No additional timer, global catalogue or cached process authority is used.
+Linux uses its existing per-PID `/proc` reader for the distinct list; the
+changed watchdog composition requires Linux regression evidence separately
+from Darwin qualification.
+
 ## Expectations
 
 1. Unit/build tests MUST NOT require a reachable Docker runtime.

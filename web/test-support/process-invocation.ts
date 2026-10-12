@@ -118,7 +118,7 @@ export function invocationEnvironment(
 export function logInvocation(
   invocation: Invocation,
   event: string,
-  fields: Record<string, string | number | boolean | null>,
+  fields: Record<string, string | number | boolean | null | readonly number[]>,
 ): void {
   process.stderr.write(
     `${JSON.stringify({ invocationId: invocation.id, event, parentPid: fields.pid === process.pid ? process.ppid : process.pid, rootId: fields.rootRole ?? "none", runtime: `${process.platform}/${process.arch}/node-${process.versions.node}`, ...fields })}\n`,
@@ -202,7 +202,7 @@ async function nativeExecutable(
 
 async function readDarwinProcesses(
   invocation: Invocation,
-  pid?: number,
+  pids?: readonly number[],
 ): Promise<Readonly<{ identities: ProcessIdentity[]; diagnostics: string }>> {
   const executable = await nativeExecutable(
     invocation,
@@ -216,7 +216,7 @@ async function readDarwinProcesses(
   };
   const { stdout, stderr } = await execFileAsync(
     executable,
-    [invocation.id, ...(pid === undefined ? [] : [String(pid)])],
+    [invocation.id, ...(pids === undefined ? [] : pids.map(String))],
     {
       env,
       timeout: 10_000,
@@ -231,14 +231,15 @@ async function readDarwinProcesses(
         : "";
 
     throw new InvocationOwnershipError(
-      `native process ownership could not be inspected for ${pid ?? "snapshot"}${diagnostics ? `: ${diagnostics}` : ""}`,
+      `native process ownership could not be inspected for ${pids?.join(",") ?? "snapshot"}${diagnostics ? `: ${diagnostics}` : ""}`,
       { cause },
     );
   });
 
   if (stderr.trim())
     logInvocation(invocation, "process-inspection-diagnostic", {
-      pid: pid ?? null,
+      pid: pids?.[0] ?? null,
+      selectedPids: pids ?? null,
       nativeDiagnostics: stderr.slice(-4096).trim(),
     });
 
@@ -360,20 +361,11 @@ export function sameProcess(
   );
 }
 
-export async function findProcessIdentity(
-  invocation: Invocation,
+function identityFromRead(
   pid: number,
-): Promise<ProcessIdentity | null> {
-  const native =
-    process.platform === "darwin"
-      ? await readDarwinProcesses(invocation, pid)
-      : undefined;
-  const snapshot =
-    native?.identities ??
-    (process.platform === "linux"
-      ? await readLinuxProcesses(invocation, pid)
-      : await readProcessSnapshot(invocation));
-
+  snapshot: readonly ProcessIdentity[],
+  diagnostics: string,
+): ProcessIdentity | null {
   const entry = snapshot.find((candidate) => candidate.pid === pid);
 
   if (entry) return entry.zombie ? null : entry;
@@ -387,11 +379,61 @@ export async function findProcessIdentity(
     `live process ${pid} could not be inspected`,
     {
       cause: new Error(
-        native?.diagnostics ||
-          "process reader returned no identity for a live PID",
+        diagnostics || "process reader returned no identity for a live PID",
       ),
     },
   );
+}
+
+/** Fresh explicit-PID reads preserve request order, including duplicates and gone peers. */
+export async function findProcessIdentities(
+  invocation: Invocation,
+  pids: readonly number[],
+): Promise<readonly (ProcessIdentity | null)[]> {
+  if (
+    pids.length === 0 ||
+    pids.some((pid) => !Number.isSafeInteger(pid) || pid <= 0)
+  )
+    throw new InvocationOwnershipError(
+      "process identity lookup requires a nonempty list of positive PIDs",
+    );
+  const selected = [...new Set(pids)];
+  let snapshot: ProcessIdentity[];
+  let diagnostics = "";
+
+  if (process.platform === "darwin") {
+    const native = await readDarwinProcesses(invocation, selected);
+
+    snapshot = native.identities;
+    diagnostics = native.diagnostics;
+  } else if (process.platform === "linux") {
+    snapshot = [];
+    for (const pid of selected)
+      snapshot.push(...(await readLinuxProcesses(invocation, pid)));
+  } else {
+    throw new InvocationOwnershipError(
+      `no process environment reader for ${process.platform}`,
+    );
+  }
+
+  return pids.map((pid) => identityFromRead(pid, snapshot, diagnostics));
+}
+
+export async function findProcessIdentity(
+  invocation: Invocation,
+  pid: number,
+): Promise<ProcessIdentity | null> {
+  const native =
+    process.platform === "darwin"
+      ? await readDarwinProcesses(invocation, [pid])
+      : undefined;
+  const snapshot =
+    native?.identities ??
+    (process.platform === "linux"
+      ? await readLinuxProcesses(invocation, pid)
+      : await readProcessSnapshot(invocation));
+
+  return identityFromRead(pid, snapshot, native?.diagnostics ?? "");
 }
 
 export async function processIdentity(

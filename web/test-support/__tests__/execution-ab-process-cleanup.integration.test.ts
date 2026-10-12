@@ -15,6 +15,7 @@ import {
   unlink,
   chmod,
   readdir,
+  copyFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -41,6 +42,7 @@ import {
   type Invocation,
   registerRoot,
   processIdentity,
+  findProcessIdentities,
   signalInvocationGroup,
   signalInvocationProcess,
   signalCheckedInvocationGroup,
@@ -259,6 +261,41 @@ async function stopIdleChild(child: ChildProcess): Promise<void> {
 
   process.kill(-child.pid, "SIGKILL");
   await exited;
+}
+
+async function installEnvironmentReadDenial(
+  invocation: Invocation,
+  pid: number,
+  executable: string,
+): Promise<() => Promise<void>> {
+  const name = (await readdir(invocation.directory)).find((entry) =>
+    /^process-environment-[a-f0-9]{16}$/u.test(entry),
+  );
+
+  if (!name) throw new Error("environment-denial reader is missing");
+  const reader = path.join(invocation.directory, name);
+  const original = `${reader}.original`;
+  const replacement = `${reader}.denied`;
+  const control = path.join(
+    invocation.directory,
+    "process-environment-denied-pid",
+  );
+
+  await copyFile(executable, replacement);
+  await writeFile(control, String(pid), { flag: "wx", mode: 0o600 });
+  await rename(reader, original);
+  try {
+    await rename(replacement, reader);
+  } catch (error) {
+    await rename(original, reader);
+    throw error;
+  }
+
+  return async () => {
+    await rm(reader);
+    await rename(original, reader);
+    await rm(control);
+  };
 }
 
 async function assertDarwinGroupRetirement(
@@ -1011,6 +1048,39 @@ describe("S5.2 invocation process ownership", () => {
       });
       expect(other.exitCode).toBeNull();
       expect(decoy.exitCode).toBeNull();
+      const otherIdentity = await processIdentity(invocation, other.pid!);
+      const decoyIdentity = await processIdentity(invocation, decoy.pid!);
+
+      await expect(findProcessIdentities(invocation, [])).rejects.toThrow(
+        "nonempty list of positive PIDs",
+      );
+      expect(
+        await findProcessIdentities(invocation, [
+          other.pid!,
+          owned.pid!,
+          decoy.pid!,
+          owned.pid!,
+        ]),
+      ).toEqual([
+        otherIdentity,
+        record.identity,
+        decoyIdentity,
+        record.identity,
+      ]);
+      const gone = await startIdleChild({
+        ...process.env,
+        ...invocationEnvironment(invocation),
+      });
+
+      children.push(gone);
+      await stopIdleChild(gone);
+      expect(
+        await findProcessIdentities(invocation, [
+          owned.pid!,
+          gone.pid!,
+          other.pid!,
+        ]),
+      ).toEqual([record.identity, null, otherIdentity]);
       if (process.platform === "linux") {
         const executable = path.join(directory, "process-info-denied");
         const source = fileURLToPath(
@@ -1061,6 +1131,17 @@ describe("S5.2 invocation process ownership", () => {
         await expect(
           readFile(`/proc/${denied.pid}/environ`).then((bytes) => bytes.length),
         ).rejects.toMatchObject({ code: "EACCES" });
+        expect(
+          await findProcessIdentities(invocation, [denied.pid!, owned.pid!]),
+        ).toEqual([
+          expect.objectContaining({
+            pid: denied.pid,
+            owned: false,
+            inspected: false,
+            zombie: false,
+          }),
+          record.identity,
+        ]);
         await expect(
           registerProcess(
             invocation,
@@ -1093,6 +1174,107 @@ describe("S5.2 invocation process ownership", () => {
         process.platform,
         "O-identity requires a supported process-inspection platform",
       ).toBe("darwin");
+
+      const nativeReaderName = (await readdir(invocation.directory)).find(
+        (name) => /^process-environment-[a-f0-9]{16}$/u.test(name),
+      );
+
+      if (!nativeReaderName)
+        throw new Error("native identity reader is missing");
+      const selectedPair = await execFileAsync(
+        path.join(invocation.directory, nativeReaderName),
+        [invocation.id, String(owned.pid), String(other.pid)],
+        { env: { ...process.env, ...invocationEnvironment(invocation) } },
+      );
+
+      expect(
+        selectedPair.stdout
+          .trim()
+          .split("\n")
+          .map((line) => line.split("\t")[0]),
+        "one native execution inspects both real selected PIDs",
+      ).toEqual([String(owned.pid), String(other.pid)]);
+      for (const [index, identity] of [
+        record.identity,
+        otherIdentity,
+      ].entries()) {
+        const fields = selectedPair.stdout
+          .trim()
+          .split("\n")
+          [index]!.split("\t");
+
+        expect(fields.slice(0, 6)).toEqual([
+          String(identity.pid),
+          String(identity.ppid),
+          String(identity.pgid),
+          String(identity.uid),
+          identity.started,
+          identity.owned ? "1" : "0",
+        ]);
+        expect(Number(fields[6])).toBeGreaterThan(0);
+        expect(Number(fields[6])).toBeLessThan(5);
+      }
+
+      const environmentDeniedExecutable = path.join(
+        directory,
+        "process-environment-denied",
+      );
+
+      await execFileAsync(
+        "cc",
+        [
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-O2",
+          fileURLToPath(
+            new URL(
+              "../fixtures/process-environment-denied.c",
+              import.meta.url,
+            ),
+          ),
+          "-o",
+          environmentDeniedExecutable,
+        ],
+        { timeout: 10_000, maxBuffer: 16 * 1024 },
+      );
+      const restoreEnvironmentRead = await installEnvironmentReadDenial(
+        invocation,
+        owned.pid!,
+        environmentDeniedExecutable,
+      );
+
+      try {
+        expect(
+          await findProcessIdentities(invocation, [owned.pid!, other.pid!]),
+        ).toEqual([
+          { ...record.identity, owned: false, inspected: false },
+          otherIdentity,
+        ]);
+        await expect(
+          registerProcess(
+            invocation,
+            {
+              role: "fixture",
+              caseName: "O-identity",
+              rootRole: "none",
+              root: null,
+              bootId: "environment-denied",
+              logFile: null,
+            },
+            owned.pid!,
+          ),
+        ).rejects.toThrow("lacks the exact invocation environment tag");
+        await expect(
+          signalInvocationProcess(invocation, record.identity, "SIGTERM"),
+        ).rejects.toThrow(
+          "refusing signal to changed, foreign or uninspectable process identity",
+        );
+        expect(owned.exitCode).toBeNull();
+        expect(other.exitCode).toBeNull();
+      } finally {
+        await restoreEnvironmentRead();
+      }
 
       await assertDarwinGroupRetirement(invocation, sibling, directory);
       const transitionExecutable = path.join(
@@ -1181,6 +1363,30 @@ describe("S5.2 invocation process ownership", () => {
           owned: null,
           calls: 2,
         },
+        {
+          boundary: "batch-status",
+          query: invocation.id,
+          owned: "1",
+          calls: 0,
+        },
+        {
+          boundary: "batch-environment",
+          query: invocation.id,
+          owned: null,
+          calls: 0,
+        },
+        {
+          boundary: "batch-catalogue",
+          query: sibling.id,
+          owned: "0",
+          calls: 0,
+        },
+        {
+          boundary: "batch-inspector",
+          query: invocation.id,
+          owned: "0",
+          calls: 0,
+        },
       ] as const;
 
       for (const control of transitionControls) {
@@ -1202,8 +1408,34 @@ describe("S5.2 invocation process ownership", () => {
 
         expect(receipt.catalogueCalls).toBe(control.calls);
         expect(receipt.catalogueDenied).toBe(
-          control.boundary === "selected-catalogue" ? 1 : 0,
+          control.boundary === "selected-catalogue" ||
+            control.boundary === "batch-catalogue"
+            ? 1
+            : 0,
         );
+        if (control.boundary.startsWith("batch-")) {
+          const peer = await processIdentity(invocation, process.pid);
+          const peerRow = transition.stdout
+            .trim()
+            .split("\n")
+            .find((line) => line.startsWith(`${process.pid}\t`))
+            ?.split("\t");
+
+          expect(peerRow?.slice(0, 6)).toEqual([
+            String(peer.pid),
+            String(peer.ppid),
+            String(peer.pgid),
+            String(peer.uid),
+            peer.started,
+            peer.owned ? "1" : "0",
+          ]);
+          expect(
+            transition.stdout
+              .trim()
+              .split("\n")
+              .filter((line) => line.startsWith(`${receipt.pid}\t`)).length,
+          ).toBeLessThanOrEqual(1);
+        }
         if (control.owned !== null) {
           expect(receipt.infoReads).toBe(2);
           expect(receipt.firstStatus).toBeGreaterThan(0);
@@ -1274,14 +1506,34 @@ describe("S5.2 invocation process ownership", () => {
       expect(await processIdentity(invocation, inspector.pid!)).toEqual(
         inspectorIdentity,
       );
+      expect(
+        await findProcessIdentities(invocation, [
+          inspector.pid!,
+          owned.pid!,
+          inspector.pid!,
+        ]),
+      ).toEqual([inspectorIdentity, record.identity, inspectorIdentity]);
 
       const watchdogInvocation = await createInvocation(directory);
       let watchdog: ChildProcess | undefined;
       let watchdogReader: string | undefined;
+      let restoreWatchdogEnvironmentRead: (() => Promise<void>) | undefined;
 
       try {
         const watchdogEnvironment =
           await fixtureProcessEnvironment(watchdogInvocation);
+        const expectedOwner = JSON.parse(
+          watchdogEnvironment.MAISTER_TEST_PROCESS_OWNER!,
+        ) as { pid: number };
+        const expectedParent = JSON.parse(
+          watchdogEnvironment.MAISTER_TEST_PROCESS_PARENT!,
+        ) as { pid: number };
+
+        restoreWatchdogEnvironmentRead = await installEnvironmentReadDenial(
+          watchdogInvocation,
+          expectedOwner.pid,
+          environmentDeniedExecutable,
+        );
         const spawnedWatchdog = spawn(
           process.execPath,
           [
@@ -1320,7 +1572,7 @@ describe("S5.2 invocation process ownership", () => {
             -32 * 1024,
           );
         });
-        await registerSpawnedProcess(
+        const watchdogRecord = await registerSpawnedProcess(
           watchdogInvocation,
           {
             role: "fixture",
@@ -1332,12 +1584,71 @@ describe("S5.2 invocation process ownership", () => {
           },
           spawnedWatchdog,
         );
+
         await expect
           .poll(() => watchdogOutput.includes("inspection-control-ready"), {
             timeout: 10_000,
             interval: 50,
           })
           .toBe(true);
+        const timingLine = watchdogOutput
+          .split("\n")
+          .find((line) =>
+            line.includes('"event":"fixture-watchdog-lookup-timing"'),
+          );
+
+        if (!timingLine)
+          throw new Error(
+            `watchdog timing receipt is missing\n${watchdogOutput}`,
+          );
+        const timing = JSON.parse(timingLine) as {
+          invocationId: string;
+          pid: number;
+          pgid: number;
+          kernelStartId: string;
+          role: string;
+          caseName: string;
+          runtime: string;
+          platform: string;
+          arch: string;
+          checks: number;
+          selectedPids: number[];
+          targetCount: number;
+          cadenceMs: number;
+          lookupMs: number;
+          maxLookupMs: number;
+          observedElapsedMs: number;
+          overlapping: boolean;
+          rightCensored: boolean;
+        };
+        const selectedPids = [
+          ...new Set([expectedOwner.pid, expectedParent.pid]),
+        ];
+
+        expect(timing).toMatchObject({
+          invocationId: watchdogInvocation.id,
+          pid: spawnedWatchdog.pid,
+          pgid: watchdogRecord.identity.pgid,
+          kernelStartId: watchdogRecord.identity.started,
+          role: "fixture",
+          caseName: process.env.MAISTER_TEST_CASE_NAME ?? "fixture",
+          runtime: process.version,
+          platform: process.platform,
+          arch: process.arch,
+          checks: 1,
+          selectedPids,
+          targetCount: selectedPids.length,
+          cadenceMs: 500,
+          overlapping: true,
+          rightCensored: true,
+        });
+        expect(Number.isFinite(timing.lookupMs)).toBe(true);
+        expect(timing.lookupMs).toBeGreaterThan(0);
+        expect(timing.maxLookupMs).toBe(timing.lookupMs);
+        expect(timing.observedElapsedMs).toBeGreaterThanOrEqual(
+          timing.lookupMs,
+        );
+        process.stderr.write(`${timingLine}\n`);
         const executableName = (
           await readdir(watchdogInvocation.directory)
         ).find((name) => /^process-environment-[a-f0-9]{16}$/u.test(name));
@@ -1390,6 +1701,8 @@ describe("S5.2 invocation process ownership", () => {
       } finally {
         if (watchdogReader) await chmod(watchdogReader, 0o755);
         if (watchdog) await stopIdleChild(watchdog);
+        if (restoreWatchdogEnvironmentRead)
+          await restoreWatchdogEnvironmentRead();
         const cleanupErrors = await releaseInvocation(
           watchdogInvocation,
           "watchdog inspection control",
