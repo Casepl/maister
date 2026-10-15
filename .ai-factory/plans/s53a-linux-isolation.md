@@ -1137,6 +1137,138 @@ source and evidence review passes. The [dated fix record](../patches/2026-10-12-
 binds commands, original inventories, hashes, actual exits, limits and the
 still-unchecked owner-push/hosted Intel/Linux gates.
 
+### CI-R7 — object-read admission, terminal callback settlement and sampler identity (2026-10-15)
+
+Owner-pushed `65d86534d2d1bd8f5cc3bf5f5a91b0853494b7fd` is tested by
+[PR run 38264874681](https://github.com/maister-dev/maister/actions/runs/38264874681)
+and [push run 38264867590](https://github.com/maister-dev/maister/actions/runs/38264867590).
+PR merge `6e0ea6b5954e4673347ebdc8ecf972a6b17f4538` has the same tree
+`47608a3060ee0169bd41fbdabd92cddeab9a3cd4` as that pushed source. Both runs
+retain original web 640/Node and supervisor 111 inventories. Both supervisor
+jobs and both Node 24.19 web shards pass in each run. Node 24.15 fails one
+different web assertion per run: S2.8 draft preparation
+receives an object-content `409 command_in_progress` before its expected
+unsupported-adapter decision; pending-permission child death loses the locked
+`required_output_incomplete`/`producer_permission_failed` receipt details.
+These are separate from the fixed-budget Intel overruns: PR completes 29 cases,
+push 43; neither has the outer 7/50 reporter and both slices exit 124. Separate
+preflight passes/cleans on both. PR final process sweep is 0 with one remaining
+PostgreSQL container reaped; push reaps one process and one container.
+
+The correction follows existing OpenAPI and ADR-177 contracts; it does not
+change wire schemas, error enums, main/Brain migrations, product configuration,
+runner sizes, job/slice limits or hosting. No new ADR or migration is needed.
+Object GET admission is retryable; the same reason on POST prompt admission
+must never cause generic command retry. Share the existing content-read budget
+of five attempts with 100/200/300/400ms abortable backoff, structured warnings
+and the last typed error. Remove only redundant whole-span wrapping so one
+GET never receives 25 attempts; preserve exhausted host-span busy verdicts.
+Keep integrity, authorization, cancellation and other refusals unchanged.
+
+A closed ACP transport can reject its prompt before the child terminal purges
+pending permissions. Terminal completion must await the actual bounded
+permission continuations after purge, then classify the settled producer
+failure. Preserve initial and post-terminal fence/pressure/output/intentional
+shutdown precedence, the existing kill grace and crash-before-prompt-terminal
+ordering. A fixed sleep or assumed microtask delay is not causal evidence.
+
+Next's Turbopack build also loads the watchdog in worker threads sharing one
+PID/kernel birth. Conflicting cumulative counters are different sampler
+streams, not duplicate file copies. Add threadId/isMainThread to identify
+streams; retain every existing watcher, fresh proof and 500ms cadence. Do not
+sum overlapping/right-censored windows into CPU share or lane savings. Intel's
+remaining budget bottleneck is not established by the captured timings.
+
+Failed-run attribution does identify serial production boot as the next
+measurement target: PR 40 web startups total 562.225s and push 45 total 527.646s
+from kernel birth to `web-listening`; those particular windows do not overlap.
+Each full lane also includes one fresh build, 193.631s/252.967s. These costs
+are already inside the owning suite durations. P2's 176.093s/175.844s receipt
+partition exhausts the required real budgets and cannot be shortened. Both
+jobs received the full 2340s slice, so reducing provisioning/preflight restores
+no slice allowance. Supervisor health, seed completion, `app.prepare`,
+instrumentation stages and first successful `/login` need distinct bounded
+timing before changing startup behavior. Existing artifacts justify neither
+weaker recovery ordering nor shared cleanup-owned containers, a bundler switch
+or a Linux speed claim.
+
+Ownership and executable gates:
+
+- [x] Audit both exact-source hosted runs, original names, preflights, failing
+      assertions, incomplete isolation/report/timing and containment evidence.
+- [x] Object reader owns `events/session-content.ts`, `prompt-output.ts`, a
+      minimal shared content opener and proven duplicate wrapping in
+      `prompt-reconciliation.ts`; extend existing S2.8 title with real two-slot
+      HTTP saturation, transient recovery, exhausted/cancel paths and unchanged
+      multibyte/exact-once/adapter assertions. RED → GREEN → REFACTOR on both
+      exact Nodes; no mock, new owning case or leaked response/barrier.
+- [x] Producer lifecycle owns `bounded-acp-stream.ts`, `acp-client.ts`,
+      `types.ts`, `heartbeat.ts`, `http-api.ts` and existing N1 receipt control.
+      Use real pending permission/stdout close/SIGKILL and a held drain barrier;
+      require actual failure before the fix, then exact rejection details,
+      bounded callback settlement and canonical event order on both Nodes.
+      Keep web G0iii-b/G1 assertions and intentional lifecycle controls intact.
+- [x] Diagnostic owner changes only watchdog records and existing O-identity;
+      real main/worker records must share kernel identity while distinct thread
+      identifiers prevent stream conflation. RED → GREEN → REFACTOR on both
+      Nodes, unchanged 13/50 names, cadence, proof and fail-closed behavior.
+- [x] Freeze final executable sources; run complete affected supervisor
+      unit/integration consumers and web A/B 640 plus missing direct prompt-span/
+      content consumers on both Nodes, with original-name validation. Run quiet
+      independent preflight, full serial isolation 7/50 and minimum-Node cleanup 13;
+      require actual exits, strict validateLaneReport, timings and zero leaks.
+      Extend resource/telemetry audits with thread-aware stream keys and retain
+      ambiguous old records without an invented identity or additive cost.
+- [x] Complete docs/contracts, types/MCP build, scoped lint/format, actual
+      classified call-site sweeps, source/resource/report audit and adversarial
+      review. Root owns canonical analytics/plan/dated fix record and separate
+      local phase commits; change no infrastructure or remote state.
+- [ ] Owner pushes; verify the exact SHA/merge tree and hosted mandatory jobs,
+      complete original reporter, fixed timing budget and zero leaks. Retain
+      failed evidence if Intel still overruns; do not claim these correctness
+      fixes solve its budget. S5.2/S5.3/S5.4 stay unchecked at 42/45; separate
+      Linux qualification/hosting, browser expansion and production users remain
+      independent. Revert the focused source phase if it regresses contracts.
+
+CI-R7 final local qualification binds **2393** frozen source,
+recipe and dependency files on base `65d86534d2d1bd8f5cc3bf5f5a91b0853494b7fd` to composed code
+commit `74599ca46adf5e7e09f55736e3b2d8967381386b`. Every committed blob and tested working byte
+matches; the record phase changes only Markdown. On **each exact Node
+24.15.0/24.19.0**, the original web 640 across both shards and supervisor 111
+pass, plus complete direct web consumers 41, supervisor consumers 32 and
+checkpoint/shutdown unit consumers 9. Original full-name inventories match;
+strict validation rejects skipped, missing, duplicate and partial collection.
+
+| Quiet local Darwin ARM64 owner | Node | Suites/cases | Lane wall (s) | Cleanup (ms) | Leaks |
+| --- | --- | --- | --- | --- | --- |
+| preflight-node2419 | 24.19.0 | 1/1 | 5.021 | 169 | 0 |
+| isolation-node2419 | 24.19.0 | 7/50 | 777.025 | 278 | 0 |
+| cleanup-node2415 | 24.15.0 | 1/13 | 88.146 | 124 | 0 |
+
+The unchanged 2340s full-lane wrapper actually exits 0 in
+777.381s measured with
+`time.perf_counter`. Consumer wall deltas are functional evidence only.
+Both fresh private workflow compile caches are removed. All 15 named static
+gates pass. Independent read-only verification finds no qualified container
+across 47 invocation/session/reaper queries
+and no owned live or unverifiable registered process across
+41 fresh invocation snapshots /
+293 recorded PID/kernel checks, using the four
+original O-identity ledgers retained under macOS temporary directories too.
+Two passed ephemeral root-only controls have separate removal-receipt/fresh-
+snapshot proof; no registered PID is asserted for them. The initial audit
+discovery refusal is retained.
+Sampler audit validates 93 records across
+73 thread windows; overlapping,
+right-censored observations imply no CPU-share or additive speedup.
+Source, script and final-evidence adversarial reviews pass. The
+[dated fix record](../patches/2026-10-15-16.16.md) preserves
+actual RED/GREEN/refactor distinctions, commands, hashes, original inventories,
+clock/environment limits, measured costs and rollback/owner-push criteria.
+No source changes qualify hosted Intel or Linux by substitution. The owner
+push/exact-SHA hosted reporter, timing and zero-leak gate remains open;
+S5.2/S5.3/S5.4 stay unchecked at 42/45.
+
 ## Commit Plan
 
 Implementation commits preserve focused, qualified trees; no remote visibility before owner push.
@@ -1157,6 +1289,10 @@ The second hosted-audit correction uses disjoint local phase groups:
 | CI-R5b | Owning plan and timestamped fix patch; measured disabled/cold/warm evidence, exact-source reporters and remaining hosted gate | `docs(test): record measured macOS compile-cache qualification` |
 | CI-R6a | Fresh selected-list native reader, existing watchdog/API/control and canonical inspection contract; exact identity and full local owning qualification | `perf(test): batch fresh watchdog identity reads` |
 | CI-R6b | Owning plan and dated fix record; exact-source measured reader/hosted failure receipts, completed local qualification and remaining hosted gate | `docs(test): record watchdog inspection qualification` |
+| CI-R7a | Shared object-content GET retry policy and existing S2.8 controls; both-Node affected consumer qualification, canonical clarification recorded with R7d | `fix(execution-host): retry bounded object content admission` |
+| CI-R7b | Bounded permission callback settlement and terminal failure precedence, existing N1 control and affected lifecycle consumers | `fix(supervisor): settle permission failures before prompt rejection` |
+| CI-R7c | Thread-aware watchdog timing provenance and existing real O-identity control, full Darwin owning qualification | `fix(test): identify watchdog timing streams by thread` |
+| CI-R7d | Exact-source failed audit, canonical analytics, plan/dated fix receipts and truthful owner-push/hosted gates | `docs(test): record CI race correction qualification` |
 
 
 | Checkpoint | Tasks / required green gate | Suggested conventional commit |

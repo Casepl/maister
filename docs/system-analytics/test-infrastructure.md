@@ -932,7 +932,12 @@ that incomplete ownership proof.
 The watchdog keeps its 500ms cadence. Its existing loop records bounded
 lookup wall timings on the first successful check and every 120 successful
 checks, together with selected PIDs, check count, elapsed span and
-platform/invocation identity. Diagnostics retain the records. These samples
+platform/invocation identity. Each record includes `threadId` and
+`isMainThread`: a build worker can inherit the preload and share its process's
+kernel identity while running a distinct sampler. Audit keys include the
+invocation, PID, kernel birth and thread; duplicate file copies are separate
+from different streams. Ambiguous older records cannot establish a per-stream
+total. Diagnostics retain the records. These samples
 overlap application work and can end before the fixture's lifetime ends;
 cumulative lookup wall time is neither CPU share nor an additive lane cost.
 No additional timer, global catalogue or cached process authority is used.
