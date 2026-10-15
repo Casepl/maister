@@ -1,5 +1,6 @@
 import { writeSync } from "node:fs";
 import { performance } from "node:perf_hooks";
+import { threadId, isMainThread } from "node:worker_threads";
 
 import { findProcessIdentities, findProcessIdentity, invocationFromEnvironment, processIdentity, readProcessSnapshot, sameProcess } from "./process-invocation.ts";
 
@@ -54,8 +55,8 @@ async function checkOwners() {
     } else {
       lookupTiming = { checks: lookupTiming.checks + 1, lookupMs: lookupTiming.lookupMs + lookupMs, maxLookupMs: Math.max(lookupTiming.maxLookupMs, lookupMs) };
       if (lookupTiming.checks === 1 || lookupTiming.checks % 120 === 0) {
-        // Per-process lookup windows overlap and stop before the final lifetime is known.
-        writeSync(2, `${JSON.stringify({ invocationId: invocation.id, event: "fixture-watchdog-lookup-timing", role: "fixture", caseName: process.env.MAISTER_TEST_CASE_NAME ?? "fixture", pid: self.pid, pgid: self.pgid, kernelStartId: self.started, runtime: process.version, platform: process.platform, arch: process.arch, selectedPids, targetCount: selectedPids.length, cadenceMs: intervalMs, ...lookupTiming, observedElapsedMs: performance.now() - lookupWindowStartedAt, overlapping: true, rightCensored: true })}\n`);
+        // Per-thread lookup windows overlap and stop before the final lifetime is known.
+        writeSync(2, `${JSON.stringify({ invocationId: invocation.id, event: "fixture-watchdog-lookup-timing", role: "fixture", caseName: process.env.MAISTER_TEST_CASE_NAME ?? "fixture", pid: self.pid, pgid: self.pgid, kernelStartId: self.started, threadId, isMainThread, runtime: process.version, platform: process.platform, arch: process.arch, selectedPids, targetCount: selectedPids.length, cadenceMs: intervalMs, ...lookupTiming, observedElapsedMs: performance.now() - lookupWindowStartedAt, overlapping: true, rightCensored: true })}\n`);
       }
     }
   } catch (error) {

@@ -1534,6 +1534,10 @@ describe("S5.2 invocation process ownership", () => {
           expectedOwner.pid,
           environmentDeniedExecutable,
         );
+        // A module entry runs inherited --import preloads; classic eval workers skip them.
+        const workerSource =
+          'import { parentPort, threadId, isMainThread } from "node:worker_threads"; parentPort.on("message", () => {}); parentPort.postMessage({ threadId, isMainThread });';
+        const watchdogSource = `const { Worker } = require("node:worker_threads"); const worker = new Worker(new URL(${JSON.stringify(`data:text/javascript,${encodeURIComponent(workerSource)}`)}), { execArgv: process.execArgv.slice(0, 4) }); worker.once("error", (error) => { throw error; }); worker.once("message", (identity) => process.stderr.write(JSON.stringify({ event: "inspection-control-ready", ...identity }) + "\\n"));`;
         const spawnedWatchdog = spawn(
           process.execPath,
           [
@@ -1542,7 +1546,7 @@ describe("S5.2 invocation process ownership", () => {
             "--import",
             FIXTURE_WATCHDOG,
             "-e",
-            'process.stderr.write("inspection-control-ready\\n"); setInterval(() => {}, 60000);',
+            watchdogSource,
           ],
           {
             env: { ...process.env, ...watchdogEnvironment },
@@ -1591,64 +1595,101 @@ describe("S5.2 invocation process ownership", () => {
             interval: 50,
           })
           .toBe(true);
-        const timingLine = watchdogOutput
+        const readyLine = watchdogOutput
           .split("\n")
-          .find((line) =>
-            line.includes('"event":"fixture-watchdog-lookup-timing"'),
-          );
+          .find((line) => line.includes('"event":"inspection-control-ready"'));
 
-        if (!timingLine)
+        if (!readyLine)
           throw new Error(
-            `watchdog timing receipt is missing\n${watchdogOutput}`,
+            `watchdog worker readiness receipt is missing\n${watchdogOutput}`,
           );
-        const timing = JSON.parse(timingLine) as {
-          invocationId: string;
-          pid: number;
-          pgid: number;
-          kernelStartId: string;
-          role: string;
-          caseName: string;
-          runtime: string;
-          platform: string;
-          arch: string;
-          checks: number;
-          selectedPids: number[];
-          targetCount: number;
-          cadenceMs: number;
-          lookupMs: number;
-          maxLookupMs: number;
-          observedElapsedMs: number;
-          overlapping: boolean;
-          rightCensored: boolean;
+        const workerIdentity = JSON.parse(readyLine) as {
+          threadId: number;
+          isMainThread: boolean;
         };
+        const timingRecords = watchdogOutput
+          .split("\n")
+          .filter((line) =>
+            line.includes('"event":"fixture-watchdog-lookup-timing"'),
+          )
+          .map((line) => ({
+            line,
+            timing: JSON.parse(line) as {
+              invocationId: string;
+              pid: number;
+              pgid: number;
+              kernelStartId: string;
+              threadId: number;
+              isMainThread: boolean;
+              role: string;
+              caseName: string;
+              runtime: string;
+              platform: string;
+              arch: string;
+              checks: number;
+              selectedPids: number[];
+              targetCount: number;
+              cadenceMs: number;
+              lookupMs: number;
+              maxLookupMs: number;
+              observedElapsedMs: number;
+              overlapping: boolean;
+              rightCensored: boolean;
+            },
+          }));
         const selectedPids = [
           ...new Set([expectedOwner.pid, expectedParent.pid]),
         ];
 
-        expect(timing).toMatchObject({
-          invocationId: watchdogInvocation.id,
-          pid: spawnedWatchdog.pid,
-          pgid: watchdogRecord.identity.pgid,
-          kernelStartId: watchdogRecord.identity.started,
-          role: "fixture",
-          caseName: process.env.MAISTER_TEST_CASE_NAME ?? "fixture",
-          runtime: process.version,
-          platform: process.platform,
-          arch: process.arch,
-          checks: 1,
-          selectedPids,
-          targetCount: selectedPids.length,
-          cadenceMs: 500,
-          overlapping: true,
-          rightCensored: true,
-        });
-        expect(Number.isFinite(timing.lookupMs)).toBe(true);
-        expect(timing.lookupMs).toBeGreaterThan(0);
-        expect(timing.maxLookupMs).toBe(timing.lookupMs);
-        expect(timing.observedElapsedMs).toBeGreaterThanOrEqual(
-          timing.lookupMs,
-        );
-        process.stderr.write(`${timingLine}\n`);
+        expect(workerIdentity.threadId).toBeGreaterThan(0);
+        expect(workerIdentity.isMainThread).toBe(false);
+        for (const threadIdentity of [
+          { threadId: 0, isMainThread: true },
+          {
+            threadId: workerIdentity.threadId,
+            isMainThread: workerIdentity.isMainThread,
+          },
+        ]) {
+          const firstRecord = timingRecords.find(
+            ({ timing }) =>
+              timing.threadId === threadIdentity.threadId &&
+              timing.checks === 1,
+          );
+
+          expect(
+            firstRecord,
+            `first watchdog timing receipt for thread ${threadIdentity.threadId}\n${watchdogOutput}`,
+          ).toBeDefined();
+          if (!firstRecord)
+            throw new Error("watchdog thread timing receipt is missing");
+          const { timing, line } = firstRecord;
+
+          expect(timing).toMatchObject({
+            invocationId: watchdogInvocation.id,
+            pid: spawnedWatchdog.pid,
+            pgid: watchdogRecord.identity.pgid,
+            kernelStartId: watchdogRecord.identity.started,
+            ...threadIdentity,
+            role: "fixture",
+            caseName: process.env.MAISTER_TEST_CASE_NAME ?? "fixture",
+            runtime: process.version,
+            platform: process.platform,
+            arch: process.arch,
+            checks: 1,
+            selectedPids,
+            targetCount: selectedPids.length,
+            cadenceMs: 500,
+            overlapping: true,
+            rightCensored: true,
+          });
+          expect(Number.isFinite(timing.lookupMs)).toBe(true);
+          expect(timing.lookupMs).toBeGreaterThan(0);
+          expect(timing.maxLookupMs).toBe(timing.lookupMs);
+          expect(timing.observedElapsedMs).toBeGreaterThanOrEqual(
+            timing.lookupMs,
+          );
+          process.stderr.write(`${line}\n`);
+        }
         const executableName = (
           await readdir(watchdogInvocation.directory)
         ).find((name) => /^process-environment-[a-f0-9]{16}$/u.test(name));
