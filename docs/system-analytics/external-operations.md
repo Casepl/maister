@@ -672,6 +672,7 @@ MCP tools (`mcp/src/tools.ts`), each a thin client of the route above it:
 | `project_list` · `project_get` | new | `GET /projects` · `GET /projects/{slug}/directory` |
 | `task_search` · `work_list` · `decisions_list` · `activity_feed` | new | `GET /tasks/search` · `GET /work` · `GET /decisions` · `GET /activity/feed` |
 | `task_statement_accept` · `task_send_to_triage` | new | `POST …/statement` · `POST …/send-to-triage` |
+| `task_complete` | new | `POST …/tasks/{taskId}/complete`; global personal token only |
 | `task_publish_excerpt` | new | the ext comment route, as an explicit comment quoting the excerpt, plus a `mentioned` link |
 | `clarification_request` · `clarification_cancel` | new | `POST …/clarifications` · `DELETE …/clarifications/{id}` |
 | `run_operator_message` | new | `POST /runs/{runId}/operator-message` |
