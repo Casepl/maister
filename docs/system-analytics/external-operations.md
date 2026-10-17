@@ -658,6 +658,7 @@ New and extended ext routes (every path is under `/api/v1/ext`):
 | `GET /tasks/search?q&cursor` | `tasks:read` | visible projects only, page 25, `truncated` flag |
 | `GET /work` · `GET /activity/feed` · `GET /decisions` | `work:read` · `activity:read` · `decisions:read` | librarian and personal tokens; the decision queue is read, never answered |
 | `POST /projects/{slug}/tasks` (+`statement`) · `PATCH …/tasks/{taskId}` (+`expectedRevision`) · `POST …/tasks/{taskId}/statement` | `tasks:create` · `tasks:update` | effectful; a stale `expectedRevision` → `CONFLICT{reason:"stale_revision"}` |
+| `POST …/tasks/{taskId}/complete {expectedRevision?}` | `tasks:complete` | global personal user token only; completes only after the newest Flow run has delivered, and requires a PR to be merged |
 | `POST …/tasks/{taskId}/send-to-triage {launchIntent}` | `tasks:triage` | effectful; see [triage.md](triage.md) |
 | `POST …/tasks/{taskId}/clarifications` · `DELETE …/clarifications/{id}` · `POST …/clarifications/{id}/answer` | `hitl:request` · `hitl:request` · exact `hitl:respond:human` (global personal token only) | effectful; the answer is never reachable with a librarian or agent token |
 | `POST /runs/{runId}/operator-message` | `runs:message` | effectful; outcome `delivered \| queued \| refused_requires_rework`; never `runs:delegate` |
