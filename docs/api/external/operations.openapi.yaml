@@ -6001,11 +6001,17 @@ components:
           type: string
         status:
           type: string
-          description: Task lifecycle status on the board.
-          enum: [Backlog, InFlight, Done]
+          description: Authoritative terminal/task lifecycle status.
+          enum: [Backlog, InFlight, Done, Abandoned]
         stage:
           type: string
-          description: Finer-grained stage within the task lifecycle.
+          enum: [Backlog, Prepare]
+          description: |
+            Persisted pre-launch specification phase (`tasks.stage`), not the
+            task's current board column or derived cross-project work stage.
+            It may remain `Backlog` after `status` becomes `Done`. Use
+            `GET /api/v1/ext/work` and its `stage` field for the current
+            derived `WorkStage` (`Triage`, `Executing`, `Promoted`, and so on).
         flowId:
           type: string
           description: |
