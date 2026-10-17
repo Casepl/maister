@@ -2344,6 +2344,8 @@
     "schemaLabel": "Requested schema",
     "submit": "Submit response",
     "submitting": "Submitting…",
+    "hitlResponseInProgress": "Applying your decision…",
+    "hitlResponseInProgressHint": "MAIster is saving the answer and preparing the next Flow step. Actions are locked to prevent a duplicate response.",
     "errorInvalidJson": "Response must be valid JSON.",
     "formInstructions": "Pick an option or type your own answer for each field.",
     "agentQuestionInstructions": "Answer this clarification for the requesting agent. Your response will start its follow-up work; the original run stays complete.",
