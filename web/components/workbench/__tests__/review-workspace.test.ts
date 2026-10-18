@@ -83,8 +83,9 @@ describe("ReviewWorkspace", () => {
     expect(html).toContain('data-review-layout="stacked"');
     expect(html).not.toContain("xl:grid-cols");
     expect(html).not.toContain("xl:sticky");
-    expect(html.indexOf('data-testid="review-decision-panel"')).toBeLessThan(
-      html.indexOf('data-testid="review-diff-panel"'),
+    expect(html).toContain('id="review-workspace"');
+    expect(html.indexOf('data-testid="review-diff-panel"')).toBeLessThan(
+      html.indexOf('data-testid="review-decision-panel"'),
     );
   });
 

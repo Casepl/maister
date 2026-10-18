@@ -375,101 +375,6 @@ export function ReviewPanel({
         {t("reviewTitle")}
       </h2>
 
-      {/* base → run → target spine */}
-      <div className="mb-4 flex flex-wrap items-center gap-2 font-mono text-[11px] text-ink-2">
-        {baseBranch ? (
-          <span
-            className="rounded-md border border-line bg-paper px-2 py-1 font-semibold"
-            data-testid="review-base-branch"
-          >
-            {baseBranch}
-            {baseCommit ? (
-              <span className="ml-1.5 text-mute">{baseCommit.slice(0, 7)}</span>
-            ) : null}
-          </span>
-        ) : null}
-        <span aria-hidden="true" className="text-mute">
-          →
-        </span>
-        <span
-          className="rounded-md border border-amber-line bg-amber-soft px-2 py-1 font-semibold text-amber"
-          data-testid="review-run-branch"
-        >
-          {runBranch}
-        </span>
-        <span aria-hidden="true" className="text-mute">
-          →
-        </span>
-        {targetBranch ? (
-          <span
-            className="rounded-md border border-[color-mix(in_oklab,var(--accent-4)_35%,var(--line))] bg-accent-4-soft px-2 py-1 font-semibold text-accent-4"
-            data-testid="review-target-branch"
-          >
-            {targetBranch}
-          </span>
-        ) : null}
-      </div>
-
-      {/* ADR-141: behind/ahead chip + branch-sync affordance */}
-      {aheadBehind && (aheadBehind.behind > 0 || aheadBehind.ahead > 0) ? (
-        <div
-          className="mb-4 flex flex-wrap items-center gap-2"
-          data-testid="review-ahead-behind"
-        >
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-line bg-amber-soft px-2.5 py-1 font-mono text-[10.5px] font-bold text-amber">
-            {labels.behindAhead}
-          </span>
-          {/* Gated at the ROUTE's granularity: sync is `promoteRun` (member),
-              while this surface is `readBoard` (viewer). Offering it to a viewer
-              only buys them a 403. */}
-          {sync && !syncClaimed && canPromote && updateHref ? (
-            <Link
-              className={syncLink}
-              data-testid="review-sync-open"
-              href={updateHref}
-              scroll={false}
-            >
-              <ArrowPathIcon aria-hidden="true" className="h-3.5 w-3.5" />
-              {labels.syncBranch}
-            </Link>
-          ) : null}
-        </div>
-      ) : null}
-
-      {/* ADR-141: a live sync claim — promote + a second sync launch are frozen */}
-      {syncClaimed ? (
-        <p
-          className="mb-4 rounded-[10px] border border-accent-4/40 bg-accent-4-soft p-3 font-mono text-[11px] text-accent-4"
-          data-testid="review-sync-in-progress"
-          role="status"
-        >
-          {labels.syncInProgress}
-        </p>
-      ) : null}
-
-      {/* readiness summary */}
-      {readiness ? (
-        <div className="mb-4" data-testid="review-readiness">
-          <span
-            className={clsx(
-              "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10.5px] font-bold",
-              readinessReady
-                ? "border-[color-mix(in_oklab,var(--accent-4)_35%,var(--line))] bg-accent-4-soft text-accent-4"
-                : "border-amber-line bg-amber-soft text-amber",
-            )}
-          >
-            {readinessReady ? labels.readinessReady : labels.readinessBlocked}
-          </span>
-          {!readinessReady && readiness.reasons.length > 0 ? (
-            <ul className="mt-2 flex list-none flex-col gap-1 p-0 font-mono text-[10.5px] text-mute">
-              {readiness.reasons.map((reason) => (
-                <li key={reason}>{reason}</li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-      ) : null}
-
       {reviewUnavailable ? (
         <div
           className="mb-4 rounded-[10px] border border-amber-line bg-amber-soft p-4 font-mono text-[11px] leading-[1.5] text-amber"
@@ -525,6 +430,85 @@ export function ReviewPanel({
           />
         </div>
       )}
+
+      <details className="mb-4">
+        <summary className="cursor-pointer font-mono text-[11px] text-mute">
+          {t("reviewParameters")}
+        </summary>
+        {/* base → run → target spine */}
+        <div className="mb-4 flex flex-wrap items-center gap-2 font-mono text-[11px] text-ink-2">
+          {baseBranch ? (
+            <span
+              className="rounded-md border border-line bg-paper px-2 py-1 font-semibold"
+              data-testid="review-base-branch"
+            >
+              {baseBranch}
+              {baseCommit ? (
+                <span className="ml-1.5 text-mute">
+                  {baseCommit.slice(0, 7)}
+                </span>
+              ) : null}
+            </span>
+          ) : null}
+          <span aria-hidden="true" className="text-mute">
+            →
+          </span>
+          <span
+            className="rounded-md border border-amber-line bg-amber-soft px-2 py-1 font-semibold text-amber"
+            data-testid="review-run-branch"
+          >
+            {runBranch}
+          </span>
+          <span aria-hidden="true" className="text-mute">
+            →
+          </span>
+          {targetBranch ? (
+            <span
+              className="rounded-md border border-[color-mix(in_oklab,var(--accent-4)_35%,var(--line))] bg-accent-4-soft px-2 py-1 font-semibold text-accent-4"
+              data-testid="review-target-branch"
+            >
+              {targetBranch}
+            </span>
+          ) : null}
+        </div>
+      </details>
+
+      {/* ADR-141: behind/ahead chip + branch-sync affordance */}
+      {aheadBehind && (aheadBehind.behind > 0 || aheadBehind.ahead > 0) ? (
+        <div
+          className="mb-4 flex flex-wrap items-center gap-2"
+          data-testid="review-ahead-behind"
+        >
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-line bg-amber-soft px-2.5 py-1 font-mono text-[10.5px] font-bold text-amber">
+            {labels.behindAhead}
+          </span>
+          {/* Gated at the ROUTE's granularity: sync is `promoteRun` (member),
+              while this surface is `readBoard` (viewer). Offering it to a viewer
+              only buys them a 403. */}
+          {sync && !syncClaimed && canPromote && updateHref ? (
+            <Link
+              className={syncLink}
+              data-testid="review-sync-open"
+              href={updateHref}
+              scroll={false}
+            >
+              <ArrowPathIcon aria-hidden="true" className="h-3.5 w-3.5" />
+              {labels.syncBranch}
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* ADR-141: a live sync claim — promote + a second sync launch are frozen */}
+      {syncClaimed ? (
+        <p
+          className="mb-4 rounded-[10px] border border-accent-4/40 bg-accent-4-soft p-3 font-mono text-[11px] text-accent-4"
+          data-testid="review-sync-in-progress"
+          role="status"
+        >
+          {labels.syncInProgress}
+        </p>
+      ) : null}
 
       {prUrl ? (
         <p className="mb-4 font-mono text-[11px]">
@@ -636,70 +620,74 @@ export function ReviewPanel({
               title={labels.promotionInProgress}
             />
           ) : null}
+          <details>
+            <summary className="cursor-pointer font-mono text-[11px] text-mute">
+              {t("reviewParameters")}
+            </summary>
+            <label className="mt-2 flex flex-col gap-1">
+              <span className="font-mono text-[9.5px] font-bold uppercase tracking-[0.06em] text-mute">
+                {labels.promotionMode}
+              </span>
+              <span className="sr-only" id={modeLabelId}>
+                {labels.promotionMode}
+              </span>
+              <Select
+                aria-labelledby={modeLabelId}
+                className="w-full max-w-[260px]"
+                selectedKey={mode}
+                variant="secondary"
+                onSelectionChange={(key) => setMode(selectionKey(key, mode))}
+              >
+                <Select.Trigger className="h-9 rounded-md border-line bg-paper px-2 font-mono text-[11px] text-ink">
+                  <Select.Value />
+                  <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover className="rounded-md border border-line bg-paper p-1 shadow-lg">
+                  <ListBox aria-label={labels.promotionMode}>
+                    <ListBox.Item id="merge" textValue={labels.promotionMerge}>
+                      {labels.promotionMerge}
+                    </ListBox.Item>
+                    <ListBox.Item
+                      id="rebase_merge"
+                      textValue={labels.promotionRebaseMerge}
+                    >
+                      {labels.promotionRebaseMerge}
+                    </ListBox.Item>
+                    <ListBox.Item
+                      id="pull_request"
+                      textValue={labels.promotionPullRequest}
+                    >
+                      {labels.promotionPullRequest}
+                    </ListBox.Item>
+                    <ListBox.Item
+                      id="ai_rebase_merge"
+                      textValue={labels.promotionAiRebaseMerge}
+                    >
+                      {labels.promotionAiRebaseMerge}
+                    </ListBox.Item>
+                  </ListBox>
+                </Select.Popover>
+              </Select>
+            </label>
 
-          <label className="flex flex-col gap-1">
-            <span className="font-mono text-[9.5px] font-bold uppercase tracking-[0.06em] text-mute">
-              {labels.promotionMode}
-            </span>
-            <span className="sr-only" id={modeLabelId}>
-              {labels.promotionMode}
-            </span>
-            <Select
-              aria-labelledby={modeLabelId}
-              className="w-full max-w-[260px]"
-              selectedKey={mode}
-              variant="secondary"
-              onSelectionChange={(key) => setMode(selectionKey(key, mode))}
-            >
-              <Select.Trigger className="h-9 rounded-md border-line bg-paper px-2 font-mono text-[11px] text-ink">
-                <Select.Value />
-                <Select.Indicator />
-              </Select.Trigger>
-              <Select.Popover className="rounded-md border border-line bg-paper p-1 shadow-lg">
-                <ListBox aria-label={labels.promotionMode}>
-                  <ListBox.Item id="merge" textValue={labels.promotionMerge}>
-                    {labels.promotionMerge}
-                  </ListBox.Item>
-                  <ListBox.Item
-                    id="rebase_merge"
-                    textValue={labels.promotionRebaseMerge}
-                  >
-                    {labels.promotionRebaseMerge}
-                  </ListBox.Item>
-                  <ListBox.Item
-                    id="pull_request"
-                    textValue={labels.promotionPullRequest}
-                  >
-                    {labels.promotionPullRequest}
-                  </ListBox.Item>
-                  <ListBox.Item
-                    id="ai_rebase_merge"
-                    textValue={labels.promotionAiRebaseMerge}
-                  >
-                    {labels.promotionAiRebaseMerge}
-                  </ListBox.Item>
-                </ListBox>
-              </Select.Popover>
-            </Select>
-          </label>
-
-          {/* ADR-141 (decision 19): ai_rebase_merge one-click chaining — OFF by
+            {/* ADR-141 (decision 19): ai_rebase_merge one-click chaining — OFF by
               default (two-step: the resolver returns the run to Review). */}
-          {mode === "ai_rebase_merge" ? (
-            <div data-testid="review-auto-finalize">
-              <label className="flex items-center gap-2 font-mono text-[11px] text-ink-2">
-                <input
-                  checked={autoFinalize}
-                  type="checkbox"
-                  onChange={(e) => setAutoFinalize(e.target.checked)}
-                />
-                {labels.autoFinalize}
-              </label>
-              <p className="ml-6 mt-0.5 font-mono text-[10.5px] text-mute">
-                {labels.autoFinalizeHint}
-              </p>
-            </div>
-          ) : null}
+            {mode === "ai_rebase_merge" ? (
+              <div data-testid="review-auto-finalize">
+                <label className="flex items-center gap-2 font-mono text-[11px] text-ink-2">
+                  <input
+                    checked={autoFinalize}
+                    type="checkbox"
+                    onChange={(e) => setAutoFinalize(e.target.checked)}
+                  />
+                  {labels.autoFinalize}
+                </label>
+                <p className="ml-6 mt-0.5 font-mono text-[10.5px] text-mute">
+                  {labels.autoFinalizeHint}
+                </p>
+              </div>
+            ) : null}
+          </details>
 
           {drift ? (
             <div
@@ -813,6 +801,28 @@ export function ReviewPanel({
           ) : null}
         </div>
       )}
+      {/* readiness summary */}
+      {readiness ? (
+        <div className="mb-4" data-testid="review-readiness">
+          <span
+            className={clsx(
+              "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10.5px] font-bold",
+              readinessReady
+                ? "border-[color-mix(in_oklab,var(--accent-4)_35%,var(--line))] bg-accent-4-soft text-accent-4"
+                : "border-amber-line bg-amber-soft text-amber",
+            )}
+          >
+            {readinessReady ? labels.readinessReady : labels.readinessBlocked}
+          </span>
+          {!readinessReady && readiness.reasons.length > 0 ? (
+            <ul className="mt-2 flex list-none flex-col gap-1 p-0 font-mono text-[10.5px] text-mute">
+              {readiness.reasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }
