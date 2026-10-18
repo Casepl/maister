@@ -5509,6 +5509,7 @@
     "webhookAttempts": "$count attempts",
     "kinds": {
       "task_created": "task created",
+      "task_completed": "task completed",
       "comment_added": "comment",
       "task_mentioned": "mentioned",
       "relation_added": "relation added",
