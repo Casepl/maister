@@ -122,6 +122,7 @@
     }
   },
   "nav": {
+    "projectSetup": "\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0430 \u043f\u0440\u043e\u0435\u043a\u0442\u0430",
     "projects": "Проекты",
     "inbox": "Инбокс",
     "flows": "Флоу",
@@ -847,6 +848,18 @@
     "subtitle": "Хостовые серверы Model Context Protocol и их вычисленная готовность."
   },
   "portfolio": {
+    "projectRunning": "В работе",
+    "projectIdle": "Нет активных запусков",
+    "tasksBacklog": "Задачи в бэклоге",
+    "runningCount": "Активные запуски",
+    "attentionCount": "Требуется внимание · {count}",
+    "openProject": "Открыть проект",
+    "technicalInfo": "Техническая информация",
+    "flowSettings": "Flow",
+    "agentSettings": "Настройки агентов",
+    "gitSettings": "Настройки Git",
+    "defaultAgent": "Агент по умолчанию",
+    "gitConflict": "Конфликт Git",
     "eyebrow": "Рабочая область · {projects} проектов",
     "heading": "Проекты.",
     "subheading": "{projects} репозиториев под управлением. {workspaces} воркспейсов в работе. {needs} ждут вас.",
@@ -1346,6 +1359,9 @@
     "turnQuarantined": "Результат последнего хода не удалось сохранить, и ход завершился без него. Отправьте новое сообщение, чтобы продолжить."
   },
   "board": {
+    "statistics": "Статистика проекта",
+    "moreActions": "Дополнительные действия",
+    "workspacesButton": "Рабочие копии · {count}",
     "needYou": "нужно вам",
     "inProd": "в проде",
     "backlogCount": "бэклог",
@@ -2259,6 +2275,13 @@
     "closeAndSync": "Закрыть и синхронизироваться"
   },
   "run": {
+    "reviewParameters": "Параметры",
+    "reviewPublish": "Опубликовать",
+    "reviewUpdateBranch": "Обновить ветку",
+    "reviewResolveConflict": "Разрешить конфликт",
+    "reviewRestoreWorkspace": "Вернуть рабочую копию",
+    "reviewAdditional": "Дополнительно",
+    "reviewTechnicalHistory": "Flow и техническая история",
     "eyebrow": "запуск",
     "fromPackage": "из {name} @ {version}",
     "backToBoard": "← Назад к доске",
@@ -4090,7 +4113,8 @@
     }
   },
   "workbenchGit": {
-    "title": "Git-панель",
+    "parameters": "Параметры",
+    "title": "Операции с рабочей копией",
     "loading": "Читаю состояние git…",
     "loadFailed": "Не удалось прочитать состояние git.",
     "membersOnly": "Git-состояние видно только участникам проекта.",
