@@ -2336,7 +2336,7 @@
     "inspectorActionViewUncommittedDiff": "Open uncommitted diff",
     "inspectorActionOpenPendingInput": "Open pending input",
     "inspectorActionOpenAgentChat": "Ask the agent",
-    "pendingTitle": "Waiting on you",
+    "pendingTitle": "Your input is needed",
     "pendingCount": "({count} requests)",
     "responseLabel": "Response (JSON)",
     "responseHint": "Enter a JSON value matching the requested schema below.",
@@ -2931,7 +2931,9 @@
     "targetLabel": "Target node",
     "targetRecommended": "{node} (recommended)",
     "default": "default",
-    "interruptNode": "Interrupt node"
+    "interruptControlTitle": "Current step controls",
+    "interruptNode": "Stop current step",
+    "interruptNodeHelp": "Stops only the current Flow step. The run and workspace stay available so you can choose how to continue."
   },
   "evidence": {
     "title": "Evidence graph",
