@@ -122,6 +122,7 @@
     }
   },
   "nav": {
+    "projectSetup": "Project setup",
     "projects": "Projects",
     "inbox": "Inbox",
     "flows": "Flows",
@@ -847,6 +848,18 @@
     "subtitle": "Host-wide Model Context Protocol servers and their computed readiness."
   },
   "portfolio": {
+    "projectRunning": "In progress",
+    "projectIdle": "No active runs",
+    "tasksBacklog": "Backlog tasks",
+    "runningCount": "Active runs",
+    "attentionCount": "Needs attention · {count}",
+    "openProject": "Open project",
+    "technicalInfo": "Technical information",
+    "flowSettings": "Flows",
+    "agentSettings": "Agent settings",
+    "gitSettings": "Git settings",
+    "defaultAgent": "Default agent",
+    "gitConflict": "Git conflict",
     "eyebrow": "Working pane · {projects} projects",
     "heading": "Projects.",
     "subheading": "{projects} repos under management. {workspaces} workspaces in flight. {needs} things waiting on you.",
@@ -1346,6 +1359,9 @@
     "turnQuarantined": "The last turn's result could not be stored, so it ended without one. Send a new message to continue."
   },
   "board": {
+    "statistics": "Project statistics",
+    "moreActions": "More actions",
+    "workspacesButton": "Workspaces · {count}",
     "needYou": "need you",
     "inProd": "in prod",
     "backlogCount": "backlog",
@@ -2259,6 +2275,13 @@
     "closeAndSync": "Close & sync from upstream"
   },
   "run": {
+    "reviewParameters": "Parameters",
+    "reviewPublish": "Publish",
+    "reviewUpdateBranch": "Update branch",
+    "reviewResolveConflict": "Resolve conflict",
+    "reviewRestoreWorkspace": "Restore workspace",
+    "reviewAdditional": "Advanced",
+    "reviewTechnicalHistory": "Flow and technical history",
     "eyebrow": "run",
     "fromPackage": "from {name} @ {version}",
     "backToBoard": "← Back to board",
@@ -4098,7 +4121,8 @@
     }
   },
   "workbenchGit": {
-    "title": "Git panel",
+    "parameters": "Parameters",
+    "title": "Workspace operations",
     "loading": "Reading the git state…",
     "loadFailed": "Could not read the git state.",
     "membersOnly": "The git state is shown to project members only.",
