@@ -164,6 +164,10 @@ export async function createTask(
         createdViaOperationId: ctx.librarianOperationId ?? null,
         status: "Backlog",
         stage: "Backlog",
+        // ADR-119 allocates the first run by atomically incrementing this
+        // high-water mark. A newly created task has no attempts yet, so it
+        // must start at zero regardless of the legacy database default.
+        attemptNumber: 0,
       })
       .onConflictDoNothing()
       .returning({ id: tasks.id });
