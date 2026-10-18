@@ -107,10 +107,6 @@ export interface BacklogCard {
   prompt: string;
   // M34: null on a flowless simple-intent task (renders the unconfigured chip).
   flowRef: string | null;
-  // ISO task update timestamp used by the board's "touched" filter.
-  touchedAt?: string;
-  // Latest run agent when one exists; null for work that has never been run.
-  agent?: BoardAgent | null;
   // The enabled revision is not executable on this host. This is deliberately
   // distinct from the launch dialog's detailed options response: the board
   // must expose an early, visible reason beside the disabled affordance.
@@ -173,8 +169,6 @@ export interface FlightCard {
   title: string;
   // null on a flowless simple-intent task.
   flowRef: string | null;
-  // ISO task update timestamp used by the board's "touched" filter.
-  touchedAt?: string;
   flowIncompatibility: BoardFlowIncompatibility | null;
   // ADR-121: the task's first-class criticality priority + queue-pause flag.
   taskPriority: TaskPriority;
@@ -374,7 +368,6 @@ export async function getBoardData(projectId: string): Promise<BoardData> {
       status: tasks.status,
       stage: tasks.stage,
       createdAt: tasks.createdAt,
-      updatedAt: tasks.updatedAt,
       flowRef: flows.flowRefId,
       flowManifest: flows.manifest,
       enabledRevisionManifest: flowRevisions.manifest,
@@ -749,14 +742,6 @@ export async function getBoardData(projectId: string): Promise<BoardData> {
         title: task.title,
         prompt: task.prompt,
         flowRef: task.flowRef ?? null,
-        touchedAt: task.updatedAt.toISOString(),
-        agent: run
-          ? runnerAgentFromFields({
-              capabilityAgent: run.capabilityAgent,
-              runnerSnapshot: run.runnerSnapshot,
-              context: run.runId,
-            })
-          : null,
         flowIncompatibility: boardFlowIncompatibility(
           task.enabledRevisionManifest ?? null,
           task.enabledRevisionEngineMin ?? null,
@@ -843,7 +828,6 @@ export async function getBoardData(projectId: string): Promise<BoardData> {
       keyRef: `${projectTaskKey}-${task.number}`,
       title: task.title,
       flowRef: task.flowRef ?? null,
-      touchedAt: task.updatedAt.toISOString(),
       flowIncompatibility: boardFlowIncompatibility(
         task.enabledRevisionManifest ?? null,
         task.enabledRevisionEngineMin ?? null,
