@@ -39,6 +39,12 @@ import {
 import { isBrainSchemaApplied } from "@/lib/brain/guard";
 import { isProjectBrainIndexingAvailable } from "@/lib/brain/availability";
 import {
+  BOARD_FILTER_NONE,
+  filterBoardData,
+  getBoardFilterOptions,
+  normalizeBoardFilters,
+} from "@/lib/board/filters";
+import {
   loadProjectBrainPanelData,
   type BrainUiDb,
 } from "@/lib/brain/ui-queries";
@@ -117,6 +123,10 @@ interface PageProps {
     audit_result?: string | string[];
     audit_page?: string | string[];
     brain_query?: string | string[];
+    board_flow?: string | string[];
+    board_agent?: string | string[];
+    board_priority?: string | string[];
+    board_touched?: string | string[];
   }>;
 }
 
@@ -143,6 +153,10 @@ export default async function ProjectBoardPage({
     audit_result: rawAuditResult,
     audit_page: rawAuditPage,
     brain_query: rawBrainQuery,
+    board_flow: rawBoardFlow,
+    board_agent: rawBoardAgent,
+    board_priority: rawBoardPriority,
+    board_touched: rawBoardTouched,
   } = await searchParams;
   const requestedTab = parseTab(rawTab);
   const one = (v: string | string[] | undefined): string | undefined =>
@@ -231,6 +245,17 @@ export default async function ProjectBoardPage({
       // second local sum that is free to disagree with the rail badge.
       getDecisionsCount(user.id, user.role, { projectId: project.id }),
     ]);
+  const boardFilterOptions = getBoardFilterOptions(board);
+  const boardFilters = normalizeBoardFilters(
+    {
+      flow: one(rawBoardFlow),
+      agent: one(rawBoardAgent),
+      priority: one(rawBoardPriority),
+      touched: one(rawBoardTouched),
+    },
+    boardFilterOptions,
+  );
+  const filteredBoard = filterBoardData(board, boardFilters);
   const activityLog =
     tab === "activity"
       ? await getProjectActivityLog(project.id, logFilters)
@@ -340,13 +365,30 @@ export default async function ProjectBoardPage({
       />
       <header className="mb-6 grid grid-cols-1 items-start gap-6 border-b border-line pb-[22px] lg:grid-cols-[1fr_auto]">
         <div className="min-w-0">
-          <div className="mb-3 inline-flex items-center gap-2.5 font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-mute before:h-px before:w-[18px] before:bg-amber before:content-['']">
-            <span>{tNav("crumbProjects")}</span>
-            <span className="opacity-50">/</span>
-            <b className="text-[12.5px] font-bold normal-case tracking-normal text-ink-2">
-              {project.name}
-            </b>
-          </div>
+          <nav
+            aria-label={tNav("breadcrumbLabel")}
+            className="mb-3 font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-mute before:mr-2.5 before:inline-block before:h-px before:w-[18px] before:align-middle before:bg-amber before:content-['']"
+          >
+            <ol className="inline-flex min-w-0 items-center gap-2.5 align-middle">
+              <li>
+                <Link
+                  className="underline decoration-transparent underline-offset-4 transition-colors hover:text-amber hover:decoration-amber focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber/40"
+                  href="/projects"
+                >
+                  {tNav("projects")}
+                </Link>
+              </li>
+              <li aria-hidden="true" className="opacity-50">
+                /
+              </li>
+              <li
+                aria-current="page"
+                className="truncate text-[12.5px] font-bold normal-case tracking-normal text-ink-2"
+              >
+                {project.name}
+              </li>
+            </ol>
+          </nav>
           <div className="mb-1.5 flex flex-wrap items-baseline gap-3.5">
             <h1 className="m-0 text-[36px] font-semibold leading-[1.05] tracking-[-0.024em] text-ink">
               {project.name}
@@ -469,13 +511,15 @@ export default async function ProjectBoardPage({
             </section>
           ) : null}
           <BoardTools
+            filters={boardFilters}
             labels={{
               filterFlow: t("filterFlow"),
               filterAgent: t("filterAgent"),
               filterPrio: t("filterPrio"),
               filterTouched: t("filterTouched"),
               filterAny: t("filterAny"),
-              touchedValue: "7d",
+              filterAnyTime: t("filterAnyTime"),
+              clearFilters: t("clearFilters"),
               layout: t("layout"),
               layoutBoard: t("layoutBoard"),
               layoutSwimlanes: t("layoutSwimlanes"),
@@ -483,10 +527,51 @@ export default async function ProjectBoardPage({
               asOf: t("asOf"),
               justNow: t("justNow"),
             }}
+            options={{
+              flow: [
+                ...(boardFilterOptions.hasFlowless
+                  ? [
+                      {
+                        value: BOARD_FILTER_NONE,
+                        label: t("filterNoFlow"),
+                      },
+                    ]
+                  : []),
+                ...boardFilterOptions.flows.map((flow) => ({
+                  value: flow,
+                  label: flow,
+                })),
+              ],
+              agent: [
+                ...(boardFilterOptions.hasAgentless
+                  ? [
+                      {
+                        value: BOARD_FILTER_NONE,
+                        label: t("filterNoAgent"),
+                      },
+                    ]
+                  : []),
+                ...boardFilterOptions.agents.map((agent) => ({
+                  value: agent,
+                  label: agent,
+                })),
+              ],
+              priority: [
+                { value: "urgent", label: t("priorityUrgent") },
+                { value: "high", label: t("priorityHigh") },
+                { value: "normal", label: t("priorityNormal") },
+                { value: "low", label: t("priorityLow") },
+              ],
+              touched: [
+                { value: "1d", label: t("filterTouchedDay") },
+                { value: "7d", label: t("filterTouchedWeek") },
+                { value: "30d", label: t("filterTouchedMonth") },
+              ],
+            }}
           >
             <Board
               canAct={canAct}
-              data={board}
+              data={filteredBoard}
               platformStatus={platformStatus}
               slug={slug}
             />
