@@ -60,6 +60,7 @@ const LABELS = {
   decisionApprove: "run.decisionApprove",
   decisionRework: "run.decisionRework",
   permissionAllowOnce: "Разрешить один раз",
+  permissionAllowWithUpdates: "Разрешить и запомнить",
   permissionAllowAlways: "Разрешать всегда",
   permissionReject: "Отклонить",
   sendBackWithComments: "run.sendBackWithComments",
@@ -337,7 +338,8 @@ describe("HitlDecisionControls — pure HITL response rendering (M17 P4)", () =>
       const options: HitlOption[] = [
         { optionId: "allow-once", label: "allow-once" },
         { optionId: "reject", label: "reject" },
-        { optionId: "allow-with-updates", label: "Allow with updates" },
+        { optionId: "allow-with-updates", label: "allow-with-updates" },
+        { optionId: "custom-scope", label: "Allow with custom scope" },
       ];
 
       const html = render({
@@ -346,9 +348,11 @@ describe("HitlDecisionControls — pure HITL response rendering (M17 P4)", () =>
       });
 
       expect(html).toContain("Разрешить один раз");
+      expect(html).toContain("Разрешить и запомнить");
       expect(html).toContain("Отклонить");
-      expect(html).toContain("Allow with updates");
+      expect(html).toContain("Allow with custom scope");
       expect(html).not.toContain(">allow-once<");
+      expect(html).not.toContain(">allow-with-updates<");
       expect(html).not.toContain(">reject<");
     });
   });

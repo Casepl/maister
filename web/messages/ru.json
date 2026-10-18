@@ -2407,6 +2407,7 @@
     "decisionApprove": "Одобрить",
     "decisionRework": "Вернуть на доработку",
     "permissionAllowOnce": "Разрешить один раз",
+    "permissionAllowWithUpdates": "Разрешить и запомнить",
     "permissionAllowAlways": "Разрешать всегда",
     "permissionReject": "Отклонить",
     "decisionCrashRecover": "Восстановлен после сбоя",
