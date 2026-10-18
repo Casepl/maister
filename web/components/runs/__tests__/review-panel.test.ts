@@ -193,6 +193,17 @@ describe("ReviewPanel — base→run→target review surface (M18 T4.2)", () => 
     expect(html).toContain('data-testid="diff-view"');
   });
 
+  it("puts the diff before the decision and checks after the decision", () => {
+    const html = render();
+    const diff = html.indexOf('data-testid="diff-view"');
+    const decision = html.indexOf('data-testid="review-promote"');
+    const checks = html.indexOf('data-testid="review-readiness"');
+
+    expect(diff).toBeGreaterThan(-1);
+    expect(decision).toBeGreaterThan(diff);
+    expect(checks).toBeGreaterThan(decision);
+  });
+
   it("names the exact target in the Promote button label", () => {
     const html = render({ targetBranch: "release" });
 

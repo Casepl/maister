@@ -3,10 +3,12 @@ import type { FlowResultDegradationCode } from "@/lib/runs/flow-result-dto";
 import type { ResultStatus } from "@/lib/run-results/types";
 import type { ReactElement, ReactNode } from "react";
 
+import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { notFound, redirect } from "next/navigation";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 
+import { RunReviewDisclosure } from "@/components/runs/run-review-disclosure";
 import {
   CRASH_RECOVER_DECISION,
   TURN_LOST_DECISION,
@@ -1311,6 +1313,24 @@ export default async function RunDetailLayout({
   // ADR-181 D2: the viewer's own set — the claim owner of an open rework claim
   // gets the git set; `detail.lifecycleActions` is the viewer-less projection.
   const viewerLifecycleActions = lifecycleActionsForViewer(detail, user.id);
+  const contextualGitAction = viewerLifecycleActions.includes("reattach")
+    ? { id: "reattach", label: t("reviewRestoreWorkspace") }
+    : viewerLifecycleActions.includes("update") && detail.prHasConflicts
+      ? { id: "update", label: t("reviewResolveConflict") }
+      : viewerLifecycleActions.includes("update") &&
+          (syncPanel?.aheadBehind?.behind ?? 0) > 0
+        ? { id: "update", label: t("reviewUpdateBranch") }
+        : viewerLifecycleActions.includes("exportBranch") &&
+            !detail.lifecycleFacts.publishedBranch
+          ? { id: "exportBranch", label: t("reviewPublish") }
+          : null;
+  const contextualGitHref = contextualGitAction
+    ? gitPanelHref({
+        runId: detail.runId,
+        runKind: detail.runKind,
+        actionId: contextualGitAction.id,
+      })
+    : null;
   const policyActions = deriveInspectorActions({
     runId: detail.runId,
     runKind: detail.runKind,
@@ -1482,56 +1502,157 @@ export default async function RunDetailLayout({
       </>
     ) : null;
 
-  const primaryResult =
-    flowGraphData || showAgentCenter ? (
-      <section className="min-w-0 max-w-full" data-testid="run-primary-result">
-        {flowGraphData ? (
-          <FlowRunCenter
-            graphView={
-              <FlowGraphViewSection
-                labels={flowGraphData.labels}
-                layout={flowGraphData.layout}
-                nodeTooltips={flowGraphData.nodeTooltips}
-                runContext={{
-                  runId: detail.runId,
-                  initialStatuses: flowGraphData.statuses.nodes,
-                  currentStepId: flowGraphData.statuses.currentStepId,
-                  runStatus: detail.status,
-                  restrictedNodeIds: settings
-                    ? settings.nodes
-                        .filter((n) => n.classes.length > 0)
-                        .map((n) => n.nodeId)
-                    : [],
-                }}
-                topology={flowGraphData.topology}
-              />
-            }
-            labels={flowRunCenterLabels}
-            locale={locale}
-            result={flowResultDto}
-          />
-        ) : (
-          <>
-            <AgentRunCenter
-              labels={agentRunCenterLabels}
+  const reviewMode = showReview || hasReviewGate;
+  const flowContent = (
+    <>
+      {flowGraphData || showAgentCenter ? (
+        <section
+          className="min-w-0 max-w-full"
+          data-testid="run-primary-result"
+        >
+          {flowGraphData ? (
+            <FlowRunCenter
+              graphView={
+                <FlowGraphViewSection
+                  labels={flowGraphData.labels}
+                  layout={flowGraphData.layout}
+                  nodeTooltips={flowGraphData.nodeTooltips}
+                  runContext={{
+                    runId: detail.runId,
+                    initialStatuses: flowGraphData.statuses.nodes,
+                    currentStepId: flowGraphData.statuses.currentStepId,
+                    runStatus: detail.status,
+                    restrictedNodeIds: settings
+                      ? settings.nodes
+                          .filter((n) => n.classes.length > 0)
+                          .map((n) => n.nodeId)
+                      : [],
+                  }}
+                  topology={flowGraphData.topology}
+                />
+              }
+              labels={flowRunCenterLabels}
+              locale={locale}
               result={flowResultDto}
             />
-            <AgentRunTranscript
-              defaultOpen
-              labels={flowRunCenterLabels.transcript}
-              live={isLiveRunStatus(detail.status)}
-              runId={detail.runId}
+          ) : (
+            <>
+              <AgentRunCenter
+                labels={agentRunCenterLabels}
+                result={flowResultDto}
+              />
+              <AgentRunTranscript
+                defaultOpen
+                labels={flowRunCenterLabels.transcript}
+                live={isLiveRunStatus(detail.status)}
+                runId={detail.runId}
+              />
+            </>
+          )}
+          {isOrchestratorRun ? (
+            <OrchestratorRunSubtree
+              childRuns={childRuns}
+              labels={orchestratorSubtreeLabels}
             />
-          </>
-        )}
-        {isOrchestratorRun ? (
-          <OrchestratorRunSubtree
-            childRuns={childRuns}
-            labels={orchestratorSubtreeLabels}
+          ) : null}
+        </section>
+      ) : null}
+    </>
+  );
+  const workbenchContent = (
+    <>
+      {flowGraphData || showAgentCenter || isCutoverHistory ? (
+        <section className="min-w-0 max-w-full" data-testid="run-workbench">
+          <WorkbenchPanel
+            diff={
+              <RunDiff
+                labels={flowGraphData?.diffLabels ?? workbenchDiffLabels}
+                runId={detail.runId}
+                scopeSwitcher={workbenchDiffScopeLabels}
+              />
+            }
+            evidence={
+              <section>
+                <h2 className="mb-3 font-sans text-[14px] font-bold tracking-[-0.01em] text-ink">
+                  {evidenceLabels.title}
+                </h2>
+                <EvidenceGraphSection
+                  graph={evidence}
+                  labels={evidenceLabels}
+                  runId={detail.runId}
+                />
+              </section>
+            }
+            filesPane={children}
+            filesTree={
+              <FileTree
+                filesApiBase={`/api/runs/${detail.runId}/files`}
+                labels={flowGraphData?.filesLabels ?? workbenchFilesLabels}
+              />
+            }
+            runId={detail.runId}
+            tabLabels={flowGraphData?.tabLabels ?? workbenchTabLabels}
+            timeline={
+              <RunTimeline
+                assignmentEvents={timeline.assignmentEvents}
+                entries={timeline.entries as TimelineEntry[]}
+                labels={timelineLabels}
+                locale={locale}
+              />
+            }
           />
-        ) : null}
-      </section>
-    ) : null;
+        </section>
+      ) : null}
+    </>
+  );
+  const technicalHistory = (
+    <>
+      {flowContent}
+      {workbenchContent}
+    </>
+  );
+  const lifecycleControls = (
+    <>
+      {viewerLifecycleActions.length > 0 ? (
+        <WorkbenchLifecycleActions
+          actions={viewerLifecycleActions}
+          runId={detail.runId}
+          runKind={detail.runKind}
+          syncDefaults={{
+            strategy: detail.syncStrategyDefault,
+            runnerOptions: syncPanel?.sync.runnerOptions ?? [],
+            defaultRunnerId: syncPanel?.sync.defaultRunnerId ?? null,
+          }}
+          variant="detail"
+          workspaceAvailable={Boolean(detail.worktreePath) && !detail.pruned}
+        />
+      ) : null}
+    </>
+  );
+  const readinessSummary = (
+    <>
+      {readiness &&
+      detail.status !== "Failed" &&
+      detail.status !== "Crashed" ? (
+        <ReadinessSummary
+          labels={{
+            state: {
+              ready: tReadiness("ready"),
+              blocked: tReadiness("blocked"),
+              stale: tReadiness("stale"),
+              failed: tReadiness("failed"),
+              waiting: tReadiness("waiting"),
+              overridden: tReadiness("overridden"),
+            },
+            summary: tReadiness("summary"),
+            reasons: tReadiness("reasons"),
+          }}
+          reasons={readiness.reasons}
+          state={readiness.readiness}
+        />
+      ) : null}
+    </>
+  );
 
   return (
     <RunStreamProvider runId={detail.runId} runStatus={detail.status}>
@@ -1588,7 +1709,13 @@ export default async function RunDetailLayout({
         projectHref={`/projects/${detail.projectSlug}`}
         projectLabel={t("backToBoard")}
         promotionOperation={headerPromotionOperation}
-        reviewHref={showReview && reviewData ? "#review-panel" : null}
+        reviewHref={
+          hasReviewGate
+            ? "#review-workspace"
+            : showReview && reviewData
+              ? "#review-panel"
+              : null
+        }
         runId={detail.runId}
         status={detail.status}
         subtitle={shellSubtitle}
@@ -1602,6 +1729,50 @@ export default async function RunDetailLayout({
         title={shellTitle}
       >
         <div className="grid min-w-0 max-w-full gap-5">
+          {showReview && reviewData ? (
+            <ReviewPanel
+              aheadBehind={syncPanel?.aheadBehind ?? null}
+              baseBranch={reviewData.baseBranch}
+              baseCommit={reviewData.baseCommit}
+              canPromote={canAct}
+              conflict={reviewConflict}
+              deliveryPolicy={reviewData.deliveryPolicy}
+              diff={reviewData.diff}
+              displayParentRepoPath={displayParentRepoPath}
+              driftDetected={reviewData.driftDetected}
+              id="review-panel"
+              labels={reviewLabels}
+              legacyNeedsRelaunch={reviewData.legacyNeedsRelaunch}
+              parentRepoPath={detail.parentRepoPath}
+              prNumber={detail.prNumber}
+              prUrl={detail.prUrl}
+              promotionMode={reviewData.promotionMode}
+              readiness={reviewReadiness}
+              reviewUnavailable={
+                reviewData.reviewUnavailable
+                  ? {
+                      ...reviewData.reviewUnavailable,
+                      reattachHref: gitPanelHref({
+                        runId: detail.runId,
+                        runKind: detail.runKind,
+                        actionId: "reattach",
+                      }),
+                    }
+                  : null
+              }
+              reviewedTargetCommit={reviewData.reviewedTargetCommit}
+              runBranch={detail.branch}
+              runId={detail.runId}
+              sync={syncPanel?.sync ?? null}
+              targetBranch={reviewData.targetBranch}
+              updateHref={gitPanelHref({
+                runId: detail.runId,
+                runKind: detail.runKind,
+                actionId: "update",
+              })}
+            />
+          ) : null}
+
           {detail.runnerResolutionWarnings.length > 0 ? (
             <section
               className="flex gap-2 rounded-[10px] border border-amber-line bg-amber-soft px-3 py-2 text-[12px] text-amber"
@@ -1655,44 +1826,8 @@ export default async function RunDetailLayout({
             />
           ) : null}
 
-          {viewerLifecycleActions.length > 0 ? (
-            <WorkbenchLifecycleActions
-              actions={viewerLifecycleActions}
-              runId={detail.runId}
-              runKind={detail.runKind}
-              syncDefaults={{
-                strategy: detail.syncStrategyDefault,
-                runnerOptions: syncPanel?.sync.runnerOptions ?? [],
-                defaultRunnerId: syncPanel?.sync.defaultRunnerId ?? null,
-              }}
-              variant="detail"
-              workspaceAvailable={
-                Boolean(detail.worktreePath) && !detail.pruned
-              }
-            />
-          ) : null}
-
-          {readiness &&
-          detail.status !== "Failed" &&
-          detail.status !== "Crashed" ? (
-            <ReadinessSummary
-              labels={{
-                state: {
-                  ready: tReadiness("ready"),
-                  blocked: tReadiness("blocked"),
-                  stale: tReadiness("stale"),
-                  failed: tReadiness("failed"),
-                  waiting: tReadiness("waiting"),
-                  overridden: tReadiness("overridden"),
-                },
-                summary: tReadiness("summary"),
-                reasons: tReadiness("reasons"),
-              }}
-              reasons={readiness.reasons}
-              state={readiness.readiness}
-            />
-          ) : null}
-
+          {!reviewMode ? lifecycleControls : null}
+          {!reviewMode ? readinessSummary : null}
           {policy?.trigger === "auto_on_ready" && detail.status === "Review" ? (
             <section
               className="rounded-[10px] border border-amber-line bg-amber-soft p-4"
@@ -1714,8 +1849,9 @@ export default async function RunDetailLayout({
             </section>
           ) : null}
 
-          {!detail.pendingHitl || isCutoverHistory ? primaryResult : null}
-
+          {!reviewMode && (!detail.pendingHitl || isCutoverHistory)
+            ? flowContent
+            : null}
           {detail.status === "Failed" || detail.status === "Abandoned" ? (
             <TerminalCauseNotice
               cause={detail.terminalCause}
@@ -1889,37 +2025,6 @@ export default async function RunDetailLayout({
                     </section>
                   ) : null}
                   {detail.pendingHitl &&
-                  (detail.pendingHitl.kind === "human" ||
-                    detail.pendingHitl.kind === "form") ? (
-                    <div id="agent-chat">
-                      <GateChatPanel
-                        canAct={canAct}
-                        hitlRequestId={detail.pendingHitl.hitlRequestId}
-                        labels={{
-                          title: t("chatTitle"),
-                          placeholder: t("chatPlaceholder"),
-                          send: t("chatSend"),
-                          sending: t("chatSending"),
-                          unavailable: t("chatUnavailable"),
-                          idleCostWarning: t("chatIdleCostWarning"),
-                          revertNotice: t("chatRevertNotice"),
-                          agentLabel: t("chatAgentLabel"),
-                          error: t("chatError"),
-                          transcript: {
-                            thinking: t("chatThinking"),
-                            rawEvent: t("chatRawEvent"),
-                            input: t("chatToolInput"),
-                            result: t("chatToolResult"),
-                            copy: t("chatCopy"),
-                            copied: t("chatCopied"),
-                            toolCount: "{name} ×{count}",
-                          },
-                        }}
-                        runId={detail.runId}
-                      />
-                    </div>
-                  ) : null}
-                  {detail.pendingHitl &&
                   hasReviewGate &&
                   (dirtySummary || detail.pendingHitl.dirtyResolution) ? (
                     <DirtyResolutionBanner
@@ -2008,6 +2113,37 @@ export default async function RunDetailLayout({
                       storedResponse={detail.pendingHitl.storedResponse}
                     />
                   )}
+                  {detail.pendingHitl &&
+                  (detail.pendingHitl.kind === "human" ||
+                    detail.pendingHitl.kind === "form") ? (
+                    <div id="agent-chat">
+                      <GateChatPanel
+                        canAct={canAct}
+                        hitlRequestId={detail.pendingHitl.hitlRequestId}
+                        labels={{
+                          title: t("chatTitle"),
+                          placeholder: t("chatPlaceholder"),
+                          send: t("chatSend"),
+                          sending: t("chatSending"),
+                          unavailable: t("chatUnavailable"),
+                          idleCostWarning: t("chatIdleCostWarning"),
+                          revertNotice: t("chatRevertNotice"),
+                          agentLabel: t("chatAgentLabel"),
+                          error: t("chatError"),
+                          transcript: {
+                            thinking: t("chatThinking"),
+                            rawEvent: t("chatRawEvent"),
+                            input: t("chatToolInput"),
+                            result: t("chatToolResult"),
+                            copy: t("chatCopy"),
+                            copied: t("chatCopied"),
+                            toolCount: "{name} ×{count}",
+                          },
+                        }}
+                        runId={detail.runId}
+                      />
+                    </div>
+                  ) : null}
                   {canClaim ? (
                     <div className="mt-4 border-t border-dashed border-amber-line pt-4">
                       <RunTakeoverActions
@@ -2086,7 +2222,9 @@ export default async function RunDetailLayout({
               </section>
             ))}
 
-          {detail.pendingHitl && !isCutoverHistory ? primaryResult : null}
+          {detail.pendingHitl && !isCutoverHistory && !reviewMode
+            ? flowContent
+            : null}
 
           {!hasReviewGate ? (
             <ReviewWorkspaceUnavailable
@@ -2150,91 +2288,33 @@ export default async function RunDetailLayout({
             </section>
           ) : null}
 
-          {flowGraphData || showAgentCenter || isCutoverHistory ? (
-            <section className="min-w-0 max-w-full" data-testid="run-workbench">
-              <WorkbenchPanel
-                diff={
-                  <RunDiff
-                    labels={flowGraphData?.diffLabels ?? workbenchDiffLabels}
-                    runId={detail.runId}
-                    scopeSwitcher={workbenchDiffScopeLabels}
-                  />
-                }
-                evidence={
-                  <section>
-                    <h2 className="mb-3 font-sans text-[14px] font-bold tracking-[-0.01em] text-ink">
-                      {evidenceLabels.title}
-                    </h2>
-                    <EvidenceGraphSection
-                      graph={evidence}
-                      labels={evidenceLabels}
-                      runId={detail.runId}
-                    />
-                  </section>
-                }
-                filesPane={children}
-                filesTree={
-                  <FileTree
-                    filesApiBase={`/api/runs/${detail.runId}/files`}
-                    labels={flowGraphData?.filesLabels ?? workbenchFilesLabels}
-                  />
-                }
-                runId={detail.runId}
-                tabLabels={flowGraphData?.tabLabels ?? workbenchTabLabels}
-                timeline={
-                  <RunTimeline
-                    assignmentEvents={timeline.assignmentEvents}
-                    entries={timeline.entries as TimelineEntry[]}
-                    labels={timelineLabels}
-                    locale={locale}
-                  />
-                }
-              />
-            </section>
+          {!reviewMode ? workbenchContent : null}
+          {reviewMode ? readinessSummary : null}
+          {reviewMode && contextualGitAction && contextualGitHref ? (
+            <Link
+              className="w-fit rounded-md border border-line bg-paper px-3 py-2 text-[12px] font-semibold text-ink-2"
+              href={contextualGitHref}
+              scroll={false}
+            >
+              {contextualGitAction.label}
+            </Link>
           ) : null}
-
-          {showReview && reviewData ? (
-            <ReviewPanel
-              aheadBehind={syncPanel?.aheadBehind ?? null}
-              baseBranch={reviewData.baseBranch}
-              baseCommit={reviewData.baseCommit}
-              canPromote={canAct}
-              conflict={reviewConflict}
-              deliveryPolicy={reviewData.deliveryPolicy}
-              diff={reviewData.diff}
-              displayParentRepoPath={displayParentRepoPath}
-              driftDetected={reviewData.driftDetected}
-              id="review-panel"
-              labels={reviewLabels}
-              legacyNeedsRelaunch={reviewData.legacyNeedsRelaunch}
-              parentRepoPath={detail.parentRepoPath}
-              prNumber={detail.prNumber}
-              prUrl={detail.prUrl}
-              promotionMode={reviewData.promotionMode}
-              readiness={reviewReadiness}
-              reviewUnavailable={
-                reviewData.reviewUnavailable
-                  ? {
-                      ...reviewData.reviewUnavailable,
-                      reattachHref: gitPanelHref({
-                        runId: detail.runId,
-                        runKind: detail.runKind,
-                        actionId: "reattach",
-                      }),
-                    }
-                  : null
-              }
-              reviewedTargetCommit={reviewData.reviewedTargetCommit}
-              runBranch={detail.branch}
-              runId={detail.runId}
-              sync={syncPanel?.sync ?? null}
-              targetBranch={reviewData.targetBranch}
-              updateHref={gitPanelHref({
-                runId: detail.runId,
-                runKind: detail.runKind,
-                actionId: "update",
-              })}
-            />
+          {reviewMode ? (
+            <RunReviewDisclosure
+              collapsed={reviewMode}
+              label={t("reviewTechnicalHistory")}
+            >
+              {technicalHistory}
+            </RunReviewDisclosure>
+          ) : null}
+          {reviewMode ? (
+            <RunReviewDisclosure
+              advanced
+              collapsed={reviewMode}
+              label={t("reviewAdditional")}
+            >
+              {lifecycleControls}
+            </RunReviewDisclosure>
           ) : null}
 
           {/* ADR-126: auto-promotion verdict + Hold/Release (Review flow runs) or
