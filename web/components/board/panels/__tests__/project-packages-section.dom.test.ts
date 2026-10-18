@@ -128,6 +128,7 @@ afterEach(() => {
   for (const root of roots) act(() => root.unmount());
   roots.length = 0;
   document.body.innerHTML = "";
+  fetchMock.mockReset();
   vi.unstubAllGlobals();
 });
 
@@ -200,5 +201,32 @@ describe("ProjectPackagesSection name-collision pre-flight", () => {
         '[data-testid="package-trust-confirm-submit"]',
       ),
     ).not.toHaveProperty("disabled", true);
+  });
+
+  it("surfaces the API refusal message instead of a generic package error", async () => {
+    vi.stubGlobal("fetch", fetchMock);
+    const host = render();
+    const refusal =
+      'package "aif" has an active run pinned to a member revision';
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ code: "PRECONDITION", message: refusal }), {
+        status: 409,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    await click(
+      [...host.querySelectorAll("button")].find(
+        (button) => button.textContent === "packages.detach",
+      )!,
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/projects/demo/packages/att-1",
+      expect.objectContaining({ method: "DELETE" }),
+    );
+    expect(host.textContent).toContain(refusal);
+    expect(host.textContent).not.toContain("packages.errorGeneric");
   });
 });
