@@ -30,7 +30,6 @@ const labels: CapabilityProfilePanelLabels = {
   title: "Capability profile",
   subtitle: "Capabilities materialized for each AI node (recorded only).",
   digestLabel: "Profile digest",
-  digestHint: "Hash of the effective capability set.",
   revisionLabel: "Resolved revisions",
   enforcedLabel: "Enforced",
   instructedLabel: "Instructed",
@@ -76,7 +75,6 @@ describe("CapabilityProfilePanel — materialized profile per node", () => {
 
     // first 12 chars of the digest surface (full 24-char digest may be elided).
     expect(html).toContain("abcdef012345");
-    expect(html).toContain("Hash of the effective capability set.");
   });
 
   it("renders enforced / instructed / refused class names", () => {

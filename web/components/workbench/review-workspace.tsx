@@ -68,20 +68,8 @@ export function ReviewWorkspace({
           {labels.source}
         </p>
       </header>
-      <div className="grid min-w-0 gap-4" data-review-layout="stacked">
-        <aside
-          className="rounded-[14px] border border-line bg-paper p-4"
-          data-testid="review-decision-panel"
-        >
-          <h3 className="mb-3 font-sans text-[14px] font-bold tracking-[-0.01em] text-ink">
-            {labels.decision}
-          </h3>
-          {decision}
-        </aside>
-        <div
-          className="min-w-0 rounded-[14px] border border-line bg-paper p-2"
-          data-testid="review-diff-panel"
-        >
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(300px,380px)] xl:items-start">
+        <div className="min-w-0 rounded-[14px] border border-line bg-paper p-2">
           <RunDiff
             forcedScope="review"
             labels={diffLabels}
@@ -89,6 +77,12 @@ export function ReviewWorkspace({
             runId={runId}
           />
         </div>
+        <aside className="rounded-[14px] border border-line bg-paper p-4">
+          <h3 className="mb-3 font-sans text-[14px] font-bold tracking-[-0.01em] text-ink">
+            {labels.decision}
+          </h3>
+          {decision}
+        </aside>
       </div>
     </section>
   );
