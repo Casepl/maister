@@ -2408,6 +2408,7 @@
     "decisionApprove": "Approve",
     "decisionRework": "Request rework",
     "permissionAllowOnce": "Allow once",
+    "permissionAllowWithUpdates": "Allow and remember",
     "permissionAllowAlways": "Always allow",
     "permissionReject": "Reject",
     "decisionCrashRecover": "Recovered after crash",

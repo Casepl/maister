@@ -83,6 +83,7 @@ export interface HitlDecisionControlsLabels extends ConsensusCardMappedLabels {
   decisionApprove: string;
   decisionRework: string;
   permissionAllowOnce?: string;
+  permissionAllowWithUpdates?: string;
   permissionAllowAlways?: string;
   permissionReject?: string;
   sendBackWithComments: string;
@@ -451,7 +452,11 @@ export interface HitlDecisionControlsProps {
   onSubmitForm: () => void;
 }
 
-type PermissionOptionMeaning = "allow_once" | "allow_always" | "reject";
+type PermissionOptionMeaning =
+  | "allow_once"
+  | "allow_with_updates"
+  | "allow_always"
+  | "reject";
 
 function normalizedPermissionOption(value: string): string {
   return value
@@ -472,6 +477,8 @@ function permissionOptionMeaning(
     return "allow_once";
   }
 
+  if (values.has("allow-with-updates")) return "allow_with_updates";
+
   if (values.has("allow-always")) return "allow_always";
 
   if (values.has("reject") || values.has("reject-once")) {
@@ -485,12 +492,17 @@ export function permissionOptionLabel(
   option: HitlOption,
   labels: Pick<
     HitlDecisionControlsLabels,
-    "permissionAllowOnce" | "permissionAllowAlways" | "permissionReject"
+    | "permissionAllowOnce"
+    | "permissionAllowWithUpdates"
+    | "permissionAllowAlways"
+    | "permissionReject"
   >,
 ): string {
   switch (permissionOptionMeaning(option)) {
     case "allow_once":
       return labels.permissionAllowOnce ?? option.label;
+    case "allow_with_updates":
+      return labels.permissionAllowWithUpdates ?? option.label;
     case "allow_always":
       return labels.permissionAllowAlways ?? option.label;
     case "reject":

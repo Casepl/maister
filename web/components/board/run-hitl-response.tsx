@@ -617,6 +617,7 @@ export function RunHitlResponse({
     decisionApprove: t("decisionApprove"),
     decisionRework: t("decisionRework"),
     permissionAllowOnce: t("permissionAllowOnce"),
+    permissionAllowWithUpdates: t("permissionAllowWithUpdates"),
     permissionAllowAlways: t("permissionAllowAlways"),
     permissionReject: t("permissionReject"),
     sendBackWithComments: t("sendBackWithComments"),
