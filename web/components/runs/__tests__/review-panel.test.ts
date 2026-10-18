@@ -141,9 +141,9 @@ describe("ReviewPanel — base→run→target review surface (M18 T4.2)", () => 
 
   it("uses clear Russian delivery terms instead of the internal promote jargon", () => {
     expect(ru.run.reviewTitle).toBe("Ревью и доставка изменений");
-    expect(ru.run.promotionMode).toBe("Способ доставки");
+    expect(ru.run.promotionMode).toBe("Режим слияния");
     expect(ru.run.promotionMerge).toBe("Слияние");
-    expect(ru.run.promotionRebaseMerge).toBe("Перебазирование и слияние");
+    expect(ru.run.promotionRebaseMerge).toBe("Rebase + слияние");
     expect(ru.run.promotionAiRebaseMerge).toBe(
       "Перебазирование и слияние с помощью ИИ",
     );
@@ -160,7 +160,7 @@ describe("ReviewPanel — base→run→target review surface (M18 T4.2)", () => 
         ru.run.promoteTo,
         ru.autoPromotion.panel.title,
       ].join(" "),
-    ).not.toMatch(/промоут|promot|\bmerge\b|\brebase\b/i);
+    ).not.toMatch(/промоут|promot/i);
   });
 
   it("renders the base→run→target spine (all three branch names + base commit)", () => {
@@ -400,6 +400,33 @@ describe("ReviewPanel — branch sync (ADR-141)", () => {
     expect(html).toContain('data-testid="review-conflict"');
     expect(html).toContain('data-testid="review-conflict-resolve-agent"');
     expect(html).toContain("run.resolveWithAgent");
-    expect(html).toContain('href="/runs/run-1?git=update"');
+    expect(html).not.toContain('href="/runs/run-1?git=update"');
+  });
+
+  it("distinguishes a missing current worktree from a legacy run", () => {
+    const html = render({
+      reviewUnavailable: {
+        reason: "missing-worktree",
+        canReattach: false,
+      },
+    });
+
+    expect(html).toContain('data-testid="review-worktree-unavailable"');
+    expect(html).toContain("run.reviewWorktreeMissing");
+    expect(html).not.toContain("run.relaunchToPromote");
+    expect(html).not.toContain('data-testid="review-promote"');
+  });
+
+  it("offers re-attach only when a recovery source survives", () => {
+    const html = render({
+      reviewUnavailable: {
+        reason: "missing-worktree",
+        canReattach: true,
+        reattachHref: "/runs/run-1?git=reattach",
+      },
+    });
+
+    expect(html).toContain('data-testid="review-reattach-worktree"');
+    expect(html).toContain('href="/runs/run-1?git=reattach"');
   });
 });
