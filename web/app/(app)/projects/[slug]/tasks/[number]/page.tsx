@@ -53,6 +53,7 @@ import {
 import { resolveTaskLaunchConfig } from "@/lib/runs/task-launch-config";
 import { getPlatformStatus } from "@/lib/execution-host";
 import { formatTokenCount } from "@/lib/runs/cost-summary-facts";
+import { isLiveRunStatus } from "@/lib/runs/live-inspector";
 
 const DELIVERY_STRATEGY_LABEL: Record<string, string> = {
   merge: "strategyMerge",
@@ -568,6 +569,10 @@ export default async function TaskDetailPage({
                   agentPickerLabel: t("agentPickerLabel"),
                   errorGeneric: t("agentActionFailed"),
                 }}
+                showSendToTriage={
+                  !detail.latestFlowRun ||
+                  !isLiveRunStatus(detail.latestFlowRun.status)
+                }
                 slug={slug}
                 taskId={detail.task.id}
                 taskNumber={detail.task.number}

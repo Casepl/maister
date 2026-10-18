@@ -2337,7 +2337,7 @@
     "inspectorActionViewUncommittedDiff": "Открыть незакоммиченный диф",
     "inspectorActionOpenPendingInput": "К ожидающему вводу",
     "inspectorActionOpenAgentChat": "К чату с агентом",
-    "pendingTitle": "Ждёт вашего ответа",
+    "pendingTitle": "Требуется ваш ответ",
     "pendingCount": "(запросов: {count})",
     "responseLabel": "Ответ (JSON)",
     "responseHint": "Введите JSON-значение по схеме ниже.",
@@ -2932,7 +2932,9 @@
     "targetLabel": "Целевой узел",
     "targetRecommended": "{node} (рекомендуется)",
     "default": "по умолчанию",
-    "interruptNode": "Прервать узел"
+    "interruptControlTitle": "Управление текущим шагом",
+    "interruptNode": "Остановить текущий шаг",
+    "interruptNodeHelp": "Остановит только текущий шаг Flow. Запуск и рабочая копия сохранятся — затем можно выбрать, как продолжить."
   },
   "evidence": {
     "title": "Граф свидетельств",

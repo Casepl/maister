@@ -455,6 +455,7 @@ export default async function RunDetailLayout({
   const tReadiness = await getTranslations("readiness");
   const tWorkbench = await getTranslations("workbench");
   const tLifecycle = await getTranslations("workbenchLifecycle");
+  const tNodeInterrupt = await getTranslations("nodeInterrupt");
 
   const evidenceLabels: EvidenceGraphLabels = {
     title: tEvidence("title"),
@@ -1423,6 +1424,57 @@ export default async function RunDetailLayout({
       </>
     ) : null;
 
+  const primaryResult =
+    flowGraphData || showAgentCenter ? (
+      <section className="min-w-0 max-w-full" data-testid="run-primary-result">
+        {flowGraphData ? (
+          <FlowRunCenter
+            graphView={
+              <FlowGraphViewSection
+                labels={flowGraphData.labels}
+                layout={flowGraphData.layout}
+                nodeTooltips={flowGraphData.nodeTooltips}
+                runContext={{
+                  runId: detail.runId,
+                  initialStatuses: flowGraphData.statuses.nodes,
+                  currentStepId: flowGraphData.statuses.currentStepId,
+                  runStatus: detail.status,
+                  restrictedNodeIds: settings
+                    ? settings.nodes
+                        .filter((n) => n.classes.length > 0)
+                        .map((n) => n.nodeId)
+                    : [],
+                }}
+                topology={flowGraphData.topology}
+              />
+            }
+            labels={flowRunCenterLabels}
+            locale={locale}
+            result={flowResultDto}
+          />
+        ) : (
+          <>
+            <AgentRunCenter
+              labels={agentRunCenterLabels}
+              result={flowResultDto}
+            />
+            <AgentRunTranscript
+              defaultOpen
+              labels={flowRunCenterLabels.transcript}
+              live={isLiveRunStatus(detail.status)}
+              runId={detail.runId}
+            />
+          </>
+        )}
+        {isOrchestratorRun ? (
+          <OrchestratorRunSubtree
+            childRuns={childRuns}
+            labels={orchestratorSubtreeLabels}
+          />
+        ) : null}
+      </section>
+    ) : null;
+
   return (
     <RunStreamProvider runId={detail.runId} runStatus={detail.status}>
       <RunLiveRefresh
@@ -1604,58 +1656,7 @@ export default async function RunDetailLayout({
             </section>
           ) : null}
 
-          {flowGraphData || showAgentCenter ? (
-            <section
-              className="min-w-0 max-w-full"
-              data-testid="run-primary-result"
-            >
-              {flowGraphData ? (
-                <FlowRunCenter
-                  graphView={
-                    <FlowGraphViewSection
-                      labels={flowGraphData.labels}
-                      layout={flowGraphData.layout}
-                      nodeTooltips={flowGraphData.nodeTooltips}
-                      runContext={{
-                        runId: detail.runId,
-                        initialStatuses: flowGraphData.statuses.nodes,
-                        currentStepId: flowGraphData.statuses.currentStepId,
-                        runStatus: detail.status,
-                        restrictedNodeIds: settings
-                          ? settings.nodes
-                              .filter((n) => n.classes.length > 0)
-                              .map((n) => n.nodeId)
-                          : [],
-                      }}
-                      topology={flowGraphData.topology}
-                    />
-                  }
-                  labels={flowRunCenterLabels}
-                  locale={locale}
-                  result={flowResultDto}
-                />
-              ) : (
-                <>
-                  <AgentRunCenter
-                    labels={agentRunCenterLabels}
-                    result={flowResultDto}
-                  />
-                  <AgentRunTranscript
-                    defaultOpen
-                    labels={flowRunCenterLabels.transcript}
-                    live={isLiveRunStatus(detail.status)}
-                    runId={detail.runId}
-                  />
-                </>
-              )}
-              {isOrchestratorRun ? (
-                <OrchestratorRunSubtree
-                  childRuns={childRuns}
-                  labels={orchestratorSubtreeLabels}
-                />
-              ) : null}
-            </section>
-          ) : null}
+          {!detail.pendingHitl || isCutoverHistory ? primaryResult : null}
 
           {detail.status === "Failed" || detail.status === "Abandoned" ? (
             <TerminalCauseNotice
@@ -1971,6 +1972,8 @@ export default async function RunDetailLayout({
             </section>
           ))}
 
+          {detail.pendingHitl && !isCutoverHistory ? primaryResult : null}
+
           {!hasReviewGate ? (
             <ReviewWorkspaceUnavailable
               message={t("reviewWorkspaceUnavailable")}
@@ -1985,7 +1988,7 @@ export default async function RunDetailLayout({
           {canInterruptNode ? (
             <section className="mt-6 rounded-[14px] border border-line bg-ivory p-5">
               <h2 className="mb-3 inline-flex items-center gap-2 font-sans text-[14px] font-bold tracking-[-0.01em] text-ink before:h-[7px] before:w-[7px] before:rounded-full before:bg-amber before:content-['']">
-                {t("handoff")}
+                {tNodeInterrupt("interruptControlTitle")}
               </h2>
               <NodeInterruptTrigger canAct={canAct} runId={detail.runId} />
             </section>
