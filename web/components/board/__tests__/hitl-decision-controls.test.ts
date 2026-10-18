@@ -59,6 +59,9 @@ const LABELS = {
   reviewComments: "run.reviewComments",
   decisionApprove: "run.decisionApprove",
   decisionRework: "run.decisionRework",
+  permissionAllowOnce: "Разрешить один раз",
+  permissionAllowAlways: "Разрешать всегда",
+  permissionReject: "Отклонить",
   sendBackWithComments: "run.sendBackWithComments",
   responseLabel: "run.responseLabel",
   responseHint: "run.responseHint",
@@ -330,10 +333,11 @@ describe("HitlDecisionControls — pure HITL response rendering (M17 P4)", () =>
   });
 
   describe("permission branch", () => {
-    it("renders option buttons", () => {
+    it("localizes standard ACP option labels without changing custom labels", () => {
       const options: HitlOption[] = [
-        { optionId: "allow", label: "Allow this request" },
-        { optionId: "deny", label: "Deny" },
+        { optionId: "allow-once", label: "allow-once" },
+        { optionId: "reject", label: "reject" },
+        { optionId: "allow-with-updates", label: "Allow with updates" },
       ];
 
       const html = render({
@@ -341,8 +345,11 @@ describe("HitlDecisionControls — pure HITL response rendering (M17 P4)", () =>
         options,
       });
 
-      expect(html).toContain("Allow this request");
-      expect(html).toContain("Deny");
+      expect(html).toContain("Разрешить один раз");
+      expect(html).toContain("Отклонить");
+      expect(html).toContain("Allow with updates");
+      expect(html).not.toContain(">allow-once<");
+      expect(html).not.toContain(">reject<");
     });
   });
 

@@ -82,6 +82,9 @@ export interface HitlDecisionControlsLabels extends ConsensusCardMappedLabels {
   reviewComments: string;
   decisionApprove: string;
   decisionRework: string;
+  permissionAllowOnce?: string;
+  permissionAllowAlways?: string;
+  permissionReject?: string;
   sendBackWithComments: string;
   responseLabel: string;
   responseHint: string;
@@ -446,6 +449,59 @@ export interface HitlDecisionControlsProps {
   onOption: (optionId: string) => void;
   onSubmitJson: () => void;
   onSubmitForm: () => void;
+}
+
+type PermissionOptionMeaning = "allow_once" | "allow_always" | "reject";
+
+function normalizedPermissionOption(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, "-");
+}
+
+function permissionOptionMeaning(
+  option: HitlOption,
+): PermissionOptionMeaning | null {
+  const values = new Set([
+    normalizedPermissionOption(option.optionId),
+    normalizedPermissionOption(option.label),
+  ]);
+
+  if (values.has("allow-once")) {
+    return "allow_once";
+  }
+
+  if (values.has("allow-always")) return "allow_always";
+
+  if (values.has("reject") || values.has("reject-once")) {
+    return "reject";
+  }
+
+  return null;
+}
+
+export function permissionOptionLabel(
+  option: HitlOption,
+  labels: Pick<
+    HitlDecisionControlsLabels,
+    "permissionAllowOnce" | "permissionAllowAlways" | "permissionReject"
+  >,
+): string {
+  switch (permissionOptionMeaning(option)) {
+    case "allow_once":
+      return labels.permissionAllowOnce ?? option.label;
+    case "allow_always":
+      return labels.permissionAllowAlways ?? option.label;
+    case "reject":
+      return labels.permissionReject ?? option.label;
+    default:
+      return option.label;
+  }
+}
+
+function isRejectPermissionOption(option: HitlOption): boolean {
+  return permissionOptionMeaning(option) === "reject";
 }
 
 // Structural view of the watchdog-stamped budget_breach `schema` (LOCKED in the
@@ -1632,7 +1688,7 @@ export function HitlDecisionControls({
               key={opt.optionId}
               className={clsx(
                 "rounded-lg border px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-[0.06em]",
-                opt.optionId.includes("deny")
+                isRejectPermissionOption(opt)
                   ? "border-line bg-paper text-mute hover:border-mute hover:text-ink-2"
                   : "border-amber bg-amber text-white shadow-[0_4px_12px_-6px_var(--amber)] hover:bg-amber-2",
                 disabled && "opacity-60",
@@ -1641,7 +1697,7 @@ export function HitlDecisionControls({
               type="button"
               onClick={() => onOption(opt.optionId)}
             >
-              {opt.label}
+              {permissionOptionLabel(opt, labels)}
             </button>
           ))}
         </div>
