@@ -4,6 +4,9 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ReviewPanel } from "@/components/runs/review-panel";
+import ru from "@/messages/ru.json";
+
 // ---------------------------------------------------------------------------
 // CONTRACT under test — `components/runs/review-panel.tsx` (M18 T4.2).
 //
@@ -49,8 +52,6 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
   usePathname: () => "/runs/run-1",
 }));
-
-import { ReviewPanel } from "@/components/runs/review-panel";
 
 const READY: ReadinessDTO = {
   readiness: "ready",
@@ -133,6 +134,30 @@ function render(over: Partial<ReviewPanelProps> = {}): string {
 describe("ReviewPanel — base→run→target review surface (M18 T4.2)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("uses clear Russian delivery terms instead of the internal promote jargon", () => {
+    expect(ru.run.reviewTitle).toBe("Ревью и доставка изменений");
+    expect(ru.run.promotionMode).toBe("Способ доставки");
+    expect(ru.run.promotionMerge).toBe("Слияние");
+    expect(ru.run.promotionRebaseMerge).toBe("Перебазирование и слияние");
+    expect(ru.run.promotionAiRebaseMerge).toBe(
+      "Перебазирование и слияние с помощью ИИ",
+    );
+    expect(ru.run.promoteTo).toBe("Доставить в");
+    expect(ru.autoPromotion.panel.title).toBe("Автоматическая доставка");
+
+    expect(
+      [
+        ru.run.reviewTitle,
+        ru.run.promotionMode,
+        ru.run.promotionMerge,
+        ru.run.promotionRebaseMerge,
+        ru.run.promotionAiRebaseMerge,
+        ru.run.promoteTo,
+        ru.autoPromotion.panel.title,
+      ].join(" "),
+    ).not.toMatch(/промоут|promot|\bmerge\b|\brebase\b/i);
   });
 
   it("renders the base→run→target spine (all three branch names + base commit)", () => {

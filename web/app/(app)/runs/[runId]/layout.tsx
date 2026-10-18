@@ -633,6 +633,7 @@ export default async function RunDetailLayout({
     title: t("capabilityTitle"),
     subtitle: t("capabilitySubtitle"),
     digestLabel: t("capabilityDigest"),
+    digestHint: t("capabilityDigestHint"),
     revisionLabel: t("capabilityRevision"),
     enforcedLabel: t("capabilityEnforced"),
     instructedLabel: t("capabilityInstructed"),
@@ -704,6 +705,11 @@ export default async function RunDetailLayout({
   // gate (one threads query + at most one diff prep, per the D5 perf rule);
   // every other run pays nothing.
   const hasReviewGate = isFlowReviewGate(detail.runKind, detail.pendingHitl);
+  const planDecisionHitls = hasReviewGate
+    ? detail.pendingHitls
+        .slice(1)
+        .filter((pendingHitl) => pendingHitl.kind === "decision_request")
+    : [];
   let reviewGateCounts: ReviewThreadCounts | null = null;
   let gateDiffReview: RunDiffReviewContext | undefined;
   const flowResultDegradations: FlowResultDegradationCode[] = [];
@@ -1776,6 +1782,55 @@ export default async function RunDetailLayout({
                       status={detail.pendingHitl.assignmentStatus}
                     />
                   </div>
+                  {planDecisionHitls.length > 0 ? (
+                    <section
+                      className="mb-4 rounded-[12px] border border-amber-line bg-paper p-4"
+                      data-testid="plan-decision-group"
+                      id="plan-decisions"
+                    >
+                      <h3 className="font-sans text-[15px] font-bold tracking-[-0.01em] text-ink">
+                        {t("planDecisionGroupTitle")}
+                      </h3>
+                      <p className="mt-1 font-mono text-[11px] leading-[1.5] text-mute">
+                        {t("planDecisionGroupHint", {
+                          count: planDecisionHitls.length,
+                        })}
+                      </p>
+                      <div className="mt-4 grid gap-3">
+                        {planDecisionHitls.map((pendingHitl) => (
+                          <div
+                            key={pendingHitl.hitlRequestId}
+                            className="rounded-[10px] border border-line bg-ivory/45 p-4"
+                            data-pending-hitl-card="true"
+                            data-testid="pending-plan-decision"
+                            tabIndex={-1}
+                          >
+                            <p className="mb-3 text-[14px] leading-[1.4] text-ink">
+                              {pendingHitl.prompt}
+                            </p>
+                            <RunHitlResponse
+                              restoreFocusAfterResponse
+                              answerState={pendingHitl.answerState}
+                              availableOptions={pendingHitl.availableOptions}
+                              budgetProgress={pendingHitl.budgetProgress}
+                              canAct={canAct}
+                              canReadRepoFiles={canReadRepoFiles}
+                              claimStage={pendingHitl.claimStage}
+                              criticality={pendingHitl.criticality}
+                              hitlRequestId={pendingHitl.hitlRequestId}
+                              kind={pendingHitl.kind}
+                              nodeInterrupt={pendingHitl.nodeInterrupt}
+                              options={pendingHitl.options}
+                              reviewCounts={null}
+                              runId={detail.runId}
+                              schema={pendingHitl.schema}
+                              storedResponse={pendingHitl.storedResponse}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  ) : null}
                   {detail.pendingHitl &&
                   (detail.pendingHitl.kind === "human" ||
                     detail.pendingHitl.kind === "form") ? (
@@ -1831,6 +1886,7 @@ export default async function RunDetailLayout({
                           unstaged: dirtySummary?.unstaged ?? 0,
                           untracked: dirtySummary?.untracked ?? 0,
                         }),
+                        hint: t("dirtyHint"),
                         viewDiff: t("dirtyViewDiff"),
                         commit: t("dirtyCommit"),
                         discard: t("dirtyDiscard"),
@@ -1917,55 +1973,61 @@ export default async function RunDetailLayout({
             </p>
           )}
 
-          {detail.pendingHitls.slice(1).map((pendingHitl) => (
-            <section
-              key={pendingHitl.hitlRequestId}
-              className="mt-4 rounded-[14px] border border-amber-line bg-[color-mix(in_oklab,var(--amber-soft)_25%,var(--paper))] p-5"
-              data-pending-hitl-card="true"
-              data-testid="pending-input-card"
-              tabIndex={-1}
-            >
-              <p className="mb-3 text-[14px] leading-[1.4] text-ink">
-                {pendingHitl.prompt}
-              </p>
-              <div className="mb-4 flex flex-wrap gap-2 font-mono text-[10.5px] tracking-[0.02em] text-mute">
-                {pendingHitl.assignmentActionKind ? (
+          {detail.pendingHitls
+            .slice(1)
+            .filter(
+              (pendingHitl) =>
+                !hasReviewGate || pendingHitl.kind !== "decision_request",
+            )
+            .map((pendingHitl) => (
+              <section
+                key={pendingHitl.hitlRequestId}
+                className="mt-4 rounded-[14px] border border-amber-line bg-[color-mix(in_oklab,var(--amber-soft)_25%,var(--paper))] p-5"
+                data-pending-hitl-card="true"
+                data-testid="pending-input-card"
+                tabIndex={-1}
+              >
+                <p className="mb-3 text-[14px] leading-[1.4] text-ink">
+                  {pendingHitl.prompt}
+                </p>
+                <div className="mb-4 flex flex-wrap gap-2 font-mono text-[10.5px] tracking-[0.02em] text-mute">
+                  {pendingHitl.assignmentActionKind ? (
+                    <span className="rounded-md border border-amber-line bg-paper px-2 py-1 font-semibold text-ink-2">
+                      {t("assignmentAction", {
+                        action: pendingHitl.assignmentActionKind,
+                      })}
+                    </span>
+                  ) : null}
                   <span className="rounded-md border border-amber-line bg-paper px-2 py-1 font-semibold text-ink-2">
-                    {t("assignmentAction", {
-                      action: pendingHitl.assignmentActionKind,
-                    })}
+                    {pendingHitl.assigneeLabel
+                      ? t("assignmentClaimedBy", {
+                          actor: pendingHitl.assigneeLabel,
+                        })
+                      : t("assignmentUnclaimed")}
                   </span>
-                ) : null}
-                <span className="rounded-md border border-amber-line bg-paper px-2 py-1 font-semibold text-ink-2">
-                  {pendingHitl.assigneeLabel
-                    ? t("assignmentClaimedBy", {
-                        actor: pendingHitl.assigneeLabel,
-                      })
-                    : t("assignmentUnclaimed")}
-                </span>
-              </div>
-              <RunHitlResponse
-                restoreFocusAfterResponse
-                answerState={pendingHitl.answerState}
-                availableOptions={pendingHitl.availableOptions}
-                budgetProgress={pendingHitl.budgetProgress}
-                canAct={canAct}
-                canReadRepoFiles={canReadRepoFiles}
-                claimStage={pendingHitl.claimStage}
-                criticality={pendingHitl.criticality}
-                hitlRequestId={pendingHitl.hitlRequestId}
-                kind={pendingHitl.kind}
-                nodeInterrupt={pendingHitl.nodeInterrupt}
-                options={pendingHitl.options}
-                reviewCounts={
-                  pendingHitl.kind === "human" ? reviewGateCounts : null
-                }
-                runId={detail.runId}
-                schema={pendingHitl.schema}
-                storedResponse={pendingHitl.storedResponse}
-              />
-            </section>
-          ))}
+                </div>
+                <RunHitlResponse
+                  restoreFocusAfterResponse
+                  answerState={pendingHitl.answerState}
+                  availableOptions={pendingHitl.availableOptions}
+                  budgetProgress={pendingHitl.budgetProgress}
+                  canAct={canAct}
+                  canReadRepoFiles={canReadRepoFiles}
+                  claimStage={pendingHitl.claimStage}
+                  criticality={pendingHitl.criticality}
+                  hitlRequestId={pendingHitl.hitlRequestId}
+                  kind={pendingHitl.kind}
+                  nodeInterrupt={pendingHitl.nodeInterrupt}
+                  options={pendingHitl.options}
+                  reviewCounts={
+                    pendingHitl.kind === "human" ? reviewGateCounts : null
+                  }
+                  runId={detail.runId}
+                  schema={pendingHitl.schema}
+                  storedResponse={pendingHitl.storedResponse}
+                />
+              </section>
+            ))}
 
           {!hasReviewGate ? (
             <ReviewWorkspaceUnavailable
