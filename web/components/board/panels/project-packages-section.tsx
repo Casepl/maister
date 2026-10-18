@@ -27,7 +27,7 @@ async function call(
   url: string,
   method: "POST" | "DELETE",
   body?: unknown,
-): Promise<{ ok: boolean; writeBack?: string }> {
+): Promise<{ ok: boolean; writeBack?: string; message?: string }> {
   const res = await fetch(url, {
     method,
     headers: { "content-type": "application/json" },
@@ -35,10 +35,11 @@ async function call(
   });
   const payload = (await res.json().catch(() => null)) as {
     writeBack?: string;
+    message?: string;
   } | null;
 
   if (!res.ok) {
-    return { ok: false };
+    return { ok: false, message: payload?.message };
   }
 
   return { ok: true, writeBack: payload?.writeBack };
@@ -85,8 +86,12 @@ export function ProjectPackagesSection({
     if (notice) noticeRef.current?.focus();
   }, [notice]);
 
-  function surface(result: { ok: boolean; writeBack?: string }): void {
-    if (!result.ok) setNotice(t("errorGeneric"));
+  function surface(result: {
+    ok: boolean;
+    writeBack?: string;
+    message?: string;
+  }): void {
+    if (!result.ok) setNotice(result.message ?? t("errorGeneric"));
     else if (result.writeBack === "failed")
       setNotice(t("attachWriteBackFailed"));
     else setNotice(null);
