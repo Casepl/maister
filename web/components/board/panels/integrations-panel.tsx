@@ -92,6 +92,7 @@ export interface TokenLabels {
   scopeRelationsDelete: string;
   scopeFlowsRead: string;
   scopeRunnersRead: string;
+  scopePackagesManage: string;
   scopeAgentsTrigger: string;
   scopeRunsDelegate: string;
   scopeRunsCollect: string;
@@ -180,6 +181,8 @@ function scopeLabel(labels: TokenLabels, scope: string): string {
       return labels.scopeFlowsRead;
     case "runners:read":
       return labels.scopeRunnersRead;
+    case "packages:manage":
+      return labels.scopePackagesManage;
     case "agents:trigger":
       return labels.scopeAgentsTrigger;
     case "runs:delegate":
@@ -435,6 +438,7 @@ export async function IntegrationsPanel({
     scopeRelationsDelete: t("scopeRelationsDelete"),
     scopeFlowsRead: t("scopeFlowsRead"),
     scopeRunnersRead: t("scopeRunnersRead"),
+    scopePackagesManage: t("scopePackagesManage"),
     scopeAgentsTrigger: t("scopeAgentsTrigger"),
     scopeRunsDelegate: t("scopeRunsDelegate"),
     scopeRunsCollect: t("scopeRunsCollect"),

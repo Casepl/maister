@@ -152,6 +152,7 @@ export const PROJECT_ACTION_BY_SCOPE: Partial<Record<string, ProjectAction>> = {
   "relations:delete": "manageTaskRelations",
   "flows:read": "readBoard",
   "runners:read": "readBoard",
+  "packages:manage": "managePackages",
   "runs:launch": "launchRun",
   "runs:message": "launchRun",
   "runs:cancel": "recoverRun",

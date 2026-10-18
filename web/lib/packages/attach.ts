@@ -1078,6 +1078,9 @@ export async function upgradeAttachment(opts: {
   projectSlug: string;
   attachmentId: string;
   packageInstallId: string;
+  // Optional compare-and-swap guard for external/headless callers. Internal
+  // callers keep their existing behaviour when it is omitted.
+  expectedPackageInstallId?: string;
   workspaceRoot?: string;
   // FIXME(any): dual drizzle-orm peer-dep variants.
   db?: any;
@@ -1087,6 +1090,17 @@ export async function upgradeAttachment(opts: {
   const att = await loadAttachment(db, opts.projectId, opts.attachmentId);
 
   if (!att) return null;
+
+  if (
+    opts.expectedPackageInstallId !== undefined &&
+    att.packageInstallId !== opts.expectedPackageInstallId
+  ) {
+    throw new MaisterError(
+      "CONFLICT",
+      "package attachment changed since it was read; refresh and retry",
+      { details: { reason: "stale_attachment_revision" } },
+    );
+  }
 
   const [next] = await db
     .select()
@@ -1106,6 +1120,10 @@ export async function upgradeAttachment(opts: {
       "PRECONDITION",
       `package install ${next.id} is ${next.packageStatus}, not Installed`,
     );
+  }
+
+  if (next.id === att.packageInstallId) {
+    return { upgraded: false };
   }
 
   const [previous] = await db
@@ -1158,10 +1176,29 @@ export async function upgradeAttachment(opts: {
     );
     await tx.delete(flows).where(removedFlowWhere);
 
-    await tx
+    const updated = await tx
       .update(projectPackageAttachments)
       .set({ packageInstallId: next.id })
-      .where(eq(projectPackageAttachments.id, att.id));
+      .where(
+        opts.expectedPackageInstallId === undefined
+          ? eq(projectPackageAttachments.id, att.id)
+          : and(
+              eq(projectPackageAttachments.id, att.id),
+              eq(
+                projectPackageAttachments.packageInstallId,
+                opts.expectedPackageInstallId,
+              ),
+            ),
+      )
+      .returning({ id: projectPackageAttachments.id });
+
+    if (updated.length === 0) {
+      throw new MaisterError(
+        "CONFLICT",
+        "package attachment changed since it was read; refresh and retry",
+        { details: { reason: "stale_attachment_revision" } },
+      );
+    }
   });
 
   const capRows = await db
