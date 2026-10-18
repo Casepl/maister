@@ -81,8 +81,10 @@ import { RunShell, type RunShellLabels } from "@/components/runs/run-shell";
 import { ExecutionPolicyBadge } from "@/components/runs/execution-policy-badge";
 import {
   ReviewPanel,
+  type ReviewPanelConflict,
   type ReviewPanelDiff,
   type ReviewPanelLabels,
+  type ReviewPanelUnavailable,
 } from "@/components/runs/review-panel";
 import FileTree, {
   type FileTreeLabels,
@@ -144,6 +146,7 @@ import {
   statusPorcelain,
 } from "@/lib/worktree";
 import { buildRunSyncPanelData } from "@/lib/runs/sync-panel-data";
+import { findActiveAssignmentForRun } from "@/lib/assignments/service";
 import { gitPanelHref } from "@/lib/workbench-git/panel-link";
 import { deliveryPolicyFromLegacyPromotionMode } from "@/lib/runs/delivery-policy";
 import {
@@ -196,6 +199,7 @@ async function buildReviewPanelData(detail: RunDetailForReview): Promise<{
   diff: ReviewPanelDiff;
   driftDetected: boolean;
   legacyNeedsRelaunch: boolean;
+  reviewUnavailable: ReviewPanelUnavailable | null;
 }> {
   const targetBranch = detail.targetBranch ?? detail.projectMainBranch;
   const deliveryPolicy =
@@ -205,6 +209,27 @@ async function buildReviewPanelData(detail: RunDetailForReview): Promise<{
       projectMainBranch: targetBranch,
     });
   const promotionMode = deliveryPolicy.strategy;
+
+  // Missing current worktree is an operational lifecycle state, not evidence
+  // that the row predates branch targeting. Keep the recorded branch metadata
+  // visible and route the owner to re-attach only when a source actually exists.
+  if (detail.lifecycleFacts.worktreePresent === false) {
+    return {
+      baseBranch: detail.baseBranch,
+      baseCommit: detail.baseCommit,
+      targetBranch,
+      reviewedTargetCommit: null,
+      promotionMode,
+      deliveryPolicy,
+      diff: EMPTY_DIFF,
+      driftDetected: false,
+      legacyNeedsRelaunch: false,
+      reviewUnavailable: {
+        reason: "missing-worktree",
+        canReattach: detail.lifecycleFacts.reattachSource === true,
+      },
+    };
+  }
 
   // The diff base: the EXACT commit the run forked from (a stable point — the
   // target branch may have advanced since), else the recorded base branch, else
@@ -234,6 +259,7 @@ async function buildReviewPanelData(detail: RunDetailForReview): Promise<{
         diff: EMPTY_DIFF,
         driftDetected: false,
         legacyNeedsRelaunch: true,
+        reviewUnavailable: null,
       };
     }
   }
@@ -270,6 +296,7 @@ async function buildReviewPanelData(detail: RunDetailForReview): Promise<{
     diff,
     driftDetected: false,
     legacyNeedsRelaunch: false,
+    reviewUnavailable: null,
   };
 }
 
@@ -781,13 +808,14 @@ export default async function RunDetailLayout({
   let reviewReadiness = null;
   let syncPanel: Awaited<ReturnType<typeof buildRunSyncPanelData>> | null =
     null;
+  let reviewConflict: ReviewPanelConflict | undefined;
 
   if (showReview) {
     try {
       reviewData = await buildReviewPanelData(detail);
     } catch (err) {
-      // A derivation failure that is not a clean legacy-relaunch case (e.g. the
-      // worktree is gone): fall back to the relaunch state rather than crash.
+      // A current run whose review data cannot be read is not a legacy row.
+      // Preserve its target metadata and render an explicit unavailable state.
       if (isMaisterError(err)) {
         const fallbackPolicy =
           detail.deliveryPolicySnapshot ??
@@ -799,13 +827,17 @@ export default async function RunDetailLayout({
         reviewData = {
           baseBranch: detail.baseBranch,
           baseCommit: detail.baseCommit,
-          targetBranch: null,
+          targetBranch: detail.targetBranch ?? detail.projectMainBranch,
           reviewedTargetCommit: null,
           promotionMode: fallbackPolicy.strategy,
           deliveryPolicy: fallbackPolicy,
           diff: EMPTY_DIFF,
           driftDetected: false,
-          legacyNeedsRelaunch: true,
+          legacyNeedsRelaunch: false,
+          reviewUnavailable: {
+            reason: "diff-error",
+            canReattach: detail.lifecycleFacts.reattachSource === true,
+          },
         };
         flowResultDegradations.push("review-diff-fallback");
       } else {
@@ -815,11 +847,32 @@ export default async function RunDetailLayout({
 
     reviewReadiness = await getRunReadiness(detail.runId, detail.projectId);
 
+    const activeConflict = await findActiveAssignmentForRun({
+      runId: detail.runId,
+      actionKinds: ["merge_conflict"],
+    });
+
+    if (activeConflict) {
+      const conflictTarget =
+        activeConflict.ref ??
+        reviewData?.targetBranch ??
+        detail.projectMainBranch;
+      const conflictBranch = activeConflict.branch ?? detail.branch;
+
+      reviewConflict = {
+        parentRepoPath: detail.parentRepoPath,
+        targetBranch: conflictTarget,
+        runBranch: conflictBranch,
+        command: `git merge --no-ff ${conflictBranch}`,
+      };
+    }
+
     // ADR-141: behind/ahead + branch-sync dialog seed. Only when a
     // real target + worktree are known (never for the legacy-relaunch fallback).
     if (
       reviewData &&
       !reviewData.legacyNeedsRelaunch &&
+      !reviewData.reviewUnavailable &&
       reviewData.targetBranch
     ) {
       syncPanel = await buildRunSyncPanelData({
@@ -2147,6 +2200,7 @@ export default async function RunDetailLayout({
               baseBranch={reviewData.baseBranch}
               baseCommit={reviewData.baseCommit}
               canPromote={canAct}
+              conflict={reviewConflict}
               deliveryPolicy={reviewData.deliveryPolicy}
               diff={reviewData.diff}
               displayParentRepoPath={displayParentRepoPath}
@@ -2159,6 +2213,18 @@ export default async function RunDetailLayout({
               prUrl={detail.prUrl}
               promotionMode={reviewData.promotionMode}
               readiness={reviewReadiness}
+              reviewUnavailable={
+                reviewData.reviewUnavailable
+                  ? {
+                      ...reviewData.reviewUnavailable,
+                      reattachHref: gitPanelHref({
+                        runId: detail.runId,
+                        runKind: detail.runKind,
+                        actionId: "reattach",
+                      }),
+                    }
+                  : null
+              }
               reviewedTargetCommit={reviewData.reviewedTargetCommit}
               runBranch={detail.branch}
               runId={detail.runId}

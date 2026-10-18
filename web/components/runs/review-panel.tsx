@@ -82,6 +82,13 @@ export type ReviewPanelSync = {
   // Non-null ⇒ a sync claim is live (phase from the latest attempt); the panel
   // shows the phase and disables both promote and a second sync launch.
   inProgress: { phase: string } | null;
+  defaultRunnerId?: string | null;
+};
+
+export type ReviewPanelUnavailable = {
+  reason: "missing-worktree" | "diff-error";
+  canReattach: boolean;
+  reattachHref?: string | null;
 };
 
 export interface ReviewPanelProps {
@@ -106,6 +113,10 @@ export interface ReviewPanelProps {
   // A pre-M18 row whose branch metadata cannot be derived: the panel shows the
   // "relaunch to promote" PRECONDITION state instead of the Promote action.
   legacyNeedsRelaunch?: boolean;
+  // A current run whose workspace cannot be read is not a legacy run. Keep
+  // that operational failure distinct so the owner gets the right recovery
+  // action (or an honest terminal explanation when no source survives).
+  reviewUnavailable?: ReviewPanelUnavailable | null;
   // Server-resolved drift (the live target HEAD moved since this render): the
   // panel opens directly in the drift state offering "Promote anyway".
   driftDetected?: boolean;
@@ -194,6 +205,7 @@ export function ReviewPanel({
   parentRepoPath,
   displayParentRepoPath,
   legacyNeedsRelaunch = false,
+  reviewUnavailable = null,
   driftDetected = false,
   conflict,
   canPromote = true,
@@ -206,6 +218,7 @@ export function ReviewPanel({
   const router = useRouter();
   const [mode, setMode] = useState<PromotionMode>(promotionMode);
   const [busy, setBusy] = useState(false);
+  const [resolvingConflict, setResolvingConflict] = useState(false);
   const [promotionSlow, setPromotionSlow] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [drift, setDrift] = useState(driftDetected);
@@ -235,7 +248,7 @@ export function ReviewPanel({
     canPromote,
     reviewReady: readinessReady,
     diffTruncated: diff.truncated,
-    legacyNeedsRelaunch,
+    legacyNeedsRelaunch: legacyNeedsRelaunch || reviewUnavailable !== null,
     truncationAcknowledged: truncationAck,
     autoFinalize,
   };
@@ -316,9 +329,44 @@ export function ReviewPanel({
     }
   }
 
+  async function resolveConflictWithAgent(): Promise<void> {
+    setResolvingConflict(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/runs/${runId}/sync`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          onto: "target",
+          strategy: "rebase",
+          agent: true,
+          push: false,
+          ...(sync?.defaultRunnerId ? { runnerId: sync.defaultRunnerId } : {}),
+        }),
+      });
+
+      if (res.ok) {
+        router.refresh();
+
+        return;
+      }
+
+      const data = (await res.json().catch(() => null)) as {
+        code?: string;
+      } | null;
+
+      setError(t(resolveUiErrorMessageKey(data?.code)));
+    } catch {
+      setError(t("error.generic"));
+    } finally {
+      setResolvingConflict(false);
+    }
+  }
+
   return (
     <section
-      aria-busy={busy || syncClaimed}
+      aria-busy={busy || resolvingConflict || syncClaimed}
       className={clsx(shell, "mt-6 p-5")}
       data-testid="review-panel"
       id={id}
@@ -422,33 +470,61 @@ export function ReviewPanel({
         </div>
       ) : null}
 
-      {/* ADR-066 diff (server-built Shiki bundle, split/inline) */}
-      <div className="mb-4">
-        <DiffView
-          files={diff.files}
-          labels={{
-            empty: tWorkbench("diff.empty"),
-            bodyUnavailable: tWorkbench("diff.bodyUnavailable"),
-            added: tWorkbench("diff.added"),
-            removed: tWorkbench("diff.removed"),
-            displayMode: tWorkbench("diff.displayMode"),
-            rich: tWorkbench("diff.rich"),
-            raw: tWorkbench("diff.raw"),
-            filterFiles: tWorkbench("diff.filterFiles"),
-            filterFilesPlaceholder: tWorkbench("diff.filterFilesPlaceholder"),
-            filterNoMatches: tWorkbench("diff.filterNoMatches"),
-            showFiles: tWorkbench("diff.showFiles"),
-            hideFiles: tWorkbench("diff.hideFiles"),
-            refresh: tWorkbench("diff.refresh"),
-            viewMode: tWorkbench("diff.viewMode"),
-            split: tWorkbench("diff.split"),
-            unified: tWorkbench("diff.unified"),
-            truncated: tWorkbench("diff.truncated"),
-          }}
-          perFile={diff.perFile}
-          truncated={diff.truncated}
-        />
-      </div>
+      {reviewUnavailable ? (
+        <div
+          className="mb-4 rounded-[10px] border border-amber-line bg-amber-soft p-4 font-mono text-[11px] leading-[1.5] text-amber"
+          data-testid="review-worktree-unavailable"
+          role="alert"
+        >
+          <p>
+            {t(
+              reviewUnavailable.reason === "missing-worktree"
+                ? reviewUnavailable.canReattach
+                  ? "reviewWorktreeMissingRecoverable"
+                  : "reviewWorktreeMissing"
+                : "reviewDiffUnavailable",
+            )}
+          </p>
+          {reviewUnavailable.canReattach && reviewUnavailable.reattachHref ? (
+            <Link
+              className={clsx(syncLink, "mt-3")}
+              data-testid="review-reattach-worktree"
+              href={reviewUnavailable.reattachHref}
+              scroll={false}
+            >
+              {t("reattachWorktree")}
+            </Link>
+          ) : null}
+        </div>
+      ) : (
+        /* ADR-066 diff (server-built Shiki bundle, split/inline) */
+        <div className="mb-4">
+          <DiffView
+            files={diff.files}
+            labels={{
+              empty: tWorkbench("diff.empty"),
+              bodyUnavailable: tWorkbench("diff.bodyUnavailable"),
+              added: tWorkbench("diff.added"),
+              removed: tWorkbench("diff.removed"),
+              displayMode: tWorkbench("diff.displayMode"),
+              rich: tWorkbench("diff.rich"),
+              raw: tWorkbench("diff.raw"),
+              filterFiles: tWorkbench("diff.filterFiles"),
+              filterFilesPlaceholder: tWorkbench("diff.filterFilesPlaceholder"),
+              filterNoMatches: tWorkbench("diff.filterNoMatches"),
+              showFiles: tWorkbench("diff.showFiles"),
+              hideFiles: tWorkbench("diff.hideFiles"),
+              refresh: tWorkbench("diff.refresh"),
+              viewMode: tWorkbench("diff.viewMode"),
+              split: tWorkbench("diff.split"),
+              unified: tWorkbench("diff.unified"),
+              truncated: tWorkbench("diff.truncated"),
+            }}
+            perFile={diff.perFile}
+            truncated={diff.truncated}
+          />
+        </div>
+      )}
 
       {prUrl ? (
         <p className="mb-4 font-mono text-[11px]">
@@ -496,15 +572,28 @@ export function ReviewPanel({
               <dd className="inline font-bold">{conflictState.command}</dd>
             </div>
           </dl>
-          {sync && !syncClaimed && updateHref ? (
-            <Link
-              className={clsx(syncLink, "mt-3")}
+          {sync && !syncClaimed && !reviewUnavailable ? (
+            <Button
+              className="mt-3 border-[#d9534f]/40 bg-paper font-mono text-[10px] font-bold uppercase tracking-[0.06em] text-ink-2"
               data-testid="review-conflict-resolve-agent"
-              href={updateHref}
-              scroll={false}
+              isDisabled={resolvingConflict}
+              size="sm"
+              type="button"
+              variant="outline"
+              onClick={() => void resolveConflictWithAgent()}
             >
               {labels.resolveWithAgent}
-            </Link>
+            </Button>
+          ) : null}
+          {resolvingConflict ? (
+            <div className="mt-3">
+              <OperationStatus
+                detail={t("resolveInProgressHint")}
+                slow={false}
+                slowText={labels.operationTakingLonger}
+                title={t("resolveInProgress")}
+              />
+            </div>
           ) : null}
         </div>
       ) : null}
