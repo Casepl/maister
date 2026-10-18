@@ -5519,6 +5519,7 @@
     "webhookAttempts": "попыток: $count",
     "kinds": {
       "task_created": "задача создана",
+      "task_completed": "задача завершена",
       "comment_added": "комментарий",
       "task_mentioned": "упоминание",
       "relation_added": "связь добавлена",
