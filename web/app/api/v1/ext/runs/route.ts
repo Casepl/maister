@@ -46,13 +46,21 @@ const postBodySchema = z
     },
   );
 
+// Project resolution must tolerate fields that the public launch contract
+// rejects later. Otherwise an authenticated caller with a valid taskId gets a
+// misleading existence-hiding 404 before the work handler can return the
+// correct 422 CONFIG response for unsupported overrides.
+const projectResolutionBodySchema = z
+  .object({ taskId: z.string().min(1) })
+  .passthrough();
+
 export async function POST(
   req: NextRequest,
   _routeCtx: object,
 ): Promise<NextResponse> {
   const db = getDb() as Db;
   const resolveTaskProjectId = async ({ db: handlerDb }: { db: Db }) => {
-    const parsed = postBodySchema.safeParse(
+    const parsed = projectResolutionBodySchema.safeParse(
       await req
         .clone()
         .json()
@@ -84,7 +92,8 @@ export async function POST(
       idempotency: {
         kind: "run_launch",
         target: { route: "/api/v1/ext/runs" },
-        parseBody: async (request) => postBodySchema.parse(await request.json()),
+        parseBody: async (request) =>
+          postBodySchema.parse(await request.json()),
       },
       db,
     },
@@ -151,7 +160,13 @@ export async function POST(
                   statusCode: 202,
                   operationId: ctx.operationId,
                   operation: ctx.operationId
-                    ? { id: ctx.operationId, result: { statusCode: 202, body: { runId, status: "Pending" } } }
+                    ? {
+                        id: ctx.operationId,
+                        result: {
+                          statusCode: 202,
+                          body: { runId, status: "Pending" },
+                        },
+                      }
                     : undefined,
                 },
                 tx,
@@ -161,10 +176,13 @@ export async function POST(
         );
 
         if (ctx.operationId) {
-          await refreshSucceededLibrarianReceipt({
-            id: ctx.operationId,
-            result: { statusCode: 202, body: result },
-          }, db);
+          await refreshSucceededLibrarianReceipt(
+            {
+              id: ctx.operationId,
+              result: { statusCode: 202, body: result },
+            },
+            db,
+          );
         }
 
         return NextResponse.json(result, { status: 202 });

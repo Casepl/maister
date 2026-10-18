@@ -42,7 +42,7 @@ async function seedTaskRun(opts: SeedOptions = {}): Promise<{
     name: slug,
     repoPath: `/tmp/${slug}`,
     maisterYamlPath: `/tmp/${slug}/maister.yaml`,
-    taskKey: "CMP",
+    taskKey: `CMP${projectId.slice(0, 5)}`.toUpperCase(),
   });
   await db.insert(schema.flows).values({
     id: flowId,
