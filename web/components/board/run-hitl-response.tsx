@@ -30,6 +30,7 @@ import {
   coerceFormFieldValue,
   consensusHitlFromSchema,
   formFieldsFromSchema,
+  permissionOptionLabel,
 } from "@/components/board/hitl-decision-controls";
 import { requestPendingHitlFocus } from "@/components/board/pending-hitl-focus-restorer";
 import {
@@ -615,6 +616,9 @@ export function RunHitlResponse({
     reviewComments: t("reviewComments"),
     decisionApprove: t("decisionApprove"),
     decisionRework: t("decisionRework"),
+    permissionAllowOnce: t("permissionAllowOnce"),
+    permissionAllowAlways: t("permissionAllowAlways"),
+    permissionReject: t("permissionReject"),
     sendBackWithComments: t("sendBackWithComments"),
     responseLabel: t("responseLabel"),
     responseHint: t("responseHint"),
@@ -860,7 +864,9 @@ export function RunHitlResponse({
             </p>
           )}
           {savedOption ? (
-            <p className="font-semibold text-ink">{savedOption.label}</p>
+            <p className="font-semibold text-ink">
+              {permissionOptionLabel(savedOption, labels)}
+            </p>
           ) : null}
           {retryPayload && "response" in retryPayload ? (
             <div>
