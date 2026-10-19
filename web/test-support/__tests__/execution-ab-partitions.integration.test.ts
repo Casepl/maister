@@ -882,6 +882,15 @@ it("P4: delayed checkpoint ACK reaches its original handler after successor epoc
       },
       "hold-request",
     );
+    const successorPublication = stack.proxy.arm(
+      {
+        caseId: "P4-successor-publication",
+        method: "POST",
+        path: /^\/runtime-objects$/,
+        assignmentEpoch: 2,
+      },
+      "hold-requests",
+    );
     const restart = await stack.api(
       `/api/runs/${runId}/hitl/${hitlRequestId}/respond`,
       {
@@ -897,9 +906,12 @@ it("P4: delayed checkpoint ACK reaches its original handler after successor epoc
     expect(restart.status).toBe(202);
     events.release();
     receipt.release();
-    const creating = await successorCreate.awaitReached();
+    const publishing = await successorPublication.awaitReached();
 
-    expect(creating.assignmentEpoch).toBe(2);
+    expect(publishing.assignmentEpoch).toBe(2);
+    // Publication waits outside a database transaction after successor metadata
+    // commits. Keep session creation behind it while the original handler rejects
+    // its stale ACK, independently of capability transfer latency.
     expect(
       oldResponseSettled,
       "successor assignment commits before old handler settles",
@@ -938,8 +950,16 @@ it("P4: delayed checkpoint ACK reaches its original handler after successor epoc
           [runId],
         )
       ).rows[0].state;
-    const currentAttempts = await stack.database.pool.query<{ id: string }>(
-      `SELECT n.id FROM node_attempts n
+    const currentAttempts = await stack.database.pool.query<{
+      id: string;
+      enforcement_recorded: boolean;
+      materialization_recorded: boolean;
+      prompt_recorded: boolean;
+    }>(
+      `SELECT n.id, n.enforcement_snapshot IS NOT NULL AS enforcement_recorded,
+         n.materialization_plan IS NOT NULL AS materialization_recorded,
+         n.resolved_prompt IS NOT NULL AS prompt_recorded
+       FROM node_attempts n
        JOIN runs r ON r.id=n.run_id
        JOIN execution_assignments a ON a.id=r.execution_assignment_id
        WHERE n.run_id=$1 AND n.status='Running'
@@ -948,6 +968,11 @@ it("P4: delayed checkpoint ACK reaches its original handler after successor epoc
     );
 
     expect(currentAttempts.rows).toHaveLength(1);
+    expect(currentAttempts.rows[0]!).toMatchObject({
+      enforcement_recorded: true,
+      materialization_recorded: true,
+      prompt_recorded: true,
+    });
     expect(currentAttempts.rows[0]!.id).not.toBe(originalAttemptId);
     await stack.database.pool.query("TRUNCATE s52_stale_writes");
     const before = await snapshot();
@@ -971,6 +996,10 @@ it("P4: delayed checkpoint ACK reaches its original handler after successor epoc
     ).toEqual([]);
     expect(stale.status).toBe(409);
     expect(await stale.json()).toMatchObject({ code: "CONFLICT" });
+    successorPublication.release();
+    const creating = await successorCreate.awaitReached();
+
+    expect(creating.assignmentEpoch).toBe(2);
     successorCreate.release();
     const successor = await successorPrompt.awaitReached();
 
