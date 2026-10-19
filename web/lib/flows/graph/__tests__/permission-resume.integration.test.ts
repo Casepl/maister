@@ -5,7 +5,7 @@ import type { RecoverResult } from "@/lib/runs/recover";
 
 import { fork, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -13,6 +13,7 @@ import { DatabaseSync } from "node:sqlite";
 import { and, asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { atomicWriteJson } from "@/lib/atomic";
 import { interruptPermissionInputAcknowledgement as interruptPermissionAck } from "@/test-support/permission-ack-fault";
 import {
   domainEvents,
@@ -592,16 +593,13 @@ describe("Owned Flow checkpointed permission resume", () => {
         pendingPermission: Record<string, unknown>;
       };
 
-      await writeFile(
-        journalFile,
-        JSON.stringify({
-          ...journal,
-          pendingPermission: {
-            ...journal.pendingPermission,
-            holdAfterSelected: true,
-          },
-        }),
-      );
+      await atomicWriteJson(journalFile, {
+        ...journal,
+        pendingPermission: {
+          ...journal.pendingPermission,
+          holdAfterSelected: true,
+        },
+      });
       await db
         .update(hitlRequests)
         .set({ response: { optionId: "allow" } })
@@ -1018,10 +1016,7 @@ describe("Owned Flow checkpointed permission resume", () => {
             unknown
           >;
 
-          await writeFile(
-            file,
-            JSON.stringify({ ...journal, rejectResume: true }),
-          );
+          await atomicWriteJson(file, { ...journal, rejectResume: true });
         }
         continuation = startFlowContinuationWorker({
           db,
@@ -1597,26 +1592,23 @@ describe("Owned Flow checkpointed permission resume", () => {
           pendingPermission: Record<string, unknown>;
         };
 
-        await writeFile(
-          journalFile,
-          JSON.stringify({
-            ...journal,
-            pendingPermission: {
-              ...journal.pendingPermission,
-              nextPermission: {
-                toolCall: {
-                  toolCallId: "tc-2",
-                  title: "Second mock tool",
-                  kind: "execute",
-                },
-                options: [
-                  { optionId: "allow", kind: "allow_always", name: "Allow" },
-                  { optionId: "deny", kind: "reject_once", name: "Deny" },
-                ],
+        await atomicWriteJson(journalFile, {
+          ...journal,
+          pendingPermission: {
+            ...journal.pendingPermission,
+            nextPermission: {
+              toolCall: {
+                toolCallId: "tc-2",
+                title: "Second mock tool",
+                kind: "execute",
               },
+              options: [
+                { optionId: "allow", kind: "allow_always", name: "Allow" },
+                { optionId: "deny", kind: "reject_once", name: "Deny" },
+              ],
             },
-          }),
-        );
+          },
+        });
         secondDriver = startProcess(
           "flow-prompt-owner-process.ts",
           seeded.runId,
