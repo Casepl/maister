@@ -875,12 +875,13 @@ unproven, retain S5.2 as open with that precise missing gate.
 
 ### S5.2 P4 concrete response window
 
-The current [P4 response-window contract](../../docs/system-analytics/test-infrastructure.md#s52-p4-concrete-response-window-2026-10-02-specification-amendment)
+The current [P4 response-window contract](../../docs/system-analytics/test-infrastructure.md#s52-p4-concrete-response-window)
 supersedes the original 2026-09-22 control arrangement. It preserves the delayed
 real HTTP ACK, original handler's 409, current-authority snapshot/write audit,
-and exactly-once successor completion. Successor creation is held after its
-assignment and Running attempt commit; session initialization and activation
-are verified after stale-handler rejection, outside the original wire deadline.
+and exactly-once successor completion. Successor capability publication is held
+after its assignment, Running attempt and protected metadata commit; session
+creation, initialization and activation are verified after stale-handler
+rejection, outside the original wire deadline.
 
 ### Phase 2 execution evidence in progress
 

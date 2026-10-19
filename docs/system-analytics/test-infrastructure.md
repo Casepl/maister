@@ -280,6 +280,16 @@ nor environment bytes enter those diagnostics. Inspection failure still refuses
 ownership and cleanup. Records use the second kernel read's current parent,
 group and status after revalidating PID, UID and start identity. Full environment
 scan failures retain at most 16 numeric diagnostics plus an omitted count.
+A transient `KERN_PROCARGS2` read/parse `EINVAL` permits three total attempts
+per environment entry, separated by 1 ms,
+with bounded numeric retry diagnostics. A successful retry still needs the
+exact environment tag and final kernel PID/UID/start-identity check before
+publishing a row or excluding an inspector helper. Persistent `EINVAL`, access
+denial and an actual foreign tag never grant signal authority. If the separate
+inspector-tag read fails, a successful ownership-tag read cannot authorize a
+signal: the emitted row remains uninspectable. O-identity
+injects transient and persistent read errors for a real child while retaining
+real kernel identities and verifies both successful owned cleanup and refusal.
 The existing O-identity control schedules real child `setpgid`/`SIGSTOP` and
 exit transitions around those reads; no synthetic ownership fields are used.
 The real sandbox-denial control verifies actionable
@@ -440,6 +450,12 @@ mandatory; the production dispatch-window controls belong to the serial slice.
 This inventory fixes discovery, while the final hosted reports must still prove
 both Node versions fit the unchanged budget.
 
+The Librarian browser server builds with the same default production bundler
+as the package build, Docker image and isolated real-web fixture. Its clean,
+build and HTTP readiness remain inside Playwright's 180-second web-server
+deadline. Pipe server stdout into the job log so a preparation timeout retains
+its last observed phase. All 13 browser cases remain mandatory.
+
 The one macOS Intel isolation job keeps Colima 0.10.3/Lima 2.2.0 and one
 `colima start` attempt. It runs `runtime:check` before provisioning.
 After that check, `scripts/setup-isolation-ci-compile-cache.mjs` creates a fresh
@@ -570,23 +586,28 @@ and epoch semantics live in [prompt lifecycle](execution-prompt-lifecycle.md),
 [S5.2 implementation plan](../../.ai-factory/plans/s5-2-closeout.md) maps each
 requirement to its RED/GREEN/falsification and phase gate.
 
-### S5.2 P4 concrete response window (2026-10-02 specification amendment)
+### S5.2 P4 concrete response window
 
 P4 installs its scoped domain-write audit before holding the first operator
 `POST /sessions/{id}/checkpoint` response after host commit. A second ordinary
 node interrupt parks the observed attempt; answering with `restart_node` /
-`workspacePolicy=keep` mints N+1. Hold N+1's `POST /sessions` before forwarding:
-the new assignment and Running attempt must exist, but its incarnation must
-not exist yet. Drain the old prompt's superseded application, clear preceding
-audit entries and snapshot current authority. Release the original checkpoint
-ACK while its unchanged 30-second request is alive. Require the original web
-handler's 409 CONFLICT, unchanged snapshot and zero current run/session/attempt
-writes. Old command receipt settlement is permitted. Then release session
-creation, prove the exact successor command-target incarnation becomes active,
-and release its held prompt for exactly-once completion. Session startup and
-projection are outside the stale HTTP response window; the stale-handler audit
-does not claim to run against an already-active successor incarnation. A response
-arriving after its HTTP deadline is not a passing control.
+`workspacePolicy=keep` mints N+1. Hold N+1's capability reservations at
+`POST /runtime-objects` before forwarding. The new assignment, Running attempt,
+enforcement snapshot and resolved prompt must already be committed, but its
+incarnation must not exist. Capability publication runs outside the protected
+database transactions: the barrier must neither hold a run-row lock nor permit
+later successor setup to contaminate the audit. Drain the old prompt's
+superseded application, clear preceding audit entries and snapshot current
+authority. Release the original checkpoint ACK while its unchanged 30-second
+request is alive. Require the original web handler's 409 CONFLICT, unchanged
+snapshot and zero current run/session/attempt writes. Old command receipt
+settlement is permitted. Release capability publication within its unchanged
+request budget, then witness and release N+1's `POST /sessions`, prove the exact
+successor command-target incarnation becomes active, and release its held
+prompt for exactly-once completion. Session startup and projection are outside
+the stale HTTP response window; the stale-handler audit does not claim to run
+against an already-active successor incarnation. A response arriving after its
+HTTP deadline is not a passing control.
 
 The scratch dispatch-window permission control similarly holds the successor
 prompt until the restarted web is ready and its command is durably admitted.
@@ -595,6 +616,27 @@ letting a second cap expire during web startup. The two-tick admission and
 stored-answer assertions remain unchanged. Agent owner interruption triggers
 match actual status transitions only; metadata and unchanged-status writes
 must pass before the intended terminal application is interrupted.
+
+The resumable adapter publishes its test journal with same-directory atomic
+rename; parent mutations use `atomicWriteJson`. A selected permission ACK is
+not proof that the adapter installed its held-turn callback. Before mutating
+that live journal, require the exact ACP session's selected/held witness and
+absence of a pending permission. The existing node/ordinary checkpoint control
+stops the real selected publisher after opening its output and proves that
+readers still see the previous complete journal. Resume and cleanup signals
+must revalidate the captured process identity. Corrupt journals and publication
+errors fail explicitly.
+
+The three durable-worker boot death controls and concurrency D2 hold the real
+adapter terminal after output, instead of relying on a fixed 60-second prompt
+delay. An invocation-owned adapter witness binds the prompt digest, ACP session,
+host command, barrier token and kernel process identity. Terminal release is
+allowed only after the issuing web process dies: after worker startup on the
+restarted web for the boot controls, or on the already-running second web for
+D2. D2 must apply the terminal before restarting the first web. Early terminal
+evidence fails the control; the original domain, exactly-once, lease and cleanup
+assertions remain in force. This terminal barrier is separate from the existing
+pre-output prompt barrier used by steering and dispatch controls.
 
 S3's late-exit control holds the initial epoch's prompt request before forwarding
 and starts its unchanged permission deadline only after that boundary releases.
@@ -1034,11 +1076,11 @@ cannot establish a fault window. Every barrier must be resolved in teardown.
 
 | Death window / test | Barrier or evidence trigger | Lane / exact file | Sufficiency and mandatory distinguishing observation |
 | --- | --- | --- | --- |
-| Web SIGKILL mid-prompt — flow | Accepted, unapplied `flow_node_attempt` command; actual web PGID dies. | isolation; `web/test-support/__tests__/durable-workers-boot.integration.test.ts:320`, `applies the flow_node_attempt owner after the production web restarts` | Existing production proof accepted: restart worker applies once; no second prompt. |
+| Web SIGKILL mid-prompt — flow | Accepted, unapplied `flow_node_attempt` command; actual web PGID dies. | isolation; `web/test-support/__tests__/durable-workers-boot.integration.test.ts`, `applies the flow_node_attempt owner after the production web restarts` | Existing production proof accepted: restart worker applies once; no second prompt. |
 | Web SIGKILL mid-prompt — agent | Same, `agent_turn`. | isolation; `web/test-support/__tests__/durable-workers-boot.integration.test.ts`, `applies the agent_turn owner after the production web restarts` | Existing production proof accepted; one correct agent domain result. |
 | Web SIGKILL mid-prompt — scratch | Same, `scratch_message`. | isolation; `web/test-support/__tests__/durable-workers-boot.integration.test.ts`, `applies the scratch_message owner after the production web restarts` | Existing production proof accepted; one reply from intended owner. |
-| Web SIGTERM with held claim | Durable held claim before SIGTERM. | isolation; `web/test-support/__tests__/durable-workers-concurrency.integration.test.ts:283`, `E: SIGTERM while a claim is held either releases it in the drain or fails shutdown loudly` | Existing production proof accepted: confirmed release or explicit failed drain; one application after restart. |
-| Two web instances | Dead instance's unapplied command; two live production claimants. | isolation; `web/test-support/__tests__/durable-workers-concurrency.integration.test.ts:241`, `D2: two production web instances on one database apply a dead instance's command exactly once` | Existing production proof accepted; winner attributed, losing claimant does not apply. Preserve D1 too. |
+| Web SIGTERM with held claim | Hold the real command-output manifest only while its exact run/command/session/request has a live application token; forward preclaim reconciliation reads unchanged. Recheck that token before SIGTERM and retain the observed process outcome. | isolation; `web/test-support/__tests__/durable-workers-concurrency.integration.test.ts`, `E: SIGTERM while a claim is held either releases it in the drain or fails shutdown loudly` | Clean exit requires confirmed release/application. Loud failure requires observed nonzero exit with its shutdown failure/deadline record and retained claim; one application after restart. Direct HTTP applications join shutdown alongside worker slots; R3 also requires admission refusal during quiesce. |
+| Two web instances | Dead instance's unapplied command; two live production claimants. | isolation; `web/test-support/__tests__/durable-workers-concurrency.integration.test.ts`, `D2: two production web instances on one database apply a dead instance's command exactly once` | Existing production proof accepted; winner attributed, losing claimant does not apply. Preserve D1 too. |
 | Web SIGKILL + restart under denied roots | I1 negative control then I3 restart; I4 host control. | isolation; `web/test-support/__tests__/execution-ab-isolation.integration.test.ts:335`, I3 | Existing production proof accepted with I1–I4: same history/object bytes, further turn, supervisor untouched, driver-specific errno. |
 | Supervisor SIGKILL mid-turn | Accepted real prompt, `sup.restart()`, receipt/canonical ordering variants. | web; `web/lib/execution-host/__tests__/command-recovery.integration.test.ts:766`, `RED 1/3 — SIGKILL mid-prompt + restart, ... → Crashed turn-lost, attempt closed, command discharged, recoverable` | **In-process proof accepted** for ADR-177 classification/evidence-order semantics: real host dies, turn_lost → Crashed, Recover → Done, one new prompt. Production worker activation is separately proven by boot suites; do not duplicate the 14-case family. |
 | Adapter SIGKILL mid-turn | Exact adapter PID belonging to run/host; persisted crash evidence. | web; `web/lib/flows/graph/__tests__/prompt-owners.integration.test.ts:3319`, `owner-flow-crash-recover: a crashed agent node recovers to a terminal state with one new prompt under the new epoch`; supporting controls and `crash-recover-continuation.integration.test.ts` | **In-process proof accepted** for ADR-175 domain/epoch semantics: real adapter killed; Recover → Done; one new prompt, zero when agreeing terminal source already exists. Keep all named subvariants. |

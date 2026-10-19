@@ -1269,9 +1269,146 @@ No source changes qualify hosted Intel or Linux by substitution. The owner
 push/exact-SHA hosted reporter, timing and zero-leak gate remains open;
 S5.2/S5.3/S5.4 stay unchecked at 42/45.
 
+### CI-R8 — production browser build and causal fixture publication (2026-10-16)
+
+The owner pushed `a60dc6ea43fa9e9ce74d1b2b2976c99ca7e9332c`.
+[PR run 38752060002](https://github.com/maister-dev/maister/actions/runs/38752060002)
+checks merge `43ee3cf813367d88e59c46ba0eef7ea8a8e67b02`, whose tree
+`e110d7bff8317c8291692fa9caea5266322b69e2` equals that source.
+[Push run 38752051464](https://github.com/maister-dev/maister/actions/runs/38752051464)
+checks the same source directly. Actual reporters preserve all 640 web cases
+and 111 supervisor cases per Node. PR web/supervisor reports all validate;
+push minimum-Node shard 1 has one failed original permission-checkpoint case.
+Its JSON parse fails before checkpoint execution: the real resumable adapter
+truncates its public journal while the test reads it. Waiting for manager input
+acknowledgement does not prove the adapter has published its selected state or
+installed its held-turn completion callback.
+
+PR Librarian startup expires its unchanged 180-second readiness gate before
+tests begin. Its harness still forces webpack inside that gate, unlike the
+package, image and production fixture's default bundler. The matching push
+passes all 13 browser cases. Hidden build stdout limits exact failed-phase
+attribution; the obsolete bundler selection is source-confirmed.
+
+Both Intel isolation slices still exit 124 without the outer seven-suite,
+50-case report. PR provisioning/preflight consume 1000 seconds, leaving 2240
+seconds under the existing formula; P4's original held checkpoint response
+expires after 30 seconds, before successor creation arrives. Push receives
+2340 seconds, passes P4 and completes six owners/47 cases before the remaining
+concurrency owner is interrupted. Do not treat containment as zero-leak
+qualification: PR reaps one PostgreSQL container; push reaps three processes
+and one container. Independent preflights pass.
+
+No public API, error enum, database migration, host SQLite schema, product
+configuration, dependency, deployment or infrastructure change is required by
+the confirmed fixture defects. Keep all Node/shard/job/slice contracts. Root
+owns the canonical test-infrastructure analytics, this plan, dated fix record,
+final source/evidence audit and phase commits. Implementation owners below
+must preserve other workers' edits and all original owning names.
+
+- [x] Audit both exact-source hosted runs and compare original reporter names;
+      retain the failed P4 response window and incomplete isolation evidence.
+- [x] Browser owner changes only `e2e/librarian-web-server.mjs` and
+      `playwright.librarian.config.ts`: use the production default bundler and
+      expose startup stdout. Keep clean/build/boot inside 180 seconds and the
+      existing restart protocol. Actual old-build bundler contract RED, then
+      full 13-case GREEN with real PostgreSQL/supervisor/browser, original
+      names, timings and zero leaks. Local ARM evidence does not qualify Linux.
+- [x] Journal owner changes the resumable ACP fixture and its four parent
+      journal publishers. Prove the actual public-file truncation with a
+      controlled real-child pause before replacing it with same-directory
+      atomic publication. Require exact child identity, guaranteed cleanup,
+      complete old/current JSON visibility, selected/held readiness before
+      parent mutation, and explicit publication failures. Keep existing case
+      titles; run focused RED/GREEN on both exact Nodes.
+- [x] Re-derive P4's causal successor barrier before editing. A Running-row
+      poll alone is insufficient because later legitimate successor writes
+      would contaminate the stale-write audit. Any correction must freeze
+      those writes explicitly, retain a committed successor assignment and
+      Running attempt with no incarnation, and deliver the original ACK to its
+      original handler before the unchanged deadline. Preserve 409, snapshot,
+      zero stale writes and successor exactly-once completion; prove the
+      ordering with a real delayed-successor RED control.
+      The selected frontier is both epoch-2 capability reservations: protected
+      metadata is committed and publication holds no database transaction.
+      Focused GREEN passes on both Nodes; complete owning suites remain below.
+- [x] Audit the four artificial 60-second terminal delays in worker boot/death
+      controls. Replace only scheduling assumptions that can be expressed as
+      witnessed real-ACP hold/release barriers, with exact session/process
+      identity and completed web death before release. Preserve every original
+      owner, terminal evidence, single application, restart and shutdown
+      assertion. Do not shorten production deadlines, P2 retry exhaustion or
+      worker lease evidence. Require causal RED/GREEN and full owner suites.
+- [x] Resolve the independently verified E shutdown gap exposed by final
+      qualification. The observed clean exit leaves E's fresh command
+      `applying`; direct `applyPromptOwner` callers can run outside worker
+      slots. First retain exact command/run/claim-token and real output-barrier
+      evidence in the existing E case, and classify the actual process code
+      and shutdown record. Prove a causal direct-waiter RED using a temporary
+      isolated worker-disable control, restoring exact source bytes and a
+      fresh build afterward. Then track direct claim-to-cleanup lifetimes in
+      `web/lib/execution-host/prompt-owner-application.ts` with a shared process
+      symbol, refuse admission during quiesce, combine caller/process abort,
+      and join active work immediately in `web/instrumentation-node.ts`'s
+      existing saved shutdown result. Preserve token predicates, confirmed
+      cancellation as deferred work, release failures and the 5/25-second
+      HTTP/whole-process deadlines. The canonical prompt-lifecycle contract
+      describes this boundary separately from qualification. No API or database
+      migration is required. Run controlled E on both Nodes, its complete concurrency/boot
+      owners and all classified direct application consumers before the
+      restored serial lane. No production edit before the causal RED.
+- [x] Resolve the final local macOS cleanup inspection race without widening
+      signal authority. V3 completes all 50 assertions but its isolation owner
+      fails teardown when a same-group process returns `EINVAL` for both
+      environment reads; containment reaps two processes and one database.
+      The child executable and eventual lifecycle are unproven. Retry only
+      `EINVAL` read/parse failures at most three times with 1 ms separation;
+      retain exact PID/UID/start checks before publishing or excluding helpers.
+      A successful ownership read followed by a failed inspector-tag read
+      must also remain uninspectable; add that asymmetric causal RED before
+      correcting the current positive ownership row.
+      Extend existing O-identity with real-PID transient and persistent error
+      controls before implementation; preserve foreign/unreadable refusal.
+      No new case names, Linux behavior or timeout changes. Qualify fresh
+      complete Darwin owners at both Nodes, separate preflight and browser.
+- [x] After executable sources freeze, run complete affected fixture consumers
+      on both exact Nodes, independent preflight and complete serial isolation
+      with strict `validateLaneReport`, original name sets, measured fixed
+      budget and zero leaks. Run docs/contracts, package types/MCP build,
+      scoped syntax/lint/format and diff checks; complete independent
+      adversarial source/evidence review before local phase commits.
+- [ ] Owner pushes the reviewed commits; verify that exact pushed SHA/merge
+      tree and all hosted reports, timing and cleanup artifacts. Retain failure
+      evidence and keep qualification open if Intel still exceeds the budget.
+      Revert the affected fixture phase if it weakens a control or introduces
+      a regression. No push/rerun/hosting migration is part of local work;
+      S5.2/S5.3/S5.4 remain unchecked at 42/45.
+
+Local CI-R8 qualification is complete on Darwin ARM64. V3 retains the actual
+63-suite/759-case web and six-suite/52-case supervisor executions on each exact
+Node, plus the six-case instrumentation and clock owners. V4 changes exactly
+the three native-inspection/control files; every other frozen executable byte
+matches V3. Fresh V4 serial isolation passes all seven suites/50 cases on
+Node 24.15.0/24.19.0 in 559.151/546.219 seconds, with separate preflights,
+clean initial sweeps and removed private compile caches. The original 13-case
+browser owner passes with 22.577-second clean-to-HTTP readiness; all 16 static
+checks pass. The read-only audit verifies original name sets, source hashes,
+reports, timings and current resource absence. Its versioned browser collector
+repair retains the original collection error and successful test execution
+separately; it does not rerun the browser. The
+[dated fix record](../patches/2026-10-16-14.17.md) binds the receipts and failed
+attempts. These local results leave the owner-push and hosted Intel gates open.
+
 ## Commit Plan
 
-Implementation commits preserve focused, qualified trees; no remote visibility before owner push.
+Implementation commits preserve focused boundaries; qualification binds each
+recorded source candidate. No remote visibility before owner push.
+
+For CI-R8, phase commits separate the fixes and their focused RED/GREEN controls.
+Complete regression receipts qualify their recorded source candidates and the
+final combined implementation; they do not claim every intermediate phase
+commit independently passed the complete lane. Retained V3 consumer executions
+and fresh V4 native/serial/browser executions keep distinct source identities.
 
 The second hosted-audit correction uses disjoint local phase groups:
 
@@ -1293,6 +1430,13 @@ The second hosted-audit correction uses disjoint local phase groups:
 | CI-R7b | Bounded permission callback settlement and terminal failure precedence, existing N1 control and affected lifecycle consumers | `fix(supervisor): settle permission failures before prompt rejection` |
 | CI-R7c | Thread-aware watchdog timing provenance and existing real O-identity control, full Darwin owning qualification | `fix(test): identify watchdog timing streams by thread` |
 | CI-R7d | Exact-source failed audit, canonical analytics, plan/dated fix receipts and truthful owner-push/hosted gates | `docs(test): record CI race correction qualification` |
+| CI-R8a | Librarian default production bundler and visible startup output; original browser13 and180-second readiness contract | `fix(test): align Librarian browser production builds` |
+| CI-R8b | Atomic resumable-adapter/parent journal publication, real stopped-publisher control and causal held readiness; complete fixture consumers both Nodes | `fix(test): publish resumable adapter journals atomically` |
+| CI-R8c | P4 transaction-free capability publication barrier; real original-ordering RED and unchanged stale-handler/successor acceptance | `fix(test): audit stale checkpoint ACK before successor setup` |
+| CI-R8d | Real post-output terminal holds in four death windows, exact identity/cleanup and worker falsification; complete serial owners | `fix(test): release worker terminals after verified web death` |
+| CI-R8d2 | Direct application admission/abort/join at shutdown, existing E's exact actor/outcome control and canonical lifecycle contract; both-Node causal RED/GREEN and complete consumers | `fix(execution-host): drain direct prompt applications on shutdown` |
+| CI-R8d3 | Bounded native EINVAL retry, final kernel identity guard and existing O-identity real-process controls; persistent denial/foreign refusal and full Darwin owning qualification | `fix(test): retry transient Darwin process inspection` |
+| CI-R8e | Canonical analytics, owning plans and dated exact-source evidence; local checks and truthful owner-push/hosted gates | `docs(test): record causal fixture qualification` |
 
 
 | Checkpoint | Tasks / required green gate | Suggested conventional commit |
