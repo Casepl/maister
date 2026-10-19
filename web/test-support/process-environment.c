@@ -7,6 +7,8 @@
 #include <string.h>
 #include <unistd.h>
 
+enum { ENVIRONMENT_READ_ATTEMPTS = 3, ENVIRONMENT_RETRY_DELAY_US = 1000 };
+
 /* Fixed fields only: diagnostics must never disclose argv or environment bytes. */
 static unsigned int inspection_diagnostics_emitted;
 static unsigned int inspection_diagnostics_omitted;
@@ -21,9 +23,10 @@ static void inspection_diagnostic(pid_t pid, const char *stage, long long result
 }
 
 /* Read only the requested environment entry; argv can never establish ownership. */
-static int owns_invocation(pid_t pid, const char *entry, char *buffer, size_t capacity) {
+static int owns_invocation_once(pid_t pid, const char *entry, char *buffer, size_t capacity) {
   int mib[] = {CTL_KERN, KERN_PROCARGS2, pid};
   size_t length = capacity;
+  errno = 0;
   if (sysctl(mib, 3, buffer, &length, NULL, 0) != 0) return -errno;
   if (length < sizeof(int)) return -EINVAL;
   int argc;
@@ -44,6 +47,17 @@ static int owns_invocation(pid_t pid, const char *entry, char *buffer, size_t ca
     cursor = next + 1;
   }
   return 0;
+}
+
+/* Retry a transient read or argument-frame error without granting ownership on failure. */
+static int owns_invocation(pid_t pid, const char *entry, char *buffer, size_t capacity) {
+  for (int attempt = 1; attempt <= ENVIRONMENT_READ_ATTEMPTS; attempt++) {
+    int owned = owns_invocation_once(pid, entry, buffer, capacity);
+    if (owned != -EINVAL || attempt == ENVIRONMENT_READ_ATTEMPTS) return owned;
+    inspection_diagnostic(pid, "kern_procargs_retry", attempt, ENVIRONMENT_READ_ATTEMPTS, EINVAL);
+    if (usleep(ENVIRONMENT_RETRY_DELAY_US) != 0) return -errno;
+  }
+  return -EINVAL;
 }
 
 int main(int argc, char **argv) {
@@ -142,11 +156,7 @@ int main(int argc, char **argv) {
     if (owned < 0) inspection_diagnostic(pids[i], "kern_procargs", owned, 0, -owned);
     int inspector = owns_invocation(pids[i], inspector_entry, buffer, (size_t)argmax);
     if (inspector < 0) inspection_diagnostic(pids[i], "kern_procargs_inspector", inspector, 0, -inspector);
-    if (inspector == 1) {
-      if (!selected) continue;
-      /* A directly inspected helper is observable but never gains signal authority. */
-      if (owned > 0) owned = 0;
-    }
+    if (inspector < 0) owned = inspector;
     struct proc_bsdinfo after;
     errno = 0;
     found = proc_pidinfo(pids[i], PROC_PIDTBSDINFO, 0, &after, sizeof(after));
@@ -166,6 +176,11 @@ int main(int argc, char **argv) {
     if (after.pbi_start_tvsec != info.pbi_start_tvsec || after.pbi_start_tvusec != info.pbi_start_tvusec) {
       if (selected) inspection_diagnostic(pids[i], "start_identity_changed", 0, 0, 0);
       continue;
+    }
+    if (inspector == 1) {
+      if (!selected) continue;
+      /* A directly inspected helper is observable but never gains signal authority. */
+      if (owned > 0) owned = 0;
     }
     printf("%u\t%u\t%u\t%u\t%llu:%llu\t%d\t%u\n", after.pbi_pid, after.pbi_ppid, after.pbi_pgid, after.pbi_uid, after.pbi_start_tvsec, after.pbi_start_tvusec, owned, after.pbi_status);
   }

@@ -1276,6 +1276,229 @@ describe("S5.2 invocation process ownership", () => {
         await restoreEnvironmentRead();
       }
 
+      const asymmetricInspector = await startIdleChild({
+        ...process.env,
+        ...invocationEnvironment(invocation),
+        MAISTER_TEST_PROCESS_INSPECTOR: invocation.id,
+      });
+
+      children.push(asymmetricInspector);
+      const asymmetricInspectorIdentity = await processIdentity(
+        invocation,
+        asymmetricInspector.pid!,
+      );
+
+      expect(asymmetricInspectorIdentity).toMatchObject({
+        owned: false,
+        inspected: true,
+        zombie: false,
+      });
+      const inspectionControls = [
+        {
+          pid: owned.pid!,
+          errno: 0,
+          limit: 2,
+          owned: true,
+          inspected: true,
+          calls: 4,
+          retries: 2,
+        },
+        {
+          pid: owned.pid!,
+          errno: 22,
+          limit: 2,
+          owned: true,
+          inspected: true,
+          calls: 4,
+          retries: 2,
+        },
+        {
+          pid: owned.pid!,
+          errno: 22,
+          limit: -1,
+          owned: false,
+          inspected: false,
+          calls: 6,
+          retries: 4,
+        },
+        {
+          pid: owned.pid!,
+          errno: 13,
+          limit: -1,
+          owned: false,
+          inspected: false,
+          calls: 2,
+          retries: 0,
+        },
+        {
+          pid: owned.pid!,
+          errno: 1,
+          limit: -1,
+          owned: false,
+          inspected: false,
+          calls: 2,
+          retries: 0,
+        },
+        {
+          pid: other.pid!,
+          errno: 22,
+          limit: 2,
+          owned: false,
+          inspected: true,
+          calls: 4,
+          retries: 2,
+        },
+        {
+          pid: other.pid!,
+          errno: 22,
+          limit: 0,
+          owned: false,
+          inspected: true,
+          calls: 2,
+          retries: 0,
+        },
+        {
+          pid: asymmetricInspector.pid!,
+          errno: 22,
+          limit: -1,
+          after: 1,
+          owned: false,
+          inspected: false,
+          calls: 4,
+          retries: 2,
+        },
+        {
+          pid: asymmetricInspector.pid!,
+          errno: 13,
+          limit: -1,
+          after: 1,
+          owned: false,
+          inspected: false,
+          calls: 2,
+          retries: 0,
+        },
+      ] as const;
+
+      for (const control of inspectionControls) {
+        const restoreInspection = await installEnvironmentReadDenial(
+          invocation,
+          control.pid,
+          environmentDeniedExecutable,
+        );
+
+        try {
+          await writeFile(
+            path.join(invocation.directory, "process-environment-denied-pid"),
+            `${control.pid} ${control.errno} ${control.limit} ${"after" in control ? control.after : 0}`,
+          );
+          const inspected = await execFileAsync(
+            path.join(invocation.directory, nativeReaderName),
+            [invocation.id, String(control.pid)],
+            {
+              env: { ...process.env, ...invocationEnvironment(invocation) },
+              timeout: 10_000,
+              maxBuffer: 16 * 1024,
+            },
+          );
+          const fields = inspected.stdout.trim().split("\t");
+          const reference =
+            control.pid === owned.pid
+              ? record.identity
+              : control.pid === other.pid
+                ? otherIdentity
+                : asymmetricInspectorIdentity;
+
+          logInvocation(invocation, "native-inspection-read-control", {
+            pid: control.pid,
+            failureErrno: control.errno,
+            failureLimit: control.limit,
+            failureOffset: "after" in control ? control.after : 0,
+            nativeRow: inspected.stdout.trim(),
+            nativeDiagnostics: inspected.stderr.trim(),
+          });
+          expect(fields.slice(0, 5)).toEqual([
+            String(reference.pid),
+            String(reference.ppid),
+            String(reference.pgid),
+            String(reference.uid),
+            reference.started,
+          ]);
+          // Soft assertions retain both real failure origins in RED while still failing this case.
+          const signalFailure = await signalInvocationGroup(
+            invocation,
+            reference.pgid,
+            "SIGCONT",
+          ).then(
+            () => null,
+            (error: unknown) => error,
+          );
+
+          if (control.owned) expect.soft(signalFailure).toBeNull();
+          else
+            expect
+              .soft(
+                signalFailure instanceof Error &&
+                  signalFailure.message.includes(
+                    "refusing unverifiable fixture group",
+                  ),
+              )
+              .toBe(true);
+          expect
+            .soft(fields[5] === "1", "retry never invents an invocation tag")
+            .toBe(control.owned);
+          expect
+            .soft(
+              Number(fields[5]) >= 0,
+              "persistent failure remains uninspectable",
+            )
+            .toBe(control.inspected);
+          const diagnostics = inspected.stderr
+            .trim()
+            .split("\n")
+            .filter(Boolean)
+            .map(
+              (line: string) =>
+                JSON.parse(line) as Readonly<{
+                  event: string;
+                  pid: number;
+                  call?: number;
+                  stage?: string;
+                  result: number;
+                  expected?: number;
+                  errno: number;
+                }>,
+            );
+          const attempts = diagnostics.filter(
+            (receipt) => receipt.event === "process-environment-control",
+          );
+          const retries = diagnostics.filter(
+            (receipt) => receipt.stage === "kern_procargs_retry",
+          );
+
+          expect.soft(attempts).toHaveLength(control.calls);
+          expect.soft(retries).toHaveLength(control.retries);
+          expect
+            .soft(
+              retries.every(
+                (receipt) =>
+                  receipt.pid === control.pid &&
+                  receipt.errno === 22 &&
+                  receipt.result >= 1 &&
+                  receipt.result <= 2 &&
+                  receipt.expected === 3,
+              ),
+            )
+            .toBe(true);
+          process.stderr.write(
+            `${JSON.stringify({ event: "native-inspection-retry-control", invocationId: invocation.id, pid: control.pid, errno: control.errno, failureLimit: control.limit, owned: fields[5] === "1", inspected: Number(fields[5]) >= 0, expectedOwned: control.owned, expectedInspected: control.inspected, attempts: attempts.length, retries: retries.length })}\n`,
+          );
+          expect(owned.exitCode).toBeNull();
+          expect(other.exitCode).toBeNull();
+        } finally {
+          await restoreInspection();
+        }
+      }
+
       await assertDarwinGroupRetirement(invocation, sibling, directory);
       const transitionExecutable = path.join(
         directory,
