@@ -71,6 +71,7 @@ type TerminalInput = Readonly<{
 }>;
 export type TerminalBarrier = Readonly<{
   waitForHeld: (command: PromptCommandRow) => Promise<void>;
+  releaseForApplication: () => Promise<void>;
   releaseAfterWebDeath: () => Promise<void>;
   close: () => Promise<void>;
 }>;
@@ -139,7 +140,7 @@ async function sessionFor(input: TerminalInput, command: PromptCommandRow) {
   return session;
 }
 
-/** Owns one real ACP terminal; SIGUSR1 is refused until its issuing web is dead. */
+/** Owns one real ACP terminal and proves the issuer lifetime required by each release. */
 export function createTerminalBarrier(input: TerminalInput): TerminalBarrier {
   const invocation = invocationFromEnvironment();
 
@@ -203,23 +204,10 @@ export function createTerminalBarrier(input: TerminalInput): TerminalBarrier {
       runId: command.runId,
     };
   };
-  const releaseAfterWebDeath = async (): Promise<void> => {
+  const release = async (): Promise<void> => {
     if (!witness || !command || released)
       throw new TerminalBarrierError(
         "terminal release requires one unreleased held witness",
-      );
-    const currentIssuer = await findProcessIdentity(
-      invocation,
-      witness.issuer.pid,
-    );
-
-    if (
-      currentIssuer &&
-      sameProcess(currentIssuer, witness.issuer) &&
-      !currentIssuer.zombie
-    )
-      throw new TerminalBarrierError(
-        `refusing terminal release before issuing web ${witness.issuer.pid} dies`,
       );
     const session = await sessionFor(input, command);
     const current = await processIdentity(invocation, witness.identity.pid);
@@ -273,6 +261,44 @@ export function createTerminalBarrier(input: TerminalInput): TerminalBarrier {
       kernelStartId: current.started,
       issuerPid: input.issuer.pid,
     });
+  };
+  const releaseAfterWebDeath = async (): Promise<void> => {
+    if (!witness)
+      throw new TerminalBarrierError(
+        "terminal release requires a held witness",
+      );
+    const currentIssuer = await findProcessIdentity(
+      invocation,
+      witness.issuer.pid,
+    );
+
+    if (
+      currentIssuer &&
+      sameProcess(currentIssuer, witness.issuer) &&
+      !currentIssuer.zombie
+    )
+      throw new TerminalBarrierError(
+        `refusing terminal release before issuing web ${witness.issuer.pid} dies`,
+      );
+    await release();
+  };
+  const releaseForApplication = async (): Promise<void> => {
+    if (!witness)
+      throw new TerminalBarrierError(
+        "application release requires a held witness",
+      );
+    const currentIssuer = await processIdentity(invocation, witness.issuer.pid);
+
+    if (
+      !currentIssuer.owned ||
+      !currentIssuer.inspected ||
+      currentIssuer.zombie ||
+      !sameProcess(currentIssuer, witness.issuer)
+    )
+      throw new TerminalBarrierError(
+        "application release requires the original live issuing web",
+      );
+    await release();
   };
 
   return {
@@ -337,6 +363,7 @@ export function createTerminalBarrier(input: TerminalInput): TerminalBarrier {
         issuerKernelStartId: witness.issuer.started,
       });
     },
+    releaseForApplication,
     releaseAfterWebDeath,
     close: async () => {
       // Retire the live waiter even when admission or witness inspection failed.

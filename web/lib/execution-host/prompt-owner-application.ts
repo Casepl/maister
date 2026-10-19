@@ -25,6 +25,7 @@ import { TERMINAL_COMMAND_STATES } from "./types";
 
 import { executionCommands } from "@/lib/db/schema";
 import { MaisterError } from "@/lib/errors";
+import { isApplicationStopping } from "@/lib/server-lifecycle";
 
 const log = pino({
   name: "prompt-owner-application",
@@ -43,6 +44,59 @@ export type PromptOwnerApplicationResult =
   | "superseded"
   | "poisoned"
   | "deferred";
+
+// Route handlers and instrumentation are separate Next bundles in one process.
+const APPLICATIONS_KEY = Symbol.for("maister.prompt-owner-applications.v1");
+
+type ApplicationState = {
+  stop: AbortController;
+  active: Set<Promise<PromptOwnerApplicationResult>>;
+  draining?: Promise<void>;
+};
+type ApplicationGlobal = typeof globalThis & {
+  [APPLICATIONS_KEY]?: ApplicationState;
+};
+
+function applicationState(): ApplicationState {
+  const shared = globalThis as ApplicationGlobal;
+
+  return (shared[APPLICATIONS_KEY] ??= {
+    stop: new AbortController(),
+    active: new Set(),
+  });
+}
+
+/** Capture the complete direct claim-to-release lifetime before aborting it.
+ * Keeping the settled results in the drain preserves release failures even
+ * when the HTTP waiter finishes before the server starts its database drain.
+ */
+export function stopPromptOwnerApplications(): Promise<void> {
+  const state = applicationState();
+
+  if (state.draining) return state.draining;
+  const active = [...state.active];
+
+  log.info(
+    { applications: active.length },
+    "prompt-owner-applications-stopping",
+  );
+  state.draining = Promise.allSettled(active).then((results) => {
+    const failures = results.filter((result) => result.status === "rejected");
+
+    if (failures.length)
+      throw new AggregateError(
+        failures.map((result) => result.reason),
+        "direct prompt owner applications could not drain",
+      );
+    log.info(
+      { applications: active.length },
+      "prompt-owner-applications-stopped",
+    );
+  });
+  state.stop.abort();
+
+  return state.draining;
+}
 
 class PromptOwnerClaimLostError extends MaisterError {
   constructor() {
@@ -443,14 +497,14 @@ export async function applyClaimedPromptOwner(input: {
 
       return "deferred";
     }
-    if (serviceFailure(error)) {
-      await releasePromptOwnerClaim(input.db, input.claim);
-      throw error;
-    }
     if (input.signal.aborted || error instanceof PromptOwnerClaimLostError) {
       await releasePromptOwnerClaim(input.db, input.claim);
 
       return "deferred";
+    }
+    if (serviceFailure(error)) {
+      await releasePromptOwnerClaim(input.db, input.claim);
+      throw error;
     }
 
     return recordFailure({ ...input, error, phase });
@@ -463,9 +517,36 @@ export async function applyPromptOwner(input: {
   commandId: string;
   signal: AbortSignal;
 }): Promise<PromptOwnerApplicationResult> {
-  const claim = await claimPromptOwner(input);
+  const state = applicationState();
 
-  if (!claim) return "deferred";
+  if (isApplicationStopping() || state.stop.signal.aborted)
+    throw new MaisterError(
+      "EXECUTOR_UNAVAILABLE",
+      "direct prompt owner applications are shutting down",
+      { details: { commandId: input.commandId } },
+    );
+  const signal = AbortSignal.any([input.signal, state.stop.signal]);
+  // Register before even the claim transaction begins; quiesce also joins a
+  // claim that is waiting on a database lock and releases it once acquired.
+  const application = Promise.resolve().then(
+    async (): Promise<PromptOwnerApplicationResult> => {
+      if (isApplicationStopping() || signal.aborted) return "deferred";
+      const claim = await claimPromptOwner(input);
 
-  return applyClaimedPromptOwner({ ...input, claim });
+      if (!claim) return "deferred";
+
+      return applyClaimedPromptOwner({ ...input, claim, signal });
+    },
+  );
+
+  state.active.add(application);
+  const finished = (): void => {
+    state.active.delete(application);
+  };
+
+  // Observe both branches; a rejecting finally-derived promise would itself
+  // be unhandled while the caller and saved shutdown drain await the original.
+  void application.then(finished, finished);
+
+  return application;
 }

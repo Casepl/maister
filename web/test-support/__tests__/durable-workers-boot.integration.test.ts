@@ -514,11 +514,25 @@ describe("P0-2 durable workers in the production web boot", () => {
           import("@/lib/server-lifecycle"),
           import("@/lib/workers/health"),
         ]);
+      const [{ applyPromptOwner }, { scratchPromptOwners }] = await Promise.all(
+        [
+          import("@/lib/execution-host/prompt-owner-application"),
+          import("@/lib/scratch-runs/prompt-owner"),
+        ],
+      );
 
       quiesceApplication();
       expect(() => startDurableWorkers()).toThrow(
         expect.objectContaining({ code: "EXECUTOR_UNAVAILABLE" }),
       );
+      await expect(
+        applyPromptOwner({
+          db: testDatabase.db,
+          owners: scratchPromptOwners,
+          commandId: randomUUID(),
+          signal: new AbortController().signal,
+        }),
+      ).rejects.toMatchObject({ code: "EXECUTOR_UNAVAILABLE" });
       expect(health.durableWorkersHealth().promptOwner.state).toBe("stopped");
     });
   });
