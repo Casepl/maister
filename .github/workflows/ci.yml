@@ -178,9 +178,13 @@ jobs:
           if-no-files-found: error
 
   execution-isolation:
-    name: A/B isolation (macOS Intel, Node 24.19.0)
+    name: A/B isolation (macOS Intel, Node 24.19.0, part ${{ matrix.part }}/2)
     runs-on: macos-15-intel
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [1, 2]
     env:
       NODE_OPTIONS: --dns-result-order=ipv4first
       MAISTER_TEST_DOCKER_PROBE_TIMEOUT_MS: "30000"
@@ -222,9 +226,9 @@ jobs:
         run: |
           set -o pipefail
           trap 'status=$?; printf "preflight_exit_code=%s\npreflight_end_seconds=%s\n" "$status" "$(( $(date +%s) - S52_JOB_STARTED_AT ))" >> "$MAISTER_TEST_EVIDENCE_DIR/timing.txt"' EXIT
-          node --input-type=module -e 'import {runStageAbLane} from "./scripts/run-stage-ab-tests.mjs"; await runStageAbLane({slice:"isolation",files:["test-support/__tests__/execution-ab-preflight.integration.test.ts"]});' 2>&1 | tee "$MAISTER_TEST_EVIDENCE_DIR/preflight.log"
+          node scripts/run-isolation-ci-stage.mjs preflight ${{ matrix.part }} 2>&1 | tee "$MAISTER_TEST_EVIDENCE_DIR/preflight.log"
           echo "preflight_complete_seconds=$(( $(date +%s) - S52_JOB_STARTED_AT ))" >> "$MAISTER_TEST_EVIDENCE_DIR/timing.txt"
-      - name: Run the complete production isolation slice
+      - name: Run the selected serial production isolation part
         timeout-minutes: 40
         shell: bash
         run: |
@@ -238,15 +242,22 @@ jobs:
             echo "No isolation budget remains before the cleanup and upload reserve" >&2
             exit 1
           fi
-          gtimeout --signal=TERM --kill-after=30s "${remaining}s" pnpm --filter maister-web test:integration:isolation 2>&1 | tee "$MAISTER_TEST_EVIDENCE_DIR/isolation.log"
+          S52_SUITE_BUDGET_SECONDS="$remaining" gtimeout --signal=TERM --kill-after=30s "${remaining}s" node scripts/run-isolation-ci-stage.mjs part ${{ matrix.part }} 2>&1 | tee "$MAISTER_TEST_EVIDENCE_DIR/isolation.log"
           echo "isolation_complete_seconds=$(( $(date +%s) - S52_JOB_STARTED_AT ))" >> "$MAISTER_TEST_EVIDENCE_DIR/timing.txt"
       - name: Upload actual isolation reports
         id: isolation_reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: execution-isolation-reports
-          path: ${{ runner.temp }}/maister-isolation-evidence/**/vitest.json
+          name: execution-isolation-part-${{ matrix.part }}-of-2-reports
+          path: ${{ runner.temp }}/maister-isolation-evidence/ci-reports/
+          if-no-files-found: error
+      - name: Preserve failed outer reports before runtime cleanup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: execution-isolation-part-${{ matrix.part }}-of-2-raw-reports
+          path: ${{ runner.temp }}/maister-isolation-evidence/maister-ab-isolation-*/vitest.json
           if-no-files-found: error
       - name: Stop the job-owned container runtime
         if: always()
@@ -274,8 +285,45 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: execution-isolation-diagnostics
+          name: execution-isolation-part-${{ matrix.part }}-of-2-diagnostics
           path: ${{ runner.temp }}/maister-isolation-evidence/
+          if-no-files-found: error
+
+  execution-isolation-complete:
+    name: A/B isolation complete (macOS Intel, 7 suites / 50 cases)
+    needs: [execution-isolation]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      MAISTER_ISOLATION_JOB_RESULT: ${{ needs.execution-isolation.result }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.3.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: execution-isolation-part-1-of-2-reports
+          path: ${{ runner.temp }}/maister-isolation-combined/part-1
+      - uses: actions/download-artifact@v4
+        with:
+          name: execution-isolation-part-2-of-2-reports
+          path: ${{ runner.temp }}/maister-isolation-combined/part-2
+      - name: Validate both preflights and the complete original isolation inventory
+        if: always()
+        run: node scripts/isolation-ci-evidence.mjs "$RUNNER_TEMP/maister-isolation-combined"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: execution-isolation-combined
+          path: ${{ runner.temp }}/maister-isolation-combined/combined.json
           if-no-files-found: error
 
   execution-image:

@@ -25,6 +25,20 @@ test("CLI accepts only valid web shards and preserves unsharded slices", () => {
   }
 });
 
+test("isolation CI parts retain the complete disjoint 19/31 whole-suite inventory", () => {
+  const first = parseLaneInvocation(["isolation", "--part", "1/2"]);
+  const second = parseLaneInvocation(["isolation", "--part", "2/2"]);
+
+  assert.deepEqual(first, { slice: "isolation", files: laneSuites.isolation.slice(0, 2) });
+  assert.deepEqual(second, { slice: "isolation", files: laneSuites.isolation.slice(2) });
+  assert.deepEqual([...first.files, ...second.files], laneSuites.isolation);
+  assert.deepEqual([first, second].map(({ files }) => files.reduce((total, file) => total + requiredIsolationCases[file].length, 0)), [19, 31]);
+  assert.deepEqual(parseLaneInvocation(["isolation"]), { slice: "isolation", files: laneSuites.isolation });
+  for (const args of [["isolation", "--part", "0/2"], ["isolation", "--part", "3/2"],
+    ["isolation", "--part", "1/3"], ["web", "--part", "1/2"], ["supervisor", "--part", "1/2"]])
+    assert.throws(() => parseLaneInvocation(args), /part|usage/u);
+});
+
 // Each lane suite owns a stack of host processes (vitest worker, PostgreSQL
 // container, real supervisor, one forked driver child), so the pool is derived
 // from that budget rather than from vitest's default worker count.

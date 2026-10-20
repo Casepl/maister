@@ -89,12 +89,24 @@ export function webShardFiles(files, shardIndex, shardCount) {
   return files.filter((_, index) => index % shardCount === shardIndex - 1);
 }
 
+export function isolationPartFiles(part) {
+  assert(part === 1 || part === 2, "usage: isolation --part 1/2|2/2");
+
+  return part === 1 ? laneSuites.isolation.slice(0, 2) : laneSuites.isolation.slice(2);
+}
+
 export function parseLaneInvocation(args) {
   const [slice, flag, shard, ...extra] = args;
 
   assert(Object.hasOwn(laneSuites, slice ?? ""), "usage: run-stage-ab-tests.mjs web|supervisor|isolation [--shard i/n]");
   assert.equal(extra.length, 0, "usage: unexpected A/B lane arguments");
   if (flag === undefined && shard === undefined) return { slice, files: laneSuites[slice] };
+  if (flag === "--part") {
+    assert.equal(slice, "isolation", "only isolation accepts --part");
+    assert(/^[12]\/2$/u.test(shard ?? ""), "usage: isolation --part 1/2|2/2");
+
+    return { slice, files: isolationPartFiles(Number(shard[0])) };
+  }
   assert.equal(slice, "web", "only the web A/B slice accepts --shard");
   assert.equal(flag, "--shard", "usage: --shard i/n");
   const match = /^([1-9]\d*)\/([1-9]\d*)$/u.exec(shard ?? "");

@@ -34,6 +34,55 @@ const cleanup = workflow.jobs["execution-isolation"].steps.find(
 
 assert(cleanup, "isolation workflow must retain its cleanup step");
 
+test("isolation CI uses two independent serial VM parts and a failure-closed combined gate", () => {
+  const job = workflow.jobs["execution-isolation"];
+  const gate = workflow.jobs["execution-isolation-complete"];
+
+  assert.equal(job["runs-on"], "macos-15-intel");
+  assert.equal(job["timeout-minutes"], 60);
+  assert.deepEqual(job.strategy, { "fail-fast": false, matrix: { part: [1, 2] } });
+  assert.match(job.name, /matrix\.part/u);
+  assert(job.steps.some((step) => step.run?.includes("run-isolation-ci-stage.mjs preflight ${{ matrix.part }}")));
+  assert(job.steps.some((step) => step.run?.includes("run-isolation-ci-stage.mjs part ${{ matrix.part }}")));
+  const production = job.steps.find((step) => step.run?.includes("run-isolation-ci-stage.mjs part"));
+
+  assert.equal(production["timeout-minutes"], 40);
+  assert.match(production.run, /remaining=\$\(\( 3240 - elapsed \)\)/u);
+  assert.match(production.run, /remaining" -gt 2340; then remaining=2340/u);
+  assert.match(production.run, /gtimeout --signal=TERM --kill-after=30s/u);
+  assert.equal(job.steps.find((step) => step.name === "Prove filesystem driver and Testcontainers before production build")["timeout-minutes"], 10);
+  assert.equal(job.steps.find((step) => step.name === "Provision pinned isolated container runtime")["timeout-minutes"], 15);
+  const reports = job.steps.find((step) => step.id === "isolation_reports");
+
+  assert.equal(reports.with.name, "execution-isolation-part-${{ matrix.part }}-of-2-reports");
+  assert.equal(reports.with.path, "${{ runner.temp }}/maister-isolation-evidence/ci-reports/");
+  assert.equal(reports.with["if-no-files-found"], "error");
+  assert.equal(reports.if, "always()");
+  assert(job.steps.indexOf(reports) < job.steps.indexOf(cleanup));
+  const rawReports = job.steps.find((step) => step.name === "Preserve failed outer reports before runtime cleanup");
+
+  assert(rawReports, "failed outer reporters must survive runtime teardown");
+  assert.equal(rawReports.if, "always()");
+  assert.equal(rawReports.with.name, "execution-isolation-part-${{ matrix.part }}-of-2-raw-reports");
+  assert.equal(rawReports.with.path, "${{ runner.temp }}/maister-isolation-evidence/maister-ab-isolation-*/vitest.json");
+  assert.equal(rawReports.with["if-no-files-found"], "error");
+  assert(job.steps.indexOf(rawReports) < job.steps.indexOf(cleanup));
+  const diagnostics = job.steps.find((step) => step.name === "Preserve isolation diagnostics");
+
+  assert.equal(diagnostics.if, "always()");
+  assert.equal(diagnostics.with.name, "execution-isolation-part-${{ matrix.part }}-of-2-diagnostics");
+  assert(job.steps.indexOf(cleanup) < job.steps.indexOf(diagnostics));
+  assert.deepEqual(gate.needs, ["execution-isolation"]);
+  assert.equal(gate.if, "always()");
+  assert.equal(gate.env.MAISTER_ISOLATION_JOB_RESULT, "${{ needs.execution-isolation.result }}");
+  const downloads = gate.steps.filter((step) => step.uses === "actions/download-artifact@v4");
+
+  assert.deepEqual(downloads.map((step) => step.with.name), ["execution-isolation-part-1-of-2-reports", "execution-isolation-part-2-of-2-reports"]);
+  assert(gate.steps.some((step) => step.run?.includes("isolation-ci-evidence.mjs")));
+  assert.deepEqual(workflow.jobs["execution-data-plane"].strategy.matrix, { node: ["24.15.0", "24.19.0"], shard: [1, 2] });
+  assert.deepEqual(workflow.jobs["execution-runtime-supervisor"].strategy.matrix, { node: ["24.15.0", "24.19.0"] });
+});
+
 test("isolation compile cache proves real inherited compilation before publishing a fresh private path and refuses disabled or missing capabilities", (context) => {
   const steps = workflow.jobs["execution-isolation"].steps;
   const index = steps.findIndex(
