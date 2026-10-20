@@ -112,16 +112,17 @@ sequenceDiagram
 
 ### S5.2 close-out protocol (as built; hosted CI qualification pending)
 
-Option B is selected: the real `sandbox-exec` driver runs in a dedicated,
-serial GitHub `macos-15-intel` job with Node 24.19.0 and a pinned Colima/Lima
-Docker runtime. The local owner Mac is ARM64 and keeps its existing driver;
+Option B is selected: the real `sandbox-exec` driver runs in two independent
+GitHub `macos-15-intel` jobs with Node 24.19.0 and a pinned Colima/Lima Docker
+runtime (implemented split; owner-authorized 2026-10-20, hosted qualification
+pending). Each job runs serially. The local owner Mac is ARM64 and keeps its existing driver;
 no Rosetta requirement is imposed locally. The Intel pin is for the hosted
 container-runtime recipe. The Linux uid/mount-namespace driver and separate-user
 Linux deployment remain S5.3. Unsupported drivers fail loudly. The negative
 control expects the driver's documented errno (macOS EPERM); the host positive
 control and HTTP readback must still succeed. Testcontainers uses only
 `pg-container.ts`, with real runtime/port reachability proved before the lane.
-The job runs an independent real-driver/PostgreSQL preflight before its production build, then `test:integration:isolation`. The runner enforces the per-file required-case manifest and rejects missing, duplicate, skipped or failed controls. CI uploads the actual `vitest.json`, safe traces and timings; total cold
+Each job runs an independent real-driver/PostgreSQL preflight before its production build, then its explicit isolation part. The runner enforces the per-file required-case manifest and rejects missing, duplicate, skipped or failed controls. CI uploads the actual `vitest.json`, safe traces and timings; total cold
 setup/build/tests/cleanup/upload must measure below 60 minutes. Missing runner
 execution or an unavailable kernel driver is unqualified, never a local-pass
 substitute. Qualification records revision, image, architecture and Node version.
@@ -173,9 +174,26 @@ counted without consuming the partition. Duplicate single-shot consumption is
 an error; repeated matches on a persistent partition are expected. No boolean
 multi-mode helper: use typed actions with separate handlers.
 
-D3 uses persistent `hold-responses` for the exact uploaded object. It holds
-each retry ACK across individual HTTP deadlines until explicit release, with
-bounded retained bytes and observations. An upstream `ECONNRESET` from an owned
+D3's fault frontier holds the exact seal event while
+the real upload command completes successfully. ACK evidence records seal
+metadata but cannot promote the pending catalogue row; only event evidence
+can do that. Assert pending state with no source event before releasing SSE
+into the scoped database write barrier. Terminate that identified projector
+backend, then prove effect/cursor rollback and exactly one successor projection
+without a new event. Retain final POST 202. Holding HTTP ACKs throughout this
+proof would exhaust the independent ten-second wire deadlines and inject an
+unrelated upload failure. B4 uses the same ACK-before-event positive control,
+then its original scoped catalogue-write barrier and authorized readback.
+A rejected launch must surface its HTTP or launch-stream error while waiting for a barrier;
+an unreached proxy cannot explain a failure that precedes all upload traffic.
+Failure diagnostics retain the exact owned PostgreSQL container's state,
+restart/OOM indicators and a finite 200-line log snapshot, bounded to 64 KiB
+with a three-second Docker request deadline. They record the database name,
+not its credential-bearing URL. All three production-fault fixture consumers
+close their fixture in `finally`, including when diagnostics fail.
+
+Persistent `hold-responses` remains available for actual response-partition
+controls, with bounded retained bytes and observations. An upstream `ECONNRESET` from an owned
 supervisor death is forwarded as a reset, not recorded as a proxy defect. A
 single-shot client's early close is an error unless the test records its owned
 process kill before disposal; persistent receipt/response partitions tolerate
@@ -435,8 +453,38 @@ Each of the six legs has a unique artifact
 name and uploads its actual JSON reporter with `if-no-files-found: error`.
 The runner passes exactly its selected file list to Vitest and
 `validateLaneReport`; that validator rejects absent, duplicate, unexpected,
-empty, skipped and failed suites/cases. `--shard 1/2` and `--shard 2/2` are web
-only; the production isolation slice remains serial and rejects sharding.
+empty, skipped and failed suites/cases. `--shard 1/2` and `--shard 2/2` remain web-only. The isolation split uses
+`--part 1/2` and `--part 2/2`, each serial on its own VM; the local full
+`isolation` invocation still selects all seven suites. No case is removed.
+
+The macOS split selects whole owning suites in their original order:
+
+| Part | Owning suites | Required cases |
+| --- | --- | --- |
+| 1 | process cleanup; partitions | 13 + 6 = 19 |
+| 2 | process death; isolation; durable-worker boot; durable-worker concurrency; scratch dispatch | 6 + 4 + 8 + 3 + 10 = 31 |
+
+Both matrix jobs run even if the other fails. `run-isolation-ci-stage.mjs`
+executes the selected stage through `runStageAbLane`, validates its exact case
+names and writes an atomic receipt only after strict invocation cleanup returns
+success. The receipt binds the outer reporter hash, invocation, source SHA,
+repository/run/attempt, actual platform/architecture/Node, runner image,
+serial concurrency, duration and budget. Each report artifact contains fixed
+`preflight/` and `part/` paths; recursive nested cleanup-control reporters are
+retained only as diagnostics. Artifact names include `part-1-of-2` or
+`part-2-of-2` to prevent upload collisions. A separate `raw-reports` artifact
+uploads existing direct outer reporters before runtime teardown, including
+failed reports that cannot receive a success receipt. It never feeds the gate.
+
+`execution-isolation-complete` requires both entire macOS jobs to succeed,
+including runtime cleanup and all uploads. It downloads both validated report artifacts
+and rejects missing or duplicate stages, altered hashes, wrong source/run,
+non-Intel or wrong-Node evidence, failures/skips, cleanup failure, or incomplete
+case-name sets. Its `execution-isolation-combined` artifact records both separate
+preflights and the exact disjoint seven-suite/50-case union. Failed aggregation
+retains a failed receipt; a green part cannot substitute for a missing part.
+The actual hosted duration and remaining headroom still require inspection of
+both jobs and their timing diagnostics after owner push.
 
 The current inventory contains the 44 R9 web files plus two harness owners,
 partitioned into 23/23. The proxy cancellation/refusal owner and reaper lifetime
@@ -456,7 +504,7 @@ build and HTTP readiness remain inside Playwright's 180-second web-server
 deadline. Pipe server stdout into the job log so a preparation timeout retains
 its last observed phase. All 13 browser cases remain mandatory.
 
-The one macOS Intel isolation job keeps Colima 0.10.3/Lima 2.2.0 and one
+Each macOS Intel isolation job keeps Colima 0.10.3/Lima 2.2.0 and one
 `colima start` attempt. It runs `runtime:check` before provisioning.
 After that check, `scripts/setup-isolation-ci-compile-cache.mjs` creates a fresh
 0700 Node compile-cache directory under the canonical job temporary root,
@@ -501,9 +549,10 @@ still fails the job. A syntax
 check or local ARM run is not hosted proof.
 
 S5.2 acceptance requires four complete web shard reports, both runtime and
-supervisor legs, and a green macOS isolation leg on the same pushed commit.
-The separate preflight report and full isolation report must both exist; the
-six original isolation suites and all 40 original required cases must remain.
+supervisor legs, and both green macOS isolation parts plus their combined gate on the same
+pushed commit. Each part must supply its separate preflight and outer suite
+report; together they must contain exactly all seven suites and 50 required
+cases, including the original six suites/40 cases and ten dispatch controls.
 Record the run URL, source SHA, runner image/architecture, artifact identities,
 measured total duration (below 60 minutes) and remaining headroom before
 marking S5.2 complete.
@@ -908,7 +957,8 @@ The current production Dockerfile does not provision this test driver.
 Docker client, daemon, container startup, migration and query failures are
 distinct diagnostic stages; retries require an identified transient operation.
 
-Hosting remains gated by the existing plan. Isolation is serial/unsharded,
+Linux hosting remains gated by the existing plan. Its qualification remains
+serial/unsharded; the authorized two-job macOS recipe does not qualify Linux,
 with the 60-minute job limit, 15-minute setup and 10-minute separate preflight
 steps. The full-slice budget remains `min(2340, 3240 - elapsed_job_seconds)`;
 nonpositive budget refuses launch. Preserve the 30-second TERM/KILL reserve,
@@ -1158,7 +1208,7 @@ AT-17. Browser half stays open under S5.3.
 - [Colima provisioning script](../../scripts/setup-isolation-ci-runtime.sh)
 - [feature specification](../../.ai-factory/specs/feature-unified-test-database-testcontainers.md)
 
-The mandatory push workflow runs the explicit web A/B inventory in two shards per Node version and the complete supervisor A/B inventory once per Node, as specified above. Missing files, empty discovery, failed or skipped cases fail each leg. The same runner owns the serial `isolation` slice (AT-16 core, above) and the AT-12 browser lane is `pnpm --filter maister-web test:e2e:execution-ab` (`playwright.execution-ab.config.ts`: a REAL supervisor started by `e2e/execution-ab-global-setup.ts` behind a `next dev` web server; `e2e/execution-ab-content.spec.ts`). The real-supervisor fixture refuses to start without a process invocation, so the lane's wrapper `web/e2e/run.ts` mints one the way the A/B runner does and replaces any caller-supplied `MAISTER_TEST_WORKTREE_INVOCATION_ID`; the Playwright process, the web server, the supervisor and its adapters all carry the tag and are released through the same `releaseInvocation` as the A/B lanes when the lane ends. That lane must run on an otherwise idle host — concurrent CPU load or file writes under `web/` livelocked the dev server's edge-instrumentation recompile at boot (observed before the 2026-09-08 instrumentation split: ~135k warning lines and a 180 s readiness timeout versus ~3k lines and readiness in ~15 s when idle). `web/instrumentation.ts` now reaches its Node-only body (`web/instrumentation-node.ts`) solely through the `NEXT_RUNTIME === "nodejs"` branch, so the Edge instrumentation entry no longer bundles the server graph and a dev boot plus page compile prints none of those warnings; the idle-host requirement has not been re-measured since. The isolation slice is wired to the mandatory `execution-isolation` macOS Intel job; its actual hosted run and sub-60-minute budget remain unqualified. The browser lane stays with S5.3. A separate mandatory image job builds the pinned Dockerfile, exercises real binary HTTP and runs `web/scripts/smoke-production-image.ts` through the default image ENTRYPOINT/CMD with a migrated PostgreSQL container. It verifies HTTP readiness, SIGTERM completion and no remaining web PostgreSQL sessions. The browser runtime/image matrix remains part of S5.3.
+The mandatory push workflow runs the explicit web A/B inventory in two shards per Node version and the complete supervisor A/B inventory once per Node, as specified above. Missing files, empty discovery, failed or skipped cases fail each leg. The same runner owns the serial `isolation` slice (AT-16 core, above) and the AT-12 browser lane is `pnpm --filter maister-web test:e2e:execution-ab` (`playwright.execution-ab.config.ts`: a REAL supervisor started by `e2e/execution-ab-global-setup.ts` behind a `next dev` web server; `e2e/execution-ab-content.spec.ts`). The real-supervisor fixture refuses to start without a process invocation, so the lane's wrapper `web/e2e/run.ts` mints one the way the A/B runner does and replaces any caller-supplied `MAISTER_TEST_WORKTREE_INVOCATION_ID`; the Playwright process, the web server, the supervisor and its adapters all carry the tag and are released through the same `releaseInvocation` as the A/B lanes when the lane ends. That lane must run on an otherwise idle host — concurrent CPU load or file writes under `web/` livelocked the dev server's edge-instrumentation recompile at boot (observed before the 2026-09-08 instrumentation split: ~135k warning lines and a 180 s readiness timeout versus ~3k lines and readiness in ~15 s when idle). `web/instrumentation.ts` now reaches its Node-only body (`web/instrumentation-node.ts`) solely through the `NEXT_RUNTIME === "nodejs"` branch, so the Edge instrumentation entry no longer bundles the server graph and a dev boot plus page compile prints none of those warnings; the idle-host requirement has not been re-measured since. The isolation slice is wired to the mandatory two-part `execution-isolation` macOS Intel matrix and combined gate; its actual hosted run and sub-60-minute budget remain unqualified. The browser lane stays with S5.3. A separate mandatory image job builds the pinned Dockerfile, exercises real binary HTTP and runs `web/scripts/smoke-production-image.ts` through the default image ENTRYPOINT/CMD with a migrated PostgreSQL container. It verifies HTTP readiness, SIGTERM completion and no remaining web PostgreSQL sessions. The browser runtime/image matrix remains part of S5.3.
 
 Admin browser specs are opt-in alternatives in `AUTHED_SPEC`; discovery is a
 contract because any omitted filename falls into the unauthenticated Chromium

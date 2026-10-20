@@ -11,6 +11,12 @@ Implementation authorized 2026-10-03 through `aif-implement`: execute the whole 
 
 ## Settings and authority
 
+Owner amendment, 2026-10-20: CI-R9 below replaces the single macOS isolation
+job with two independent macOS jobs, serial within each. All seven suites and
+50 required cases, existing deadlines and runner sizes remain mandatory.
+Earlier unsharded-hosting language is historical for macOS; prospective Linux
+hosting still requires its own qualification. Push remains the owner's action.
+
 - Testing: **yes**, SDD → executed RED → minimal GREEN → REFACTOR → valid falsification → restored GREEN. Real Linux processes, real PostgreSQL and production web/supervisor entrypoints. No acceptance skips, quarantines, substitutes, timeout increases or larger runners.
 - Logging: **verbose**, bounded structured DEBUG diagnostics; INFO for capability/launch/restart/exit/qualification; WARN for refused authority and bounded retries; ERROR for capability, inspection, cleanup and budget failures. Reuse `logInvocation`, existing fixture loggers and `LOG_LEVEL`; never log credential values, environment dumps, prompts, sentinel contents, SQLite contents or object bodies. Paths are role labels/digests in shared evidence; private local diagnostics may retain necessary owned paths.
 - Docs: **yes**, mandatory documentation checkpoint through `$aif-docs` during implementation. Complete normative analytics before behavior changes; mark Linux mechanisms Designed until actually executed. No new standalone summary report deliverable; use existing invocation/report/timing artifacts and evidence fields in owning plans.
@@ -146,7 +152,7 @@ Preflight must separately identify Docker client construction, daemon contact, c
 
 The current canonical contract explicitly requires **green macOS isolation on the exact pushed SHA**. Linux does not meet that text. After local driver qualification, commit a prospective amendment to `test-infrastructure.md`, stabilization S5.2/S5.3a and R9 T5/T13b together: standard hosted Linux may satisfy AT-16 hosted isolation when it proves this kernel boundary, retains the complete inventory and meets unchanged timing/report/leak gates. Preserve Intel failures and ARM successes with original platform/SHA identities. Leave S5.2 unchecked while changing the recipe.
 
-Then migrate only isolation hosting/provisioning/timeout-command/finalization. Preserve push triggers, four web legs (24.15.0 and 24.19.0 × 1/2 and 2/2), two runtime/supervisor legs, browser/image/static jobs and their acceptance. Isolation stays one serial unsharded Node 24.19.0 job; local 24.15.0 qualification proves the new driver at the minimum runtime. No claim of hosted minimum-version isolation unless a separately specified hosted leg actually exists.
+Then migrate only isolation hosting/provisioning/timeout-command/finalization. Preserve push triggers, four web legs (24.15.0 and 24.19.0 × 1/2 and 2/2), two runtime/supervisor legs, browser/image/static jobs and their acceptance. Prospective Linux isolation stays one serial unsharded Node 24.19.0 job; the owner-authorized two-part macOS recipe is specified in CI-R9 below. Local 24.15.0 qualification proves the new driver at the minimum runtime. No claim of hosted minimum-version isolation unless a separately specified hosted leg actually exists.
 
 Unchanged hosted envelope:
 
@@ -1399,6 +1405,85 @@ separately; it does not rerun the browser. The
 [dated fix record](../patches/2026-10-16-14.17.md) binds the receipts and failed
 attempts. These local results leave the owner-push and hosted Intel gates open.
 
+### CI-R9 — two macOS jobs and explicit object fault frontiers (2026-10-20)
+
+The owner authorizes this amendment after run `39290649010`. Its PR head is
+`ad6e88c492c74914d10c85650acc503a9307a4d6`; the executed merge
+`1a256af174a1e31ff0bdf8c466028b8b9459c644` has the same source tree.
+The Intel lane exits 124 after four completed suites/35 cases, with B4 and D3
+failed. Separate preflight passes. Final containment reaps three processes and
+one container; no complete outer reporter exists. Other mandatory jobs pass.
+
+B4's launch loses its PostgreSQL connection before any upload reaches the
+proxy. Suppressed launch rejection conceals the HTTP failure behind an unreached
+barrier. Retained evidence does not identify what closed that connection; do not
+claim a database/network fix without a reproduction. D3 holds all three upload
+ACKs until their existing ten-second wire deadlines expire, then incorrectly
+expects POST 202. The reducer already permits only event evidence to promote
+pending to available: ACK metadata can complete before the projection fault.
+
+- [x] **CI-R9a — Object controls and failure provenance.** Root owns the existing
+      B4/D3 suites and only directly needed fixture diagnostics. Add a causal
+      upload-command frontier while the exact seal event is held; require
+      successful HTTP delivery, manager pending/no source event and positive
+      host seal metadata before releasing projection. Preserve B4's scoped
+      catalogue block/readback and all D3 backend/cursor rollback, successor
+      identity, exactly-once and final HTTP assertions. Surface launch rejection
+      immediately instead of hiding it behind a barrier timeout. RED uses real
+      exhausted ACK attempts against the old D3 ordering and an ACK-promotion
+      mutation against the new pending-state control; restore and run both full
+      owning suites. Do not change production HTTP/retry/transaction deadlines.
+- [x] **CI-R9b — Partition and fail-closed evidence.** CI owner:
+      `scripts/run-stage-ab-tests.mjs`, its test, workflow/control tests and the
+      minimal outer-receipt/aggregate entrypoint. Explicit part 1 contains
+      cleanup13 + partitions6; part 2 contains death6 + isolation4 + boot8 +
+      concurrency3 + dispatch10, preserving canonical order. Each separate
+      `macos-15-intel` VM uses Node24.19.0, serial Vitest, independent real
+      preflight/build/Colima/cache and unique artifacts. Keep 60-minute job and
+      `min(2340, 3240-elapsed)` suite budget and all existing step deadlines.
+      Matrix fail-fast is disabled. Preserve full local isolation invocation.
+      Receipts identify the actual outer reports after validated cleanup;
+      nested intentional failure reports cannot substitute. Preserve failed
+      direct outer reports in a separate upload before runtime teardown. A mandatory
+      combined gate rejects missing/duplicate parts, different source/run or
+      platform, tampered reports, missing preflight, skips/failures/leaks, or
+      anything other than the original seven-suite/50-case name set. RED then
+      GREEN actual workflow/CLI/receipt corruption controls.
+- [x] **CI-R9c — Qualification and contracts.** Root owns canonical analytics,
+      this plan and S5.2 contract reconciliation. Run both parts serially on
+      local ARM64 with separate preflight on each exact Node version; validate
+      disjoint union, exact original names, cleanup and timing from final
+      sources. Run required docs/contracts/types/build and focused lint checks,
+      then adversarial review. API/event payloads, PostgreSQL/SQLite schema,
+      migrations, deployed configuration and production isolation are unchanged;
+      no migration or ADR allocation is needed. Record uncertainties and
+      measured durations; local evidence is not hosted qualification.
+- [ ] **CI-R9d — Owner-push/hosted checkpoint.** After phase commits the owner
+      pushes. Read-only verification must bind the exact pushed SHA (and PR
+      merge tree), both macOS jobs, both separate preflights, combined 50 cases,
+      four web shards, both supervisor jobs and remaining mandatory artifacts.
+      Each macOS job must fit its unchanged budget and have zero leaks. Until
+      then S5.2/S5.3/S5.4 remain open at 42/45. If either job still fails, preserve
+      its receipts and diagnose that failure; no case removal, timeout increase
+      or Linux substitution. A local revert of the CI-only phase is available
+      if the split recipe fails; the owner controls publication.
+
+The split is a budget hypothesis, not a performance claim: the four measured
+Intel owners account for 1199.118s in part 1 and 919.787s in part 2; three part 2
+owners were not completed in that run. Each VM also pays cold setup/build cost.
+Browser lifecycle expansion and separate-user deployment remain separate.
+
+Local qualification passes on the frozen combined candidate: both exact Nodes
+run all original 50 cases as 19/31 parts, each with its own successful preflight,
+fresh production build and clean terminal sweep. Independent resource checks,
+original full-name comparison and all 17 static/runtime/contract checks pass.
+The hosted verifier correctly rejects local ARM64 receipts. The
+[dated fix record](../patches/2026-10-20-15.06.md) binds source hashes, real
+RED/falsification controls, actual reporters, timings, review corrections and
+the unproved original B4 socket cause. Phase commits organize the same tested
+combined source; they are not separate complete-lane qualification runs.
+CI-R9d remains the owner's push followed by exact-SHA hosted verification.
+
 ## Commit Plan
 
 Implementation commits preserve focused boundaries; qualification binds each
@@ -1437,6 +1522,9 @@ The second hosted-audit correction uses disjoint local phase groups:
 | CI-R8d2 | Direct application admission/abort/join at shutdown, existing E's exact actor/outcome control and canonical lifecycle contract; both-Node causal RED/GREEN and complete consumers | `fix(execution-host): drain direct prompt applications on shutdown` |
 | CI-R8d3 | Bounded native EINVAL retry, final kernel identity guard and existing O-identity real-process controls; persistent denial/foreign refusal and full Darwin owning qualification | `fix(test): retry transient Darwin process inspection` |
 | CI-R8e | Canonical analytics, owning plans and dated exact-source evidence; local checks and truthful owner-push/hosted gates | `docs(test): record causal fixture qualification` |
+| CI-R9a | Existing B4/D3 fault windows, shared PostgreSQL diagnostics and guaranteed cleanup in all three consumers; real RED/GREEN and complete original owners | `fix(test): separate upload and projection fault windows` |
+| CI-R9b | Explicit 19/31 macOS parts, actual outer receipts, failed-report preservation and strict combined gate; unchanged cases, seriality and deadlines | `ci: split macOS isolation into two serial jobs` |
+| CI-R9c | Canonical acceptance contract, owning plans and exact-source local receipts; hosted checkpoint remains open | `docs(test): record isolation split qualification` |
 
 
 | Checkpoint | Tasks / required green gate | Suggested conventional commit |
