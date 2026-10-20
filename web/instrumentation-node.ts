@@ -234,22 +234,24 @@ export async function registerNodeRuntime(): Promise<void> {
     "@/lib/execution-host/events/projection-runtime"
   );
   const { stopDurableWorkers } = await import("@/lib/workers/runtime");
+  const { stopPromptOwnerApplications } = await import(
+    "@/lib/execution-host/prompt-owner-application"
+  );
   const { beginDbShutdown, closeDb } = await import("@/lib/db/client");
   let draining: Promise<PromiseSettledResult<void>[]> | undefined;
 
   registerApplicationLifecycle({
     quiesce: () => {
-      // All four stops run concurrently, so the shutdown budget is the MAX,
-      // not the sum. A prompt-owner slot mid-application holds a renewed 30 s
-      // lease — longer than the 25 s drain — so the overrun branch below is
-      // reachable by construction, and taking it is correct: an unconfirmed
-      // claim release must fail shutdown and leave the claim to expire.
+      // Stop and join workers and direct HTTP applications concurrently. Keep
+      // their results while HTTP drains: an unconfirmed release must fail
+      // shutdown even if its waiter has already left the active application set.
       draining ??= Promise.allSettled([
         stopSchedulerTimer(),
         stopRuntimeObjectRetentionTimer(),
         stopRuntimeEventConsumers(),
         stopCanonicalProjectionWorker(),
         stopDurableWorkers(),
+        stopPromptOwnerApplications(),
       ]);
     },
     drain: async () => {

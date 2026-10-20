@@ -46,12 +46,15 @@ afterAll(async () => {
 }, 90_000);
 
 afterEach(async (context) => {
-  if (context.task.result?.state === "fail") {
-    // eslint-disable-next-line no-console
-    console.error(JSON.stringify(await fixture?.tails()));
+  try {
+    if (context.task.result?.state === "fail") {
+      // eslint-disable-next-line no-console
+      console.error(JSON.stringify(await fixture?.tails()));
+    }
+  } finally {
+    await fixture?.close();
+    fixture = undefined;
   }
-  await fixture?.close();
-  fixture = undefined;
 }, 90_000);
 
 async function restartUnadmittedTurn(
