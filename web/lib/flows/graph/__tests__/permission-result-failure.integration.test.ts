@@ -1,16 +1,22 @@
 import type { Db } from "@/lib/execution-host/db";
 import type { RealSupervisor } from "@/test-support/real-supervisor";
 import type { ProjectionWorker } from "@/lib/execution-host/events/projection-worker";
+import type {
+  Invocation,
+  ProcessIdentity,
+} from "@/test-support/process-invocation";
 
-import { fork, type ChildProcess } from "node:child_process";
+import { execFile, fork, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { access, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { access, mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { atomicWriteJson } from "@/lib/atomic";
 import {
   assignments,
   domainEvents,
@@ -54,6 +60,55 @@ import {
   startRealSupervisor,
   useRealSupervisorUrl,
 } from "@/test-support/real-supervisor";
+import {
+  findProcessIdentities,
+  invocationFromEnvironment,
+  sameProcess,
+  signalInvocationProcess,
+} from "@/test-support/process-invocation";
+
+const execFileAsync = promisify(execFile);
+
+type AdapterJournal = Readonly<{
+  acpSessionId: string;
+  permissionSelected?: boolean;
+  heldAfterPermission?: boolean;
+  pendingPermission?: Readonly<Record<string, unknown>>;
+}>;
+
+async function waitForStoppedJournalPublisher(
+  invocation: Invocation,
+  expected: ProcessIdentity,
+): Promise<void> {
+  await expect
+    .poll(
+      async () => {
+        const [current] = await findProcessIdentities(invocation, [
+          expected.pid,
+        ]);
+
+        if (
+          !current ||
+          !current.owned ||
+          !current.inspected ||
+          !sameProcess(expected, current)
+        )
+          throw new Error(
+            "Selected journal publisher lost its kernel identity",
+          );
+        const status = await execFileAsync("ps", [
+          "-o",
+          "state=",
+          "-p",
+          String(expected.pid),
+        ]);
+
+        return status.stdout.trim().startsWith("T");
+      },
+      { timeout: 10_000, interval: 25 },
+    )
+    .toBe(true);
+}
 
 let database: StartedPostgresTestDb;
 let supervisor: RealSupervisor;
@@ -573,6 +628,10 @@ describe("Owned Flow completed-command failure handoff", () => {
       const failsDuringCheckpoint = window === "failure during checkpoint";
       const terminalDuringCheckpoint =
         completesDuringCheckpoint || failsDuringCheckpoint;
+      const publicationBarrier =
+        owner === "node" && window === "ordinary"
+          ? path.join(journalPath, `selected-publication-${randomUUID()}.json`)
+          : "";
 
       await stopRuntimeEventConsumers();
       supervisor = await supervisor.restart({
@@ -581,13 +640,19 @@ describe("Owned Flow completed-command failure handoff", () => {
           MOCK_ACP_STOP_REASON: "end_turn",
           MOCK_ACP_HOLD_AFTER_PERMISSION: "1",
           MOCK_ACP_COMPLETE_ON_CHECKPOINT: terminalDuringCheckpoint ? "1" : "0",
+          MOCK_ACP_JOURNAL_SELECTION_BARRIER: publicationBarrier,
           MOCK_ACP_FAIL_AFTER_PERMISSION: failsDuringCheckpoint
             ? "adapter authentication unavailable"
             : "",
         },
       });
       const seeded = await seedFailureFlow(owner);
+      const invocation = invocationFromEnvironment();
+
+      if (!invocation)
+        throw new Error("Journal publisher requires a test invocation");
       const driver = startProcess("flow-prompt-owner-process.ts", seeded.runId);
+      let publisher: ProcessIdentity | undefined;
       let claimant: ReturnType<typeof startProcess> | undefined;
       let responder: ReturnType<typeof startProcess> | undefined;
       let continuation:
@@ -624,6 +689,41 @@ describe("Owned Flow completed-command failure handoff", () => {
           .from(hitlRequests)
           .where(eq(hitlRequests.runId, seeded.runId));
         const hosts = createExecutionHosts({ db });
+        const [incarnation] = await db
+          .select()
+          .from(runSessionIncarnations)
+          .where(
+            eq(runSessionIncarnations.hostSessionId, source.targetSessionId!),
+          );
+        const journalFile = path.join(
+          journalPath,
+          `${incarnation.acpSessionId}.json`,
+        );
+        const beforeSelection = JSON.parse(
+          await readFile(journalFile, "utf8"),
+        ) as AdapterJournal;
+
+        expect(beforeSelection.acpSessionId).toBe(incarnation.acpSessionId);
+        expect(beforeSelection.pendingPermission).toBeDefined();
+        if (publicationBarrier) {
+          const session = (await hosts.transport.listSessions()).find(
+            (candidate) => candidate.sessionId === source.targetSessionId,
+          );
+
+          if (!session || session.acpSessionId !== incarnation.acpSessionId)
+            throw new Error(
+              "Selected journal publisher has no exact host session",
+            );
+          const [identity] = await findProcessIdentities(invocation, [
+            session.pid,
+          ]);
+
+          if (!identity || !identity.owned || !identity.inspected)
+            throw new Error(
+              "Selected journal publisher is not an inspectable owned process",
+            );
+          publisher = identity;
+        }
 
         startRuntimeEventConsumer({
           db,
@@ -645,29 +745,57 @@ describe("Owned Flow completed-command failure handoff", () => {
         ).toMatchObject({
           phase: "accepted",
         });
-        const [incarnation] = await db
-          .select()
-          .from(runSessionIncarnations)
-          .where(
-            eq(runSessionIncarnations.hostSessionId, source.targetSessionId!),
-          );
-        const journalFile = path.join(
-          journalPath,
-          `${incarnation.acpSessionId}.json`,
-        );
+        if (publicationBarrier && publisher) {
+          await waitForStoppedJournalPublisher(invocation, publisher);
+          try {
+            expect(
+              JSON.parse(await readFile(publicationBarrier, "utf8")),
+            ).toEqual({
+              acpSessionId: incarnation.acpSessionId,
+              pid: publisher.pid,
+              journalPath: journalFile,
+            });
+            // The selected publisher is stopped after open, before writing.
+            // A reader must still see the complete previously published value.
+            expect(JSON.parse(await readFile(journalFile, "utf8"))).toEqual(
+              beforeSelection,
+            );
+          } finally {
+            await signalInvocationProcess(invocation, publisher, "SIGCONT");
+          }
+        }
+        await expect
+          .poll(
+            async () => {
+              const current = JSON.parse(
+                await readFile(journalFile, "utf8"),
+              ) as AdapterJournal;
+
+              return {
+                acpSessionId: current.acpSessionId,
+                selected: current.permissionSelected,
+                held: current.heldAfterPermission,
+                pending: current.pendingPermission,
+              };
+            },
+            { timeout: 30_000, interval: 25 },
+          )
+          .toEqual({
+            acpSessionId: incarnation.acpSessionId,
+            selected: true,
+            held: true,
+            pending: undefined,
+          });
         const journal = JSON.parse(
           await readFile(journalFile, "utf8"),
         ) as Record<string, unknown>;
 
-        await writeFile(
-          journalFile,
-          JSON.stringify({
-            ...journal,
-            completionText: '{"verdict":"pass"}',
-            requestFreshPermission: window === "fresh permission",
-            rejectResume: window === "refused handle",
-          }),
-        );
+        await atomicWriteJson(journalFile, {
+          ...journal,
+          completionText: '{"verdict":"pass"}',
+          requestFreshPermission: window === "fresh permission",
+          rejectResume: window === "refused handle",
+        });
         await db
           .update(runs)
           .set({ keepaliveUntil: new Date(Date.now() - 1_000) })
@@ -981,15 +1109,28 @@ describe("Owned Flow completed-command failure handoff", () => {
           { cause: error },
         );
       } finally {
-        await continuation?.stop();
-        claimant?.child.kill("SIGKILL");
-        responder?.child.kill("SIGKILL");
-        await claimant?.exited;
-        await responder?.exited;
-        if (driver.child.exitCode === null && driver.child.signalCode === null)
-          driver.child.kill("SIGKILL");
-        await driver.exited;
-        await stopRuntimeEventConsumers();
+        try {
+          if (publisher) {
+            try {
+              await signalInvocationProcess(invocation, publisher, "SIGCONT");
+            } finally {
+              await signalInvocationProcess(invocation, publisher, "SIGKILL");
+            }
+          }
+        } finally {
+          await continuation?.stop();
+          claimant?.child.kill("SIGKILL");
+          responder?.child.kill("SIGKILL");
+          await claimant?.exited;
+          await responder?.exited;
+          if (
+            driver.child.exitCode === null &&
+            driver.child.signalCode === null
+          )
+            driver.child.kill("SIGKILL");
+          await driver.exited;
+          await stopRuntimeEventConsumers();
+        }
       }
     },
     120_000,

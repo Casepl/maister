@@ -33,12 +33,15 @@ afterAll(async () => {
 }, 90_000);
 
 afterEach(async (context) => {
-  if (context.task.result?.state === "fail") {
-    // eslint-disable-next-line no-console
-    console.error(JSON.stringify(await fixture?.tails()));
+  try {
+    if (context.task.result?.state === "fail") {
+      // eslint-disable-next-line no-console
+      console.error(JSON.stringify(await fixture?.tails()));
+    }
+  } finally {
+    await fixture?.close();
+    fixture = undefined;
   }
-  await fixture?.close();
-  fixture = undefined;
 }, 90_000);
 
 type Command = {
@@ -438,15 +441,6 @@ it("D3: connection loss after projection claim rolls back effect and cursor; a s
   void request.catch(() => undefined);
   const selected = await upload.awaitReached();
   const objectId = selected.path.split("/")[2]!;
-  const ack = fixture.proxy.arm(
-    {
-      caseId: "D3-upload-ACK",
-      method: "PUT",
-      path: /^\/runtime-objects\/[^/]+\/content$/,
-      objectId,
-    },
-    "hold-responses",
-  );
   const seal = fixture.proxy.arm(
     {
       caseId: "D3-seal",
@@ -472,9 +466,37 @@ it("D3: connection loss after projection claim rolls back effect and cursor; a s
     END IF; RETURN NEW; END $audit$;
     CREATE TRIGGER s52_audit_object AFTER UPDATE ON execution_runtime_objects FOR EACH ROW WHEN (NEW.id = '${objectId}') EXECUTE FUNCTION s52_audit_object()`);
   upload.release();
-  await ack.awaitReached();
   const event = await seal.awaitReached();
+  const uploaded = await poll(
+    async () => {
+      const rows = await fixture!.database.pool.query<{
+        state: string;
+        attempts: number;
+      }>(
+        "SELECT state, attempts FROM execution_commands WHERE run_id=$1 AND kind='runtime_object.upload' AND target_session_id=$2",
+        [runId, objectId],
+      );
 
+      return ["succeeded", "failed"].includes(rows.rows[0]?.state ?? "")
+        ? rows.rows[0]!
+        : null;
+    },
+    60_000,
+    "upload delivery completes before the projection fault",
+  );
+
+  expect(uploaded.state).toBe("succeeded");
+  expect(
+    (
+      await fixture.database.pool.query(
+        "SELECT state, source_event_id FROM execution_runtime_objects WHERE id=$1",
+        [objectId],
+      )
+    ).rows,
+  ).toEqual([{ state: "pending", source_event_id: null }]);
+  expect(
+    (await fixture.database.pool.query("SELECT * FROM s52_object_audit")).rows,
+  ).toEqual([]);
   seal.release();
   const backend = await barrier.awaitReached();
   const consumer = async (): Promise<{
@@ -563,7 +585,6 @@ it("D3: connection loss after projection claim rolls back effect and cursor; a s
   expect(await fixture.web.logTail(4 * 1024 * 1024)).toMatch(
     /projection.*(failed|failure|unavailable)|terminated|connection.*closed/i,
   );
-  ack.release();
   expect((await request).status).toBe(202);
   expect(
     (await fixture.database.pool.query("SELECT * FROM s52_object_audit")).rows,

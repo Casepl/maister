@@ -26,6 +26,7 @@ export type OwnerKind =
 export type PromptCommandRow = {
   id: string;
   runId: string;
+  targetSessionId: string | null;
   state: string;
   applicationState: string;
   completionAppliedAt: Date | null;
@@ -37,6 +38,7 @@ export type PromptCommandRow = {
 const promptColumns = () => ({
   id: schema.executionCommands.id,
   runId: schema.executionCommands.runId,
+  targetSessionId: schema.executionCommands.targetSessionId,
   state: schema.executionCommands.state,
   applicationState: schema.executionCommands.applicationState,
   completionAppliedAt: schema.executionCommands.completionAppliedAt,

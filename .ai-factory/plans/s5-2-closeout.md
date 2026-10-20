@@ -163,8 +163,11 @@ family; implementation records its actual execution revision separately.
 
 ### CI driver: option B, with an explicit Intel runner pin
 
-Keep `sandbox-exec` and its documented `EPERM` denial. Add a dedicated mandatory
-macOS isolation job, serial within each job, Node `24.19.0`, 60-minute job limit.
+Keep `sandbox-exec` and its documented `EPERM` denial. The owner amendment of
+2026-10-20 requires two mandatory macOS isolation jobs, serial within each job,
+Node `24.19.0`, 60-minute job limit. The disjoint whole-suite parts retain all
+seven suites/50 cases and each independent preflight, with a combined exact-name
+report gate. See [CI-R9](s53a-linux-isolation.md#ci-r9--two-macos-jobs-and-explicit-object-fault-frontiers-2026-10-20). Earlier single-job evidence remains historical.
 Keep the existing Ubuntu A/B matrix (`24.15.0`, `24.19.0`) unchanged.
 Linux uid/mount-namespace isolation and the separate-user layout belong to S5.3.
 
@@ -682,10 +685,10 @@ fix cycle. Commit C3.
   CI-only runtime setup helper if needed. Add
   `test:integration:isolation = node ../scripts/run-stage-ab-tests.mjs isolation`.
   **T13a prerequisite:** minimal runtime/driver/PG preflight is scheduled during
-  T03 after T02; no dependency on unimplemented fault tests. **T13b final job:**
-  mandatory macOS Intel job as decided above; explicit Colima/Lima/Docker
+  T03 after T02; no dependency on unimplemented fault tests. **T13b final jobs:**
+  both mandatory macOS Intel parts and their combined gate as decided above; explicit Colima/Lima/Docker
   provisioning and preflight, frozen pnpm install, Node runtime check, driver
-  denial/positive control, serial lane and one build. Export a job-local
+  denial/positive control, serial execution and one build per part. Export a job-local
   `MAISTER_TEST_EVIDENCE_DIR` under `RUNNER_TEMP`; runner reports its actual
   `vitest.json` location and CI copies/uploads it from that recorded location
   (macOS `tmpdir()` is not `/tmp`). `always()` uploads JSON plus safe logs,
@@ -875,12 +878,13 @@ unproven, retain S5.2 as open with that precise missing gate.
 
 ### S5.2 P4 concrete response window
 
-The current [P4 response-window contract](../../docs/system-analytics/test-infrastructure.md#s52-p4-concrete-response-window-2026-10-02-specification-amendment)
+The current [P4 response-window contract](../../docs/system-analytics/test-infrastructure.md#s52-p4-concrete-response-window)
 supersedes the original 2026-09-22 control arrangement. It preserves the delayed
 real HTTP ACK, original handler's 409, current-authority snapshot/write audit,
-and exactly-once successor completion. Successor creation is held after its
-assignment and Running attempt commit; session initialization and activation
-are verified after stale-handler rejection, outside the original wire deadline.
+and exactly-once successor completion. Successor capability publication is held
+after its assignment, Running attempt and protected metadata commit; session
+creation, initialization and activation are verified after stale-handler
+rejection, outside the original wire deadline.
 
 ### Phase 2 execution evidence in progress
 
@@ -915,10 +919,13 @@ allocator; preserve its assertions and correct the remaining writer.
 Harness contract amendment after the first 12-control execution: supervisor
 death may reset an upstream SSE connection; forward that reset without classifying
 it as a proxy defect. A single-shot client's early close remains a defect unless
-the test subsequently records its owned-process kill. D3 needs a persistent
-`hold-responses` barrier for the exact object: each upload retry is observed and
-held until explicit release, including across individual HTTP deadlines. Bound
-retained response bytes and count. This does not relax single-shot ACK controls.
+the test subsequently records its owned-process kill. The original D3 prescription
+used persistent `hold-responses` for the exact object across upload retries.
+**Superseded by [CI-R9](s53a-linux-isolation.md#ci-r9--two-macos-jobs-and-explicit-object-fault-frontiers-2026-10-20):**
+that hold exhausted the independent upload deadlines. D3 now completes the ACK
+while holding the exact seal event, proves pending/no effect, then injects its
+projection fault. Persistent response barriers remain bounded and available
+for actual response-partition controls; single-shot ACK controls remain strict.
 D1 requests the existing authenticated `POST /api/cron/gc` scheduler entrypoint
 after the unavailable permission response and again after supervisor restart;
 the scheduler owns the claim and calls the production keepalive pass. Production

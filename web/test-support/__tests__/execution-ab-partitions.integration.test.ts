@@ -117,6 +117,18 @@ async function launch(upload?: string): Promise<string> {
   return (await readLaunchResult(response)).runId;
 }
 
+async function whileLaunching<T>(
+  witness: Promise<T>,
+  launched: Promise<string>,
+): Promise<T> {
+  // Successful launch is not a fault witness; a failed launch must not hide
+  // behind an unrelated proxy or catalogue timeout.
+  return Promise.race([
+    witness,
+    launched.then(() => new Promise<never>(() => {})),
+  ]);
+}
+
 async function command(id: string): Promise<CommandRow> {
   const result = await database!.pool.query<CommandRow>(
     "SELECT * FROM execution_commands WHERE id = $1",
@@ -212,46 +224,115 @@ describe("S5.2 production-boot fault partitions", () => {
   }, 120_000);
 
   afterEach(async (context) => {
-    if (context.task.result?.state === "fail") {
-      // eslint-disable-next-line no-console
-      console.error(await fixture?.tails());
+    try {
+      if (context.task.result?.state === "fail") {
+        // eslint-disable-next-line no-console
+        console.error(await fixture?.tails());
+      }
+    } finally {
+      await fixture?.close();
+      fixture = undefined;
+      dbBarrier = undefined;
     }
-    await fixture?.close();
-    fixture = undefined;
-    dbBarrier = undefined;
   }, 60_000);
 
   it("B4: sealed host object remains pending until the scoped catalogue barrier releases", async () => {
-    // HTTP ACK loss alone cannot hold the catalogue: the independent seal
-    // event must still publish it. This positive control identifies the bypass.
-    const ackOnly = proxy!.arm(
+    // ACK metadata alone cannot publish availability. Hold the event rather
+    // than a ten-second HTTP response while inspecting the durable frontier.
+    const firstUpload = proxy!.arm(
       {
-        caseId: "B4-HTTP-only",
+        caseId: "B4-HTTP-upload",
         method: "PUT",
         path: /^\/runtime-objects\/[^/]+\/content$/,
       },
-      "hold-response",
+      "hold-request",
     );
     const ackOnlyLaunch = launch("http-only-upload.txt");
-
-    void ackOnlyLaunch.catch(() => undefined);
-    const ackOnlyWitness = await ackOnly.awaitReached();
+    const ackOnlyWitness = await whileLaunching(
+      firstUpload.awaitReached(),
+      ackOnlyLaunch,
+    );
     const ackOnlyObjectId = ackOnlyWitness.path.split("/")[2]!;
+    const seal = proxy!.arm(
+      {
+        caseId: "B4-HTTP-seal",
+        method: "GET",
+        path: /^\/runtime-events$/,
+        eventType: "runtime_object.available",
+        objectId: ackOnlyObjectId,
+      },
+      "hold-events",
+    );
 
+    firstUpload.release();
+    await whileLaunching(seal.awaitReached(), ackOnlyLaunch);
+    const delivered = await whileLaunching(
+      poll(
+        async () => {
+          const result = await database!.pool.query<{ state: string }>(
+            "SELECT state FROM execution_commands WHERE kind='runtime_object.upload' AND target_session_id=$1",
+            [ackOnlyObjectId],
+          );
+
+          return ["succeeded", "failed"].includes(result.rows[0]?.state ?? "")
+            ? result.rows
+            : null;
+        },
+        30_000,
+        "HTTP upload completes while its seal event is held",
+      ),
+      ackOnlyLaunch,
+    );
+
+    expect(delivered).toEqual([{ state: "succeeded" }]);
+    const ackMetadata = await database!.pool.query<{
+      state: string;
+      source_event_id: string | null;
+      sha256: string;
+      size_bytes: string;
+    }>(
+      "SELECT state, source_event_id, sha256, size_bytes FROM execution_runtime_objects WHERE id=$1",
+      [ackOnlyObjectId],
+    );
+
+    expect(ackMetadata.rows).toEqual([
+      {
+        state: "pending",
+        source_event_id: null,
+        sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+        size_bytes: String(Buffer.byteLength("sealed partition bytes\n")),
+      },
+    ]);
+    const sealed = await fetch(
+      `${supervisor!.url}/runtime-objects/${ackOnlyObjectId}`,
+    );
+
+    expect(sealed.status).toBe(200);
+    expect(await sealed.json()).toMatchObject({
+      state: "available",
+      sha256: ackMetadata.rows[0]!.sha256,
+      sizeBytes: Number(ackMetadata.rows[0]!.size_bytes),
+    });
+    seal.release();
+    await ackOnlyLaunch;
     await poll(
       async () => {
-        const result = await database!.pool.query<{ state: string }>(
-          "SELECT state FROM execution_runtime_objects WHERE id=$1",
+        const result = await database!.pool.query<{
+          state: string;
+          source_event_id: string | null;
+        }>(
+          "SELECT state, source_event_id FROM execution_runtime_objects WHERE id=$1",
           [ackOnlyObjectId],
         );
 
-        return result.rows[0]?.state === "available" ? true : null;
+        return result.rows[0]?.state === "available" &&
+          result.rows[0].source_event_id !== null
+          ? true
+          : null;
       },
       30_000,
-      "SSE publishes catalogue while only the HTTP ACK is held",
+      "released seal event publishes the catalogue",
     );
-    ackOnly.release();
-    await ackOnlyLaunch;
     const upload = proxy!.arm(
       {
         caseId: "B4-upload",
@@ -262,8 +343,7 @@ describe("S5.2 production-boot fault partitions", () => {
     );
     const launched = launch("barrier-upload.txt");
 
-    void launched.catch(() => undefined);
-    const request = await upload.awaitReached();
+    const request = await whileLaunching(upload.awaitReached(), launched);
     const objectId = request.path.split("/")[2]!;
 
     dbBarrier = await fixture!.holdWrite({
@@ -272,7 +352,7 @@ describe("S5.2 production-boot fault partitions", () => {
       matches: { id: objectId, state: "available" },
     });
     upload.release();
-    const writer = await dbBarrier.awaitReached();
+    const writer = await whileLaunching(dbBarrier.awaitReached(), launched);
 
     expect(writer).toBeGreaterThan(0);
     const pending = await database!.pool.query<{ id: string; state: string }>(
@@ -307,6 +387,7 @@ describe("S5.2 production-boot fault partitions", () => {
       `/api/runs/${runId}/runtime-objects/${pending.rows[0]!.id}/content`,
     );
 
+    expect(response.status).toBe(200);
     expect(await response.text()).toBe("sealed partition bytes\n");
   }, 180_000);
 
@@ -882,6 +963,15 @@ it("P4: delayed checkpoint ACK reaches its original handler after successor epoc
       },
       "hold-request",
     );
+    const successorPublication = stack.proxy.arm(
+      {
+        caseId: "P4-successor-publication",
+        method: "POST",
+        path: /^\/runtime-objects$/,
+        assignmentEpoch: 2,
+      },
+      "hold-requests",
+    );
     const restart = await stack.api(
       `/api/runs/${runId}/hitl/${hitlRequestId}/respond`,
       {
@@ -897,9 +987,12 @@ it("P4: delayed checkpoint ACK reaches its original handler after successor epoc
     expect(restart.status).toBe(202);
     events.release();
     receipt.release();
-    const creating = await successorCreate.awaitReached();
+    const publishing = await successorPublication.awaitReached();
 
-    expect(creating.assignmentEpoch).toBe(2);
+    expect(publishing.assignmentEpoch).toBe(2);
+    // Publication waits outside a database transaction after successor metadata
+    // commits. Keep session creation behind it while the original handler rejects
+    // its stale ACK, independently of capability transfer latency.
     expect(
       oldResponseSettled,
       "successor assignment commits before old handler settles",
@@ -938,8 +1031,16 @@ it("P4: delayed checkpoint ACK reaches its original handler after successor epoc
           [runId],
         )
       ).rows[0].state;
-    const currentAttempts = await stack.database.pool.query<{ id: string }>(
-      `SELECT n.id FROM node_attempts n
+    const currentAttempts = await stack.database.pool.query<{
+      id: string;
+      enforcement_recorded: boolean;
+      materialization_recorded: boolean;
+      prompt_recorded: boolean;
+    }>(
+      `SELECT n.id, n.enforcement_snapshot IS NOT NULL AS enforcement_recorded,
+         n.materialization_plan IS NOT NULL AS materialization_recorded,
+         n.resolved_prompt IS NOT NULL AS prompt_recorded
+       FROM node_attempts n
        JOIN runs r ON r.id=n.run_id
        JOIN execution_assignments a ON a.id=r.execution_assignment_id
        WHERE n.run_id=$1 AND n.status='Running'
@@ -948,6 +1049,11 @@ it("P4: delayed checkpoint ACK reaches its original handler after successor epoc
     );
 
     expect(currentAttempts.rows).toHaveLength(1);
+    expect(currentAttempts.rows[0]!).toMatchObject({
+      enforcement_recorded: true,
+      materialization_recorded: true,
+      prompt_recorded: true,
+    });
     expect(currentAttempts.rows[0]!.id).not.toBe(originalAttemptId);
     await stack.database.pool.query("TRUNCATE s52_stale_writes");
     const before = await snapshot();
@@ -971,6 +1077,10 @@ it("P4: delayed checkpoint ACK reaches its original handler after successor epoc
     ).toEqual([]);
     expect(stale.status).toBe(409);
     expect(await stale.json()).toMatchObject({ code: "CONFLICT" });
+    successorPublication.release();
+    const creating = await successorCreate.awaitReached();
+
+    expect(creating.assignmentEpoch).toBe(2);
     successorCreate.release();
     const successor = await successorPrompt.awaitReached();
 

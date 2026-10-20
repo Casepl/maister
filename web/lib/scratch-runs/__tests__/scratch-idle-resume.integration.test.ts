@@ -21,6 +21,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { atomicWriteJson } from "@/lib/atomic";
 import * as schema from "@/lib/db/schema";
 import { testPlatformRunnerRow } from "@/lib/__tests__/runner-fixtures";
 import { canonicalProjectors } from "@/lib/execution-host/events/projection-runtime";
@@ -545,12 +546,14 @@ describe("scratch idle resume after a host park (D-A8)", () => {
     };
 
     expect(journal.pendingPermission).toBeDefined();
-    journal.pendingPermission = {
-      ...journal.pendingPermission,
-      toolCall,
-      ...(options ? { options } : {}),
-    };
-    await writeFile(path, JSON.stringify(journal));
+    await atomicWriteJson(path, {
+      ...journal,
+      pendingPermission: {
+        ...journal.pendingPermission,
+        toolCall,
+        ...(options ? { options } : {}),
+      },
+    });
   }
 
   it("C4: a freed-slot respawn that fails puts the answered run back in the queue at its place", async () => {

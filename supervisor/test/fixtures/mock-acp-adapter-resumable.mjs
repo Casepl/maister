@@ -27,6 +27,8 @@
 //   MOCK_ACP_HOLD_AFTER_PERMISSION  "1" → retain the selected turn until teardown.
 //   MOCK_ACP_FAIL_AFTER_PERMISSION  ACP request error after a selected permission.
 //   MOCK_ACP_COMPLETE_ON_CHECKPOINT "1" → finish the held turn during teardown.
+//   MOCK_ACP_JOURNAL_SELECTION_BARRIER  control receipt path; stop the selected
+//                             journal publisher after opening its output file.
 //   MOCK_ACP_PERMISSION_MALFORMED "1" → emit a session/request_permission frame
 //                             the supervisor's schema REFUSES, bypassing the
 //                             SDK (which would never produce one). Pins the
@@ -45,7 +47,15 @@
 //                             prior-context witness (the M0 ALBATROSS check).
 
 import { randomUUID } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
 
@@ -58,8 +68,9 @@ const HOLD_AFTER_PERMISSION =
 const FAIL_AFTER_PERMISSION = process.env.MOCK_ACP_FAIL_AFTER_PERMISSION;
 const COMPLETE_ON_CHECKPOINT =
   process.env.MOCK_ACP_COMPLETE_ON_CHECKPOINT === "1";
-const PERMISSION_MALFORMED =
-  process.env.MOCK_ACP_PERMISSION_MALFORMED === "1";
+const JOURNAL_SELECTION_BARRIER =
+  process.env.MOCK_ACP_JOURNAL_SELECTION_BARRIER;
+const PERMISSION_MALFORMED = process.env.MOCK_ACP_PERMISSION_MALFORMED === "1";
 const STATE_DIR = process.env.MOCK_ACP_STATE_DIR ?? null;
 const FLOOD_FRAMES = Number(process.env.MOCK_ACP_FLOOD_FRAMES ?? "0");
 const FLOOD_BYTES = Number(process.env.MOCK_ACP_FLOOD_BYTES ?? "0");
@@ -83,6 +94,17 @@ function statePathFor(acpSessionId) {
   return join(STATE_DIR, `${acpSessionId}.json`);
 }
 
+function journalErrorDetails(error) {
+  return {
+    name: error instanceof Error ? error.name : "UnknownError",
+    message: error instanceof Error ? error.message : String(error),
+    code:
+      typeof error?.code === "string" || typeof error?.code === "number"
+        ? error.code
+        : null,
+  };
+}
+
 function readJournal(acpSessionId) {
   const p = statePathFor(acpSessionId);
 
@@ -90,8 +112,17 @@ function readJournal(acpSessionId) {
 
   try {
     return JSON.parse(readFileSync(p, "utf8"));
-  } catch {
-    return null;
+  } catch (err) {
+    if (err?.code === "ENOENT") return null;
+    log("error", {
+      msg: "journal-read-failed",
+      acpSessionId,
+      journalPath: p,
+      error: journalErrorDetails(err),
+    });
+    throw new Error(`Cannot read adapter journal ${p} for ${acpSessionId}`, {
+      cause: err,
+    });
   }
 }
 
@@ -99,12 +130,61 @@ function writeJournal(acpSessionId, journal) {
   const p = statePathFor(acpSessionId);
 
   if (!p) return;
+  const temporary = `${p}.${randomUUID()}.tmp`;
 
   try {
     mkdirSync(STATE_DIR, { recursive: true });
-    writeFileSync(p, JSON.stringify(journal));
+    const output = openSync(temporary, "wx");
+
+    try {
+      if (
+        JOURNAL_SELECTION_BARRIER &&
+        journal.permissionSelected === true &&
+        journal.heldAfterPermission !== true
+      ) {
+        const receipt = `${JOURNAL_SELECTION_BARRIER}.${randomUUID()}.tmp`;
+
+        writeFileSync(
+          receipt,
+          JSON.stringify({ acpSessionId, pid: process.pid, journalPath: p }),
+        );
+        renameSync(receipt, JOURNAL_SELECTION_BARRIER);
+        // Self-stop cannot target a reused PID. The owner revalidates the
+        // captured kernel identity before resuming this exact publisher.
+        process.kill(process.pid, "SIGSTOP");
+      }
+      writeFileSync(output, JSON.stringify(journal));
+    } finally {
+      closeSync(output);
+    }
+    renameSync(temporary, p);
   } catch (err) {
-    log("warn", { msg: "journal-write-failed", err: String(err) });
+    log("error", {
+      msg: "journal-publish-failed",
+      acpSessionId,
+      journalPath: p,
+      error: journalErrorDetails(err),
+    });
+    try {
+      unlinkSync(temporary);
+    } catch (cleanupError) {
+      if (cleanupError?.code !== "ENOENT") {
+        log("error", {
+          msg: "journal-cleanup-failed",
+          acpSessionId,
+          journalPath: p,
+          temporaryPath: temporary,
+          error: journalErrorDetails(cleanupError),
+        });
+        throw new AggregateError(
+          [err, cleanupError],
+          `Cannot publish or clean adapter journal ${p} for ${acpSessionId}`,
+        );
+      }
+    }
+    throw new Error(`Cannot publish adapter journal ${p} for ${acpSessionId}`, {
+      cause: err,
+    });
   }
 }
 
@@ -232,7 +312,10 @@ class MockAgent {
           sessionId: params.sessionId,
           update: {
             sessionUpdate: "agent_message_chunk",
-            content: { type: "text", text: `recall: ${journal.rememberedText}` },
+            content: {
+              type: "text",
+              text: `recall: ${journal.rememberedText}`,
+            },
           },
         });
 
@@ -248,7 +331,11 @@ class MockAgent {
       if (PERMISSION_THEN_FLOOD) {
         const pending = this.connection.requestPermission({
           sessionId: params.sessionId,
-          toolCall: { toolCallId: "tc-flood", title: "Mock tool", kind: "execute" },
+          toolCall: {
+            toolCallId: "tc-flood",
+            title: "Mock tool",
+            kind: "execute",
+          },
           options: [
             { optionId: "allow", kind: "allow_always", name: "Allow" },
             { optionId: "deny", kind: "reject_once", name: "Deny" },
@@ -299,6 +386,7 @@ class MockAgent {
       if (outcome?.outcome === "selected") {
         writeJournal(params.sessionId, {
           acpSessionId: params.sessionId,
+          permissionSelected: true,
         });
         await this.connection.sessionUpdate({
           sessionId: params.sessionId,
@@ -324,7 +412,10 @@ class MockAgent {
 
           permissionSelected = nextResult?.outcome?.outcome === "selected";
           if (permissionSelected)
-            writeJournal(params.sessionId, { acpSessionId: params.sessionId });
+            writeJournal(params.sessionId, {
+              acpSessionId: params.sessionId,
+              permissionSelected: true,
+            });
           await this.connection.sessionUpdate({
             sessionId: params.sessionId,
             update: {
@@ -402,7 +493,10 @@ class MockAgent {
       permissionSelected = outcome?.outcome === "selected";
 
       if (outcome?.outcome === "selected") {
-        writeJournal(params.sessionId, { acpSessionId: params.sessionId });
+        writeJournal(params.sessionId, {
+          acpSessionId: params.sessionId,
+          permissionSelected: true,
+        });
         await this.connection.sessionUpdate({
           sessionId: params.sessionId,
           update: {
@@ -433,6 +527,12 @@ class MockAgent {
     ) {
       await new Promise((resolve) => {
         finishHeldPrompt = resolve;
+        writeJournal(params.sessionId, {
+          ...readJournal(params.sessionId),
+          acpSessionId: params.sessionId,
+          permissionSelected: true,
+          heldAfterPermission: true,
+        });
       });
       finishHeldPrompt = null;
       completionText = readJournal(params.sessionId)?.completionText;
