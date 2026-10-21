@@ -5,7 +5,7 @@ Current continuation branch: `codex/s53a-qualification`; retain this explicit pl
 Created: 2026-10-02.
 Refined through `aif-improve`: 2026-10-20 on working baseline `8237993223fa5a7c3aafe9db42d9438612990938`; implementation, verification and local phase commits authorized. Original planning/qualification sources remain separately attributed.
 Planning source: `f43ac1570380d2be19f7c59a70cd993f24ace440`.
-Status: **A1–A7 complete through C2 on `codex/s53a-linux-isolation`. Native Ubuntu's then-current 52-case inventory and final-source Darwin/full phase regression qualify the Phase-1 driver subset. A8–A12, extended lifecycle controls and Linux55/both-Node qualification remain open. A13–A15 decide hosting after G-LINUX; macOS remains the accepted default and Linux hosting is unqualified. CI-R9d and S5.2 are accepted on the exact hosted source below; stabilization is 43/45. S5.3/S5.4 and Linux qualification remain open.**
+Status: **A1–A7 complete through C2 on `codex/s53a-linux-isolation`. Native Ubuntu's then-current 52-case inventory and final-source Darwin/full phase regression qualify the Phase-1 driver subset. A8–A10 are complete at control/manifest level, including the interstage admission correction; A11–A12/C3 remain open. Initial Node24.15 Linux55 passes; final-source both-Node, ordinary-regression and fresh Darwin gates remain open. This continuation retains macOS hosting and excludes A14. Linux hosting is unqualified. CI-R9d and S5.2 are accepted on the exact hosted source below; stabilization is 43/45. S5.3/S5.4 remain open.**
 
 Implementation authorized 2026-10-03 through `aif-implement`: execute the whole plan, commit by qualified phases and mark tasks only after their acceptance evidence passes. Initial implementation HEAD is the planning source. The owner-push boundary remains binding.
 
@@ -317,9 +317,9 @@ Implementation follows repository conventions: strict explicit types, immutable 
 
 ### Phase 2 — Falsification, complete inventories and local qualification
 
-- [ ] **A8 — Complete boundary/escape/fail-closed controls without lifecycle duplication.** Owner **Qualification**. Depends: A7. Files: new Linux owning suite, minimal `web/test-support/fixtures/` descendant/escape fixture(s), `fixtures/namespace-capability-denied.c`, I1/I4 assertions if missing. Implement LI-boundary/LI-refusal with reached barriers, RO/RW controls, fork/exec, aliases, proc/FD and capabilities; add the bounded known-file device/inode/link-count guard and deliberate hardlink/replaced-source/nested-mount subcontrols. Exercise ambient environment/FD refusal, invalid-policy restart and owned-probe error/timeout cleanup without duplicating I3 continuity. Before changing code, rerun the existing two-case owner on the current source in the qualified Ubuntu environment. Resume the invalid-policy restart retry falsification that previously never reached its assertion. Add reached cancellation subcontrols within LI-refusal for database acquisition, build, policy preparation and web readiness: `linux-lifecycle-fixture.ts` currently publishes cleanup only after PostgreSQL acquisition and checks `closing` only after the build. Prove cleanup is registered before resource acquisition, late completions are joined/reclaimed, no web launches after cancellation, and the original cause survives cleanup. No new top-level title or production test flag. **Acceptance:** all D2 enforcement claims observed; known exported-inode prerequisite rejected without whole-tree scanning; real namespace denial refuses before app exec; no kernel escape success; unchanged public access positive. **Logging:** INFO assertion-role/errno/outcome, DEBUG escape type without private bytes, ERROR unexpected read/write/exec success.
-- [ ] **A9 — Complete wrapped lifecycle and cleanup controls.** Owner **Qualification**. Depends: A7, A8. Files: Linux owning suite and focused nested launcher fixtures; `real-web.ts`/launcher for RED-first defects found. Implement LI-term/LI-kill/LI-parent against actual namespace wrapper, startup death, one active-probe parent-death cut and TERM-resistant/setsid descendant; foreign sibling witnesses, exact code/signal outcomes and terminal leak scan. **Acceptance:** D3 holds with no exit-sweep dependence for parent-death claims; detached descendants die; observed application codes/signals retained and unobserved containment outcomes distinguished; containment discovery fails lane. **Logging:** INFO readiness/signal/parent-identity/death/leak counts; ERROR leak/refusal anomalies. No broad fault-harness isolation expansion.
-- [ ] **A10 — Register mandatory platform manifests and discovery.** Owner **Lane**. Depends: A8, A9. Files: `scripts/run-stage-ab-tests.mjs`, existing runner test file, `web/vitest.workspace.ts`, test-infrastructure inventory. Preserve original50 titles; promote the completed Linux suite/five required titles into the mandatory lane, preserving the platform discovery/exclusion wired in A4, with unknown-platform refusal, serial concurrency and no sharding. Keep Darwin's `laneSuites.isolation`, `isolationPartFiles`, `isolation-ci-evidence.mjs` and 19/31 combined receipt contract intact. Introduce platform-specific full-lane selection only after all five Linux titles actually pass; Linux `--part` must refuse, and Darwin aggregate validation must never accept a Linux owner. Extend the existing executable runner/receipt controls, including unknown-platform and dropped-Linux-case REDs. **Acceptance:** Linux55+preflight1; Darwin50+preflight1; discovery/report/manifest agree; dropped Linux owner or case makes validation fail; existing web shards unchanged. Reuse existing report-rejection tests. **Logging:** INFO exact selected platform/suites/cases/invocation; ERROR manifest/report drift.
+- [x] **A8 — Complete boundary/escape/fail-closed controls without lifecycle duplication.** Owner **Qualification**. Depends: A7. Files: new Linux owning suite, minimal `web/test-support/fixtures/` descendant/escape fixture(s), `fixtures/namespace-capability-denied.c`, I1/I4 assertions if missing. Implement LI-boundary/LI-refusal with reached barriers, RO/RW controls, fork/exec, aliases, proc/FD and capabilities; add the bounded known-file device/inode/link-count guard and deliberate hardlink/replaced-source/nested-mount subcontrols. Exercise ambient environment/FD refusal, invalid-policy restart and owned-probe error/timeout cleanup without duplicating I3 continuity. Before changing code, rerun the existing two-case owner on the current source in the qualified Ubuntu environment. Resume the invalid-policy restart retry falsification that previously never reached its assertion. Add reached cancellation subcontrols within LI-refusal for database acquisition, build, policy preparation and web readiness: `linux-lifecycle-fixture.ts` currently publishes cleanup only after PostgreSQL acquisition and checks `closing` only after the build. Prove cleanup is registered before resource acquisition, late completions are joined/reclaimed, no supervisor/build/web launches after cancellation (including directory and supervisor handoffs), and the original cause survives cleanup. No new top-level title or production test flag. **Acceptance:** all D2 enforcement claims observed; known exported-inode prerequisite rejected without whole-tree scanning; real namespace denial refuses before app exec; no kernel escape success; unchanged public access positive. **Logging:** INFO assertion-role/errno/outcome, DEBUG escape type without private bytes, ERROR unexpected read/write/exec success.
+- [x] **A9 — Complete wrapped lifecycle and cleanup controls.** Owner **Qualification**. Depends: A7, A8. Files: Linux owning suite and focused nested launcher fixtures; `real-web.ts`/launcher for RED-first defects found. Implement LI-term/LI-kill/LI-parent against actual namespace wrapper, startup death, one active-probe parent-death cut and TERM-resistant/setsid descendant; foreign sibling witnesses, exact code/signal outcomes and terminal leak scan. **Acceptance:** D3 holds with no exit-sweep dependence for parent-death claims; detached descendants die; observed application codes/signals retained and unobserved containment outcomes distinguished; containment discovery fails lane. **Logging:** INFO readiness/signal/parent-identity/death/leak counts; ERROR leak/refusal anomalies. No broad fault-harness isolation expansion.
+- [x] **A10 — Register mandatory platform manifests and discovery.** Owner **Lane**. Depends: A8, A9. Files: `scripts/run-stage-ab-tests.mjs`, existing runner test file, `web/vitest.workspace.ts`, test-infrastructure inventory. Preserve original50 titles; promote the completed Linux suite/five required titles into the mandatory lane, preserving the platform discovery/exclusion wired in A4, with unknown-platform refusal, serial concurrency and no sharding. Keep Darwin's `laneSuites.isolation`, `isolationPartFiles`, `isolation-ci-evidence.mjs` and 19/31 combined receipt contract intact. Introduce platform-specific full-lane selection only after all five Linux titles actually pass; Linux `--part` must refuse, and Darwin aggregate validation must never accept a Linux owner. Extend the existing executable runner/receipt controls, including unknown-platform and dropped-Linux-case REDs. **Acceptance:** Linux55+preflight1; Darwin50+preflight1; discovery/report/manifest agree; dropped Linux owner or case makes validation fail; existing web shards unchanged. Reuse existing report-rejection tests. **Logging:** INFO exact selected platform/suites/cases/invocation; ERROR manifest/report drift.
 - [ ] **A11 — Falsify enforcement/ownership, restore and qualify local Linux.** Owner **Qualification**. Depends: A10. Files: no new report artifact in git; evidence fields in this plan and existing owning plans/analytics, corrections in owned files only after new RED. Execute falsification table then restored full Linux55 lane and separate preflight on each exact Node 24.15.0/24.19.0; one fresh build per invocation. Execute Darwin50/preflight and full applicable suite/static gates; keep source frozen and platform labels. Freeze the current continuation source, not the older C2 or CI-R9d tree, including all merged harness/runtime edits. Retain separate receipts for both Nodes and for Darwin full-lane or authorized 19/31 parts with independent preflights; do not borrow the hosted checkpoint for modified source. **Acceptance:** `validateLaneReport` success, complete exact title sets, timing records and zero leaks before containment; source/restoration hashes verified; actual Ubuntu 24.04 amd64 local environment meets D4 for both Nodes. ARM64 container development results remain separate and cannot close G-LINUX. **Logging:** INFO mutant/restored source/runtime/report identity/timings; ERROR invalid mutant or incomplete/leaked lane. No hosted qualification inferred.
 
 **Phase-2 exit / G-LINUX:** actual kernel boundary, lifecycle/refusal/cleanup and minimum/current Node driver gates qualified on local Ubuntu 24.04 amd64; complete local evidence retained; full applicable suites green. If Linux capability fails, stop before CI migration. Commit checkpoint C3.
@@ -338,34 +338,38 @@ G-HOSTED for the owner-pushed Linux candidate. Failed or missing qualification
 is an open gate, not a completed disposition. S5.2 historical acceptance is
 not erased by an unqualified Linux candidate.
 
-## Current refinement and execution frontier (2026-10-20)
+## Current refinement and execution frontier (2026-10-21)
 
 `aif-improve` reviewed all 15 tasks against the continuation source. Completed
 A1–A7 are preserved. Changes affect A8 and A10–A15: cancellation ownership and
 retry falsification are explicit; Linux55 selection cannot alter accepted
 Darwin50 receipts; the changed source requires fresh qualification; hosting
 is an evidence-based retain/adopt decision after G-LINUX. No additional test
-suite or product feature is added. A9 still owns three missing lifecycle titles.
+suite or product feature is added. A8–A10 are complete at control/manifest
+level, including the reached interstage cancellation correction below. A11 has valid enforcement, namespace, supervision,
+signal-identity and outcome falsifications, with all five restored controls
+passing on native Ubuntu at both exact Nodes. The additional native probe
+correction makes namespace success observable before process exit.
 
-Observed source: `linux-isolation-driver.integration.test.ts` has only
-LI-boundary and LI-refusal; `web/vitest.workspace.ts` discovers it only on Linux;
-`run-stage-ab-tests.mjs` still has the original seven-file mandatory isolation
-manifest. The current two Linux cases are a development owner, not Linux55.
-Existing A8 production-restart code is present, but its retry falsification
-and cancellation acceptance remain unqualified. Reuse that owner rather than
-rewriting already implemented boundary controls.
+The current source has exactly five Linux titles and mandatory Linux55
+selection. Darwin's original50,19/31 parts, receipt implementation and two
+macOS jobs are preserved. An initial full Linux55 and separate preflight
+pass at Node24.15.0; final-source both-Node execution remains required after
+the interstage admission correction and changed-code lint cleanup. Complete phase regression
+is blocked by the unchanged concurrent-promotion control described below;
+fresh Darwin qualification also remains open. Historical
+hosted receipts qualify only their recorded source. Continue A11 on the
+current restored source; do not repeat completed implementation.
 
-Next action: obtain the smallest suitable Ubuntu24.04 amd64 test environment,
-run `scripts/setup-isolation-linux-runtime.sh` as the nonroot harness user,
-then reproduce A8's reached RED, implement only the observed defect, restore
-and pass the complete owner before proceeding to A9. The current machine is
-Darwin ARM64; Docker Desktop reports `aarch64`, kernel `6.12.76-linuxkit`;
+The earlier refinement ran on Darwin ARM64; Docker Desktop reported
+`aarch64`, kernel `6.12.76-linuxkit`;
 the prior `/private/tmp/maister-s53a/amd64-vm` directory is empty and no local
 Lima/Multipass/QEMU executable was found. This is an execution prerequisite,
 not a failed behavioral RED. Executing the existing setup script under Node
 24.15.0 exits 1 at the platform prerequisite, before provisioning:
 `qualification requires Ubuntu 24.04 amd64`. Access to a suitable test host/VM
-has been requested. No Linux behavior, C3 or hosting completion is claimed.
+was requested and is now available as recorded below. That historical attempt
+qualified no Linux behavior, C3 or hosting completion.
 Do not bypass the real-kernel TDD gate with unexecuted test code.
 
 Independent validation on Node24.15.0: existing lane/workflow/receipt controls
@@ -377,6 +381,428 @@ validated at CI-R9d above. Logs: `/private/tmp/maister-s53a-refinement-lane.log`
 existing contract checks, not A8 RED/GREEN or a Linux behavior qualification.
 
 ## Execution evidence
+
+### A8 — Ubuntu continuation, restart falsification and database cancellation
+
+Source prerequisites are present on `codex/s53a-qualification`: `357ae6cfd`
+and HEAD `8ad23a5fcf258a136960846fb1748e5ba908fe52`. The initial worktree was
+clean. All receipts below live outside the repository under
+`/tmp/maister-s53a-ubuntu-qlpo_wtn/`; each execution directory contains the
+command, patch hash, timing, full log, owning invocation ledger and Vitest JSON.
+No A8 completion, C3 completion, fresh Darwin or Linux hosted qualification is
+claimed.
+
+- Host: Ubuntu24.04.4 LTS, native amd64 KVM VM, kernel6.8.0-147-generic,
+  ordinary UID/GID1000. Docker29.5.3 is accessible through the user's rootless
+  Unix socket. Real SQL reports PostgreSQL16.14/x86_64; main190 and Brain6
+  migrations execute in disposable containers. Git2.43.0 and GCC13.3.0 are
+  available. Official Node24.15.0 and24.19.0 archives match their published
+  SHA256 inventories; frozen pnpm11.6.0 installation succeeded without a
+  lockfile change. Runtime receipts: `environment-gate.json`,
+  `host-proc-witness.json`, `node-downloads.json`, `postgres-version-witness/`.
+- Installed non-setuid Bubblewrap0.9.0-1ubuntu0.3 matches the authenticated
+  Ubuntu package archive (binary SHA256
+  `e318903862396f96de3df57264e0158682b952fd3fb53ac23d876413e7b30f71`).
+  Upstream0.9.0 plus the distro patch series were inspected. The existing
+  narrow AppArmor profile matches the repository profile byte-for-byte;
+  Yama remains1 and restricted unprivileged user namespaces remain enabled.
+  Both exact Nodes pass actual required namespace, private proc, dropped-cap,
+  NoNewPrivs and `--disable-sigusr1` probes. Host process/tag/start-time
+  inspection passes. The unmodified setup script reaches its redundant
+  AppArmor reload but exits1 because `sudo -n apparmor_parser` needs a password;
+  this provisioning-command refusal is retained separately from the successful
+  runtime capability observations. No host security setting was changed.
+- Baseline complete owner: `a8-baseline-linux-owner-24150/`, invocation
+  `523ee838-328f-40ff-8c80-1cadf114ec6b`, 2/2, 192.81s; fresh build126.95s,
+  exact title set validated, all recorded sweeps report zero leaks.
+- Valid restart retry falsification: `a8-restart-retry-mutant-24150/`,
+  invocation `5288d719-87f9-4dd6-bc05-0e2aa92cafd7`, 180.78s. Removing only
+  the Linux direct-start branch reaches LI-refusal's assertion: **20 attempts
+  instead of1**. LI-boundary passes; cleanup reports zero leaks. Mutant
+  `real-web.ts` SHA256 is
+  `194e91945a38958d7859c3ea7ebdf1c99081cdc23cf9ab342c9d167d83342859`;
+  restored bytes match
+  `4fee19922fb14bf6de28a3e93addc598da89336be0995123c228aac75a63d2dd`.
+  Restored complete owner: `a8-restart-restored-24150/`, invocation
+  `f221ac54-bb07-472e-bc20-8b9da851e8b7`, 2/2, 177.29s.
+- Database cancellation SDD extends the existing operation table. A real
+  migrated database is held at its acquisition handoff; no resource is faked.
+  The first test attempt, `a8-database-cancellation-red-24150/`, is **invalid
+  RED**: duplicate test teardown obscured the assertion with a second pool
+  end. After removing that duplicate, `a8-database-cancellation-red-corrected-24150/`
+  reaches `cleanup must be registered before acquisition`, false versus true;
+  invocation `df134e6e-66c4-420a-a6e7-39b3e344edb5`, 184.16s.
+- Minimal database GREEN publishes cleanup before root/DB acquisition and
+  joins acquisition before reclaiming late handles. `a8-database-cancellation-green-24150/`,
+  invocation `e89d88f3-9cbb-42e3-91e1-08e0fd501af9`, passes2/2 in183.77s
+  with unchanged source during execution. The new control observes joined
+  cleanup, no later web launch and actual Docker404 after database removal.
+  Refactor/falsification and the build/policy/readiness controls remain open.
+  Discovery remains exactly LI-boundary/LI-refusal. SDD docs gate and the
+  initial test typecheck pass; sandbox-denied tsx IPC is retained as a setup
+  failure, followed by the successful host docs gate.
+- Policy/readiness RED: `a8-policy-readiness-cancellation-red-24150/`,
+  invocation `0575dedc-5b20-431b-941c-bb6a6af67d34`, 250.18s, unchanged
+  source throughout. Both behavioral assertions execute: policy cancellation
+  admits one later web launch and returns a successful fixture; readiness
+  cancellation also returns a successful fixture. The actual policy-refusal
+  error remains the same object through cancellation and cleanup. Both late
+  handles are reclaimed, with zero live processes and remaining roots in the
+  observations; cleanup does not turn the incorrect success into acceptance.
+  Post-policy and post-readiness admission checks prevent those admissions.
+- Complete cancellation GREEN: `a8-all-cancellation-green-retry-24150/`,
+  invocation `b23b86ea-8c46-4f95-81e4-cd609d001f3b`, 273.72s, passes2/2
+  with unchanged source and zero terminal leaks. Actual build registration
+  and failure are witnessed; late build, policy and HTTP200 readiness
+  handoffs reject cancellation, preserve the original failure where present
+  and reclaim handles. The preceding unchanged-source attempt
+  `a8-all-cancellation-green-24150/` is failed acceptance: Docker500 reported
+  RootlessKit port32796 already in use, before the database barrier; its
+  failed-start owned container required containment. No shared service was
+  stopped and no timeout changed. That setup failure is not behavioral RED.
+- Admission-check falsification: `a8-admission-checks-mutant-24150/`,
+  invocation `5d4627ba-4018-43c6-9ebb-3f969f424d8c`, 284.82s, reaches all
+  three intended assertions. Removing only post-build/policy/readiness
+  checks permits a later web launch after build/policy cancellation and
+  returns success after readiness cancellation. Exact restoration precedes
+  subsequent controls; no permanent fault flag or unisolated fallback exists.
+- The first join-removal control, `a8-acquisition-join-mutant-24150/`,
+  invocation `3cb63f73-1f52-4259-9659-a3e26840bfc3`, 260.60s, reaches the
+  readiness leak assertion and requires containment of seven processes.
+  Its100ms sampling failed to discriminate other join boundaries because
+  unrelated teardown remained pending. It does not qualify those boundaries.
+- REFACTOR replaces the timing sample with the actual cleanup-stage event:
+  acquisition entry is reached, cleanup has neither completed nor advanced
+  to later stages, then the held real operation is released. Restored
+  `a8-explicit-join-green-24150/`, invocation
+  `dd9d6d77-f1c7-4f3d-846a-a5d3e02ac270`, passes2/2 in272.32s; typecheck
+  and read-only changed-file lint pass on the same source.
+- Discriminating join falsification: `a8-explicit-join-mutant-24150/`,
+  invocation `1385d101-f2d6-4a2f-b95f-e4cfb8e8530f`, 240.62s, removes
+  only the acquisition wait. All five collected observations report
+  `joined:false`, and the database acquisition assertion also fails.
+  Readiness reports seven live processes before containment; such cleanup
+  cannot turn the run green. The exact saved source is restored afterward.
+  Each external command directory retains original stdout/stderr, full
+  source patch and SHA256, start/end source equality, monotonic duration,
+  invocation ledger, build identity and complete reporter. Final restored
+  owners on both exact Nodes pass: `a8-final-restored-24150/`, invocation
+  `7e5943c8-b583-4071-8941-a21a1a4d0c6b`,258.16s, and
+  `a8-final-restored-24190/`, invocation
+  `147a71ca-de89-47e1-90e3-f83a7da03c2e`,256.09s. Both validate exactly
+  LI-boundary/LI-refusal, fresh builds and zero terminal leaks on identical
+  patch SHA256 `07f0b51df577cedd6a3db2b9f9234a425ed223a3143093fa1cf9eebf2e38e0d9`.
+  The all-document/unchanged ERD gate also passes.
+- Final coverage review adds call-through observations of supervisor and build
+  admission after database cancellation. Removing only the post-database
+  guard reaches the new supervisor-admission assertion (one actual start)
+  in `a8-database-admission-mutant-24150/`,229.86s. Exact guard restoration
+  passes the complete owner in `a8-complete-admission-green-24150/`,256.93s;
+  both admission counts are zero. This last assertion refinement has a fresh
+  minimum-Node receipt; final-source both-Node qualification remains A11.
+  A8 is complete at the control level, not a C3/full-phase qualification.
+
+A9 controls and A10 registration are now complete below. Keep A11–A13
+unchecked until their actual acceptance gates pass. Fresh Darwin regression
+needs an exact-source handoff from this Ubuntu host; historical CI receipts
+do not qualify these changes.
+
+### A9 — wrapped lifecycle controls and inherited-pipe RED
+
+Discovery now finds exactly the five planned Linux titles; typecheck and
+read-only changed-file lint pass. The mandatory full manifest is still the
+original50 pending all five controls passing and A10. New fixture programs
+use actual namespace wrappers, ordinary and detached TERM-resistant children,
+captured host identities and disposable foreign witnesses. Startup death is
+cut at a real CommonJS preload blocked before the application handshake;
+ready and active-probe cuts kill the fixture runner. Each observes process
+absence before containment, with no production fault flag.
+
+`a9-initial-owner-24150/`, invocation
+`2d23fd09-5b5f-4241-a27f-5ece59e9ba0e`,330.23s, is a valid behavioral RED:
+LI-boundary/LI-refusal pass; LI-term records production `web-shutdown-done`
+but receives an unobserved outcome after escalation; LI-kill/application
+reaches its assertion with the actual application outcome still pending.
+The application has exited, but resistant descendants retain stdout/stderr
+and prevent the bridge's child `close` event. LI-parent passes startup-worker,
+ready-runner and active-probe-runner cuts with zero live captured identities
+before containment. Both foreign witnesses remain alive. Terminal sweeps
+are clean, which does not erase the two behavioral failures.
+
+The minimal correction observes child `exit`, synchronously publishes its
+actual code/signal and unreferences inherited output pipes so descendants
+cannot keep the bridge/namespace alive. Exact Node24.15 builtin child-process
+and socket source is retained with the external evidence.
+`a9-bridge-exit-green-24150/`, invocation
+`79fb24a7-c7b5-4117-be6b-6e2f15af4e0e`,315.54s, passes all5 with clean
+terminal sweeps. Production drain reports code0; INT-forwarded controls
+distinguish code137 from actual SIGKILL; application/namespace-init/outer
+death and all three parent cuts observe zero captured survivors before
+containment. Foreign witnesses remain alive; namespace-init loss remains
+truthfully unobserved rather than a synthesized signal.
+
+The refactor adds an explicit no-group-broadcast/no-escalation observation
+to the production drain control and exposes nested-worker exit before a
+probe barrier, preserving the original diagnostic cause. Formatting is
+limited to new controls and fixtures. Refactor
+`a9-refactor-owner-24150/`, invocation
+`16361c5c-d85e-40c1-84fe-5b033e257af9`,315.98s, passes all5.
+
+- Fix-removal falsification `a9-child-close-mutant-24150/`, invocation
+  `2221da54-8681-43df-9fe6-275fc5401824`,327.16s, restores the old child
+  `close` handling. LI-term again loses the observed exit and LI-kill's
+  application outcome stays pending; the other three cases pass. Mutant
+  bridge SHA256 `0c921e9b94b54188f55605e2bc0f397366d4497d6ab80add107a294011a20a8c`.
+- Status falsification `a9-signal-collapse-mutant-24150/`, invocation
+  `35d8b14c-5509-4232-b584-efb112144faf`,287.50s, relabels actual SIGKILL
+  as numeric137. Both exact-signal assertions fail with observed code137;
+  the genuine exit137 control remains positive, other owning cases pass,
+  and both foreign witnesses remain alive. Mutant bridge SHA256
+  `836d2adeed7f9abc830dec6119bf2badebf097aa8c402f03ed20a1ae7bbb44f1`.
+
+Both mutations restore exactly to bridge SHA256
+`0475a8d626a76eedf123dbd38c32647c5214bd9ad6fe24583dddc2504ff9ffe2`.
+The external command receipts now also archive every changed and untracked
+source file, with per-file SHA256 and start/end equality. Final restored
+`a9-restored-owner-24150/`, invocation
+`b384273b-9476-4e90-b54d-f4ca7979c454`,333.84s, passes all5 with clean
+terminal sweeps and unchanged source. A9 is complete at control level;
+C3/full phase qualification remains open. Restored typecheck and lint pass;
+the typecheck receipt separately records that its only filesystem delta was
+the concurrent build’s temporary `.next.build-lock`, not source.
+
+### A10 — mandatory platform manifest
+
+All five Linux controls have passed before registration. Extend the existing
+runner controls for Linux55/Darwin50 selection, Linux part and unknown-platform
+refusal, every required Linux title, and unexpected passing-case rejection.
+The original Darwin seven files,50 titles,19/31 parts and receipt validator
+remain unchanged. Native `a10-manifest-red-native/` reaches all four new
+assertion failures (30/34 pass); the initial sandbox command failed without
+child-test detail and is not behavioral RED. Minimal GREEN
+`a10-manifest-green/` passes34/34. Removing only unknown-platform refusal in
+`a10-platform-refusal-mutant/` reaches the expected missing-exception assertion
+after Linux part refusal passes (33/34). Exact restoration
+`a10-manifest-restored/` passes34/34 in3.84s.
+
+`a10-platform-discovery/` lists all8files/55cases through installed Vitest;
+`a10-discovery-audit.json` reconciles each title and proves the original
+Darwin50/19+31 manifest unchanged against `a10-darwin50-baseline.json`.
+A10 registration is complete. A11 full execution, falsifications and fresh
+Darwin qualification remain open; the CI workflow/receipt helper are untouched.
+
+### A11 — final falsification and qualification
+
+Filesystem enforcement removal is a local-only `ordinary-exec` driver mutant,
+with no selectable fallback. `a11-ordinary-exec-mutant-24150/`, invocation
+`d7a45921-1fcd-401a-9f55-54955e699a2e`,161.48s, reaches I1/I4 denial
+failures on13 readable sentinel bytes while I2/I3 pass. Because I1 stops at
+its first assertion, `a11-private-files-mutant-24150/` temporarily collects
+its negative assertions without changing their expected denial. Invocation
+`f4252b4e-22e1-4dfc-bf98-77719c3d45df`,174.19s, reaches failures on the
+sentinel13, live SQLite4096, WAL580952 and SHM32768 bytes. Authorized web
+read, harness read and supervisor health remain positive; I2/I3 pass.
+Both attempts retain clean terminal sweeps. Driver and original test restore
+byte-for-byte in `a11-filesystem-restoration.json`. Restored
+`a11-filesystem-restored-24150/`, invocation
+`d0f9c350-e4af-4053-ad81-311c8c69e91f`,190.52s, passes I1–I4 with
+clean terminal sweep and unchanged source.
+
+Namespace guard removal first failed before reporting in
+`a11-namespace-guard-mutant-24150/`, invocation
+`9cb7c99d-ce75-4ebf-b000-4d6d08225943`,318.36s. Successful user-namespace
+entry could disrupt subsequent native probes; empty output produced a JSON
+parse error, so this is not valid behavioral RED. The native probe now
+attempts namespace creation last, and its caller preserves native failure
+diagnostics. No expected result or deadline changes. With the same two
+local quota flags removed, `a11-namespace-guard-red-corrected-24150/`,
+invocation `37ed5e65-d995-4119-a20d-005b10bc5d65`,307.10s, reaches the
+actual LI-boundary assertion: userns0 instead of ENOSPC/EPERM. Other4
+controls pass; terminal sweeps are clean. Production guard bytes restore
+exactly in `a11-namespace-restoration.json`; final restored owner remains
+required after the remaining supervision/identity mutations.
+
+Outer watchdog removal `a11-outer-watchdog-mutant-24150/`, invocation
+`349558fb-6459-4399-97bd-839ea9e2ed07`,322.15s, reaches LI-parent’s
+startup-worker death assertion with7 captured identities still live before
+containment. Other4 controls pass; both foreign witnesses remain alive.
+Task-owned containment then produces clean terminal sweeps, which does not
+erase the observed leak failure. Outer preload bytes restore exactly in
+`a11-watchdog-restoration.json`.
+
+Removing only Bubblewrap `--die-with-parent` in
+`a11-kernel-parent-mutant-24150/`, invocation
+`9125b9d4-6267-4636-b568-8750598dae0f`,278.07s, reaches LI-parent’s
+startup-worker assertion with6 live captured identities before containment.
+LI-term loses its observed graceful outcome and LI-kill/application reaches
+the pending-outcome assertion. Both foreign witnesses remain alive. Boundary
+passes; LI-refusal separately fails before its database barrier because
+RootlessKit returns Docker500 for host port32954 already in use. That
+setup failure is retained and is not behavioral RED. Terminal sweeps after
+owned containment are clean; the pre-containment leak remains failed
+acceptance. Kernel guard bytes restore in `a11-kernel-restoration.json`.
+
+Removing only the exact invocation-tag signal guard in
+`a11-signal-identity-mutant-24150/`, invocation
+`6436a8cd-e087-4b32-840b-3dea3b20bcff`,278.68s, reaches LI-kill’s
+forbidden-signal assertion: the promise resolves instead of refusing and the
+task-created foreign witness is dead before containment. Other4 controls
+pass; LI-parent’s independent foreign witness stays alive. No unrelated
+process is targeted. Original identity-guard bytes restore exactly in
+`a11-identity-restoration.json`. All production guard mutations are now
+restored; the corrected native probe observation is the sole additional
+test change. Restored complete owners and final qualification follow.
+
+Restored owners pass all5 on the identical source patch
+`cbaf52e5cd7e59b3db216a9a0bc4a4467b5ccda21de9f8f560526acb893a3ae0`:
+
+- `a11-all-guards-restored-24150/`, invocation
+  `e10bd656-05eb-4299-9014-4170a691dcfa`,318.78s;
+- `a11-all-guards-restored-24190/`, invocation
+  `64e910c7-4275-4c2a-99ea-1c6a773e9f04`,315.63s.
+
+Each uses a fresh build, observes active-build cancellation, passes all nine
+pre-containment tree checks with zero survivors, retains both foreign
+witnesses and has clean terminal sweeps. Source remains unchanged during
+each attempt. This closes the corrective/falsification control cycles, not
+the full Linux55/preflight, phase regression or Darwin gates. The existing
+Darwin receipt rejection table also explicitly includes an added Linux owner;
+its complete runner/CI contract suite remains a required static gate.
+
+Complete discovery is retained under `a11-complete-discovery/`: ordinary
+collection succeeds, then its postcondition rejects the two opt-in load
+owners omitted by Vitest2's `mode === run|only` listing. This is a discovery
+utility failure, not behavioral RED. `a11-discovery-with-loads/` separately
+enables the existing two load flags for collection, verifies identical
+source and preserves the ordinary JSON before reconciliation. The frozen
+inventory is web884unit/9222cases and596integration/5247cases;
+supervisor50unit/495cases and36integration/310cases. Ordinary integration
+is584files in25 fixed groups; eight isolation owners, independent preflight,
+scheduler-clock and both unchanged load owners execute separately.
+
+The first full web unit attempt `a11-web-unit-24150/`,360.95s, passes
+9221/9222 with no skips. The unchanged atomic-file mode assertion expects
+0644 but observes0664. `umask-verification.json` proves native inherited
+umask0002 produces0664 and an invocation-only child umask0022 produces0644.
+The production writer uses Node's default mode; no production or test
+assertion is changed. Subsequent validation subprocesses explicitly use
+umask0022, retain the parent's actual mask in each receipt, and leave host
+login/security settings unchanged. Both actual witness files remain within
+the private evidence directory. The repeated complete unit gate passes below;
+the original failed aggregate remains failed evidence.
+
+The following Node24.15.0 receipts share base
+`8ad23a5fcf258a136960846fb1748e5ba908fe52` and working diff SHA256
+`1995a75f04dba930e0ca4860f612551c914b65ec977a5576703060954aa0d633`.
+Each retains its complete source snapshot, command, timing and report outside
+git; `qualification-audit.json` verifies the exact frozen discovery titles.
+
+| Gate / evidence directory | Result | Invocation / duration |
+|---|---|---|
+| `a11-web-unit-umask-24150/` | 884 files / 9222 passed | 364.65s |
+| `a11-supervisor-unit-24150/` | 50 files / 495 passed | 18.91s |
+| `a11-supervisor-integration-24150/` | 36 files / 310 passed; clean outer sweep | `557a03e4-4f12-4332-a539-789cc505b0f3`;395.09s |
+| `a11-web-integration-00-24150/` | first frozen group,24 files / 213 passed; clean outer sweep | `37b9d843-f2a1-4c9b-a500-69dfa213a3c9`;299.47s |
+| `a11-preflight-24150/` | independent1/1; clean outer sweep | `89466edc-bee0-405c-8c06-5ed175cfe8f2`;12.25s |
+| `a11-linux55-24150/` | complete8/55; validators pass; clean outer sweep | `2c5e5f9f-3761-455c-ace1-b4b7408f3516`;1588.76s |
+
+The full Linux55 report is
+`a11-linux55-24150/maister-ab-isolation-Hgxihx/vitest.json`, SHA256
+`2ad84fb4e406f3de406db6efc99444faa4668c0c230ff726f0eda2f700519ac7`.
+It observes all nine lifecycle trees gone before containment and both foreign
+witnesses alive. Fresh default build `uTzITBnLXCFKXVN38fBVn` takes137.502s.
+This receipt is below the unchanged2340s limit, with no skips or errors;
+it does not qualify a later changed source, Darwin, the complete phase or hosting.
+
+The second ordinary group, `a11-web-integration-01-24150/`, fails259/260
+in230.54s. Its existing `promote-flow.integration.test.ts` two-racer control
+expects `CONFLICT` but receives the target-drift `PRECONDITION` after the
+winning promotion merges. `failure-audit.json` retains the assertion and proves
+both that test and `web/lib/runs/promote.ts` are byte-identical to the continuation
+HEAD. The current claim path checks target drift before `canReclaim`; no
+production correction or weakened expectation is made. This is an unresolved
+ordinary-regression blocker, not an isolation RED or a passing phase gate.
+The serial batch runner stops at this failure; later groups are not accepted.
+Scope clarification for a product correction is pending while independent
+Linux/static gates continue.
+
+After the live lane closes, eight warnings in changed harness code are
+corrected only by import grouping, blank lines and assertion wrapping.
+`a11-final-lint/` passes with no warnings/errors. Final both-Node Linux55 and
+independent preflight must bind the corrected source. A11/C3 remain open.
+
+The corrected-source owner `a11-final-owner-24150/` passes5/5 in314.06s,
+invocation `6faf72b7-dec5-49b0-a464-21914b0f4359`, with all nine pre-containment
+tree checks, both foreign witnesses and clean outer cleanup. Its raw receipt
+flags a diff mismatch because Git lengthened abbreviated index headers from
+eight to nine characters after the read-only master-object fetch. The retained
+`source-stability-audit.json` and qualification validator independently verify
+identical source snapshots and diff bodies, with only those hash-prefix lengths
+changed. No working source or HEAD changed. Future evidence uses `--full-index`.
+The raw receipt is preserved rather than rewritten.
+
+`a11-final-{web-types,supervisor-types,mcp-types,runner,runtime-tests,runtime-check,contracts,docs,diff}/`
+all pass. Runner/workflow/receipt controls are34/34; the generated140-table ERD
+is unchanged. These static gates are distinct from the failed ordinary
+integration aggregate and the unavailable fresh Darwin gate.
+
+Local control checkpoint `dbe36dd19004d3b4a399bbfcb45c60f4055d2fd9` and
+manifest checkpoint `6f6dabc41e68e7499dacebb769a753ea4803f488` contain only the
+validated owned files. Every staged blob was matched against its passing
+owner/runner snapshot before committing. They are focused implementation
+checkpoints, not C3 acceptance; no push or CI action occurred.
+
+Read-only master recheck finds
+`698b8cb35151b089d492c13cf3bcdc28a3858281`, compared with local baseline
+`8237993223fa5a7c3aafe9db42d9438612990938`. Only `gates-exec.ts` and its existing
+integration test differ; ADR allocations, promotion code and CI are unchanged.
+`a12-master-recheck.json` retains the check. No rebase is performed and no new
+ADR is allocated. The continuation's API/DB/config/deployment audit remains
+a no-production-delta finding; A12's qualified-candidate gate is still pending.
+
+### A8 follow-up — interstage cancellation admission
+
+Final adversarial review identifies two unguarded awaits between the existing
+cancellation checks: directory/sentinel preparation before supervisor startup,
+and supervisor startup before the production build. Cancellation at either
+handoff can admit a later process even though eventual cleanup joins and reclaims
+it. Reopen A8 narrowly: reuse LI-refusal and its real call-through barrier helper;
+retain the actual filesystem write and actual supervisor startup results until
+cancellation is registered. Assert zero later supervisor/build admissions in the
+existing test body, so an unwanted launch is a reached behavioral RED rather
+than a hook timeout. After RED, add admission checks before those two launches,
+remove them for falsification, restore exact sources and rerun the owner.
+No new top-level case, production flag, timeout or inventory change is allowed.
+Final-source both-Node Linux55 remains required after this correction.
+
+The first attempt `a8-interstage-admission-red-24150/` fails setup in177.24s,
+before the assertion body, after RootlessKit selects port33066 while a connection
+to this invocation's PostgreSQL port33063 remains in TIME-WAIT. Native `ss`
+confirms that exact tuple in `port-followup.json`. The report has five skipped
+cases and containment discovers/removes one owned container: this is failed
+setup/leak evidence, not behavioral RED. No host socket, daemon or security
+setting is changed. The unchanged-source retry reaches both assertions.
+
+| Cycle / evidence directory | Complete owner result | Invocation / duration |
+|---|---|---|
+| `a8-interstage-admission-red-retry-24150/` | 4 pass/1 fail; LI-refusal observes supervisor1 and build1 instead of0 | `030402c4-bc36-4d72-a90d-5487728576e2`;321.00s |
+| `a8-interstage-admission-green-24150/` | 5/5; both admissions0 | `1850687f-20aa-4325-bdff-dcb7c11f4bc7`;330.14s |
+| `a8-interstage-admission-mutant-24150/` | 4 pass/1 fail; removing only both checks reproduces both1-vs-0 assertions | `bde86a8b-b817-441d-8183-802bf8705a7e`;305.19s |
+| `a8-interstage-admission-restored-24150/` | 5/5; both admissions0; exact titles/validator pass | `80e34888-e463-4292-8a9b-2dc7f78eb679`;306.33s |
+
+All four reached runs retain unchanged sources and clean outer sweeps; each
+GREEN observes all nine lifecycle trees gone before containment and both
+foreign witnesses alive. Refactor review retains the two calls to the existing
+`assertAcquiring` helper: no further abstraction or behavior change is needed.
+The fixture is restored exactly to SHA256
+`d78f4218dc25ecb14bc33581beaf8cb144518e2dfea2e14260c0ac447cbc7961` from mutant
+`776e420c78304c52c344bc2195be1cdfcedf29d3ba226e451e972217ac9dc11a`;
+`a8-interstage-{mutation,restoration}.json` retains both identities.
+`a8-interstage-green-{types,lint}/` passes, with zero lint warnings.
+Correction commit `63c6e546b3da12a62953d8c9fa799018a9c1b869` contains only the
+fixture checks and their real call-through controls; both staged blobs match
+the restored-GREEN snapshot. A8 is complete at control level again. C3 is not
+accepted, and final-source both-Node Linux55/preflight remains the next gate.
 
 ### Phase 0 — specification and environment receipts (2026-10-03)
 

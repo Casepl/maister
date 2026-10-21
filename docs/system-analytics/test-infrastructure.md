@@ -708,9 +708,11 @@ The existing macOS hosted acceptance contract remains in force.
 
 LI-refusal now includes actual nested-mount refusal and frozen-policy
 production-restart subcontrols. The nested-mount guard completed a reached
-RED/GREEN/REFACTOR cycle; the restart subcontrol has a passing development
-receipt, while its retry falsification and complete native qualification remain
-open. The [A8 checkpoint](../../.ai-factory/plans/s53a-linux-isolation.md#a8--production-restart-checkpoint-and-environment-limit-2026-10-06)
+RED/GREEN/REFACTOR cycle. The restart subcontrol has a reached native retry
+falsification and restored two-case GREEN in the
+[Ubuntu continuation](../../.ai-factory/plans/s53a-linux-isolation.md#a8--ubuntu-continuation-restart-falsification-and-database-cancellation);
+complete qualification remains open. The earlier
+[A8 checkpoint](../../.ai-factory/plans/s53a-linux-isolation.md#a8--production-restart-checkpoint-and-environment-limit-2026-10-06)
 retains the failed setup/clock-divergent attempts and build provenance.
 
 Entities added to this test-only domain are an immutable launch policy, trusted
@@ -833,12 +835,30 @@ checks do not claim to resist a concurrent privileged host remounter.
 | Policy preparation or restart override | `IsolationPolicyError` before exec; no catch-all startup retry; only a proved bind-conflict may consume the existing bounded retry budget |
 | Namespace ready | Required `--unshare-user`, `--unshare-pid`, `--proc /proc`, `--die-with-parent`, `--disable-userns`, `--assert-userns-disabled`, `--cap-drop ALL`; application NoNewPrivs=1 and effective/permitted/ambient caps=0; retain reaper, no `--as-pid-1` |
 | Process inspection or signal | Exact tagged inspected identity required; mismatch/unreadable/mixed group throws existing `InvocationOwnershipError`; captured direct-child containment uses existing narrow authority |
-| Application ready/drain/exit | Typed bounded ready/output/exit protocol; app bytes cannot impersonate status; a trusted Node preload holds main execution on one readiness acknowledgement, then closes its transient descriptor before application code; verify host child ancestry and NSpid before releasing that acknowledgement or forwarding; await real exit, never `subprocess.killed` |
+| Application ready/drain/exit | Typed bounded ready/output/exit protocol; app bytes cannot impersonate status; a trusted Node preload holds main execution on one readiness acknowledgement, then closes its transient descriptor before application code; verify host child ancestry and NSpid before releasing that acknowledgement or forwarding; observe actual child exit independently of inherited output-pipe closure, so resistant descendants cannot retain the namespace or conceal that outcome; never infer exit from `subprocess.killed` |
 | Access probe | Exactly one typed `AccessProbe`, bounded output, successful app exit within 20s; malformed/empty output, spawn refusal, signal or timeout is an explicit probe error, never a denial result; await closure on every path |
 | Parent death/forced KILL | Kernel namespace-init death contains descendants; loss of app status is recorded separately from observed code/signal; no synthetic signal from 128+code |
 | Restart | Same policy/roots/DB/port, fresh boot identity and verified build; capability/policy/ownership failure propagates immediately |
 | Release | All process/container/root reclaimers execute even after a preceding failure; original and cleanup failures remain observable; foreign resources survive |
 | Finalizer | Atomic versioned reference published before any child/resource; verify job-owned canonical reference/ledger markers/device/inode and original runner identity; only proved dead runner permits reused releaseInvocation; repeated verified release is idempotent |
+
+Lifecycle fixture acquisition cancellation is **Implemented — A8 local controls**.
+Full Linux/Darwin phase qualification remains pending in the owning plan. The
+cleanup callback is published before the first asynchronous resource acquisition.
+Cancellation closes admission to later stages; cleanup joins the pending
+acquisition before reclaiming any handle it returns. A rejected acquisition
+retains its original error, with cleanup failures accompanying that error.
+LI-refusal owns the following reached barriers over real resources; these are
+subcontrols of its existing title, with no production fault flags.
+
+| Pending acquisition | Required cancellation observation | Enforcer/control |
+|---|---|---|
+| PostgreSQL | Cleanup already registered; late migrated database is stopped and removed; supervisor/build/web never start | Lifecycle acquisition join; LI-refusal/database cancellation |
+| Directory/sentinel preparation | Pending real filesystem writes settle before cleanup removes roots; no supervisor or build is admitted after cancellation | Lifecycle admission check before supervisor startup; LI-refusal/directory cancellation |
+| Supervisor startup | Pending real supervisor startup is joined and its handle reclaimed; no production build or web is admitted after cancellation | Lifecycle admission check before build startup; LI-refusal/supervisor cancellation |
+| Production build | Captured owned build is terminated or its late completion joined; no policy/web admission follows; original build failure survives | Existing build identity checks and acquisition join; LI-refusal/build cancellation |
+| Mount policy | Pending preparation settles before roots disappear; no web launch follows a late policy; an actual policy refusal remains the original failure | Lifecycle admission check and acquisition join; LI-refusal/policy cancellation |
+| Web readiness | An already admitted real web startup is joined and its late handle reclaimed; no successful fixture is returned after cancellation | Lifecycle admission check and acquisition join; LI-refusal/web-readiness cancellation |
 
 Finalizer crash windows are: before reference publication (launch forbidden),
 after publication before spawn (inert ledger reclaimable), after spawn (proved
@@ -848,16 +868,19 @@ release; it never grants finalizer authority. Missing report remains failure.
 Logs use structured role/identity/capability fields with bounded buffers; they
 never contain secrets, environment dumps, sentinel/SQLite/object bytes.
 
-### Platform case inventory and RED ownership (Designed additions)
+### Platform case inventory and RED ownership (Implemented; full qualification pending)
 
 The frozen baseline is the exact owning runner title set below: seven full
 suites/50 cases plus one separately invoked preflight. Linux adds only the
 five distinct controls below; Darwin discovery excludes that new file. The
 runner uses Vitest project `integration`; no placeholder/todo cases are active.
-The current Linux suite implements LI-boundary and LI-refusal; its Phase-1
-inventory is 52 plus separate preflight 1. The remaining three lifecycle cases
-and the nested-mount/invalid-restart subcontrols remain required before the
-final 55-case inventory can qualify. The original Darwin 50 titles remain mandatory.
+All five Linux controls are implemented and pass their native owning suite,
+including nested mounts, invalid restart, acquisition cancellation and process
+lifecycle cuts. The full selector requires Linux55 plus separate preflight1;
+Darwin retains50 plus separate preflight1 and its19/31 CI parts. Linux parts
+and unknown platforms refuse selection. Full final-source qualification on
+both exact Nodes and fresh Darwin regression remain pending. Hosting remains
+macOS; local Linux controls do not qualify hosted execution.
 
 | Owning file | Exact case title | Disposition |
 |---|---|---|
@@ -949,6 +972,10 @@ pre-containment leak observations.
 | ARM64 container development | Record image digest/host kernel/architecture/UID mapping/seccomp/capabilities/nested namespace policy; nonroot apps, no blanket privileged mode/host PID/host root bind | Development only; cannot close amd64 or hosted gates |
 | Proposed hosted qualification | Standard ubuntu-24.04 amd64, Node 24.19.0, authenticated packages and narrowly scoped bwrap AppArmor allowance if needed; tests/apps ordinary nonroot | Exact owner-pushed candidate, Linux 55 plus independent I-CI and all other mandatory jobs green; capability and speed measured |
 | Darwin regression | Existing sandbox-exec and separate preflight/original 50, labeled architecture/Node/source | Preserves Darwin behavior; cannot qualify Linux |
+
+Validation child processes use umask `0022`, matching the existing atomic-file
+`0644` acceptance assertion. Record the inherited parent mask and apply this
+only when spawning the validation child.
 
 The Linux setup script is a test prerequisite, not production deployment.
 Package revision, checksum, source and profile are recorded when provisioned;
