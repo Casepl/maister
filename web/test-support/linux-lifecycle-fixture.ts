@@ -1,5 +1,6 @@
 import type { LinuxIsolationPolicy } from "./linux-isolation";
 import type { IsolationDriver } from "./process-isolation";
+import type { StartedPostgresTestDb } from "./pg-container";
 import type { RealSupervisor } from "./real-supervisor";
 import type { ProductionWebBuild, RealWeb } from "./real-web";
 
@@ -45,17 +46,12 @@ export async function startLinuxLifecycleFixture(
   if (!context || driver.name !== "bubblewrap")
     throw new Error("Linux lifecycle controls require an owned namespace lane");
   const invocation: Invocation = context;
-  const root = await mkdtempReal("maister-linux-lifecycle-");
-  const webRoot = path.join(root, "web");
-  const worktreesRoot = path.join(root, "worktrees");
-  const supervisorRoot = path.join(root, "supervisor");
-  const sentinel = path.join(supervisorRoot, "sentinel");
-  const database = await startMainAndBrainPostgresTestDb({
-    databaseName: "linux_lifecycle",
-  });
+  let root: string | undefined;
+  let database: StartedPostgresTestDb | undefined;
   let supervisor: RealSupervisor | undefined;
   let web: RealWeb | undefined;
   let closing: Promise<void> | undefined;
+  const acquisition = Promise.withResolvers<void>();
   const buildLog = path.join(invocation.directory, "linux-lifecycle-build.log");
 
   async function stopBuild(): Promise<void> {
@@ -91,17 +87,22 @@ export async function startLinuxLifecycleFixture(
       }>
     > = [
       { stage: "build", close: stopBuild },
+      { stage: "acquisition", close: () => acquisition.promise },
       { stage: "web", close: () => web?.kill() },
       { stage: "supervisor", close: () => supervisor?.stop() },
-      { stage: "postgres", close: () => database.stop() },
+      { stage: "postgres", close: () => database?.stop() },
       {
         stage: "root",
-        close: () => rm(root, { recursive: true, force: true }),
+        close: () =>
+          root ? rm(root, { recursive: true, force: true }) : undefined,
       },
     ];
 
     for (const action of actions) {
       try {
+        logInvocation(invocation, "linux-lifecycle-cleanup-stage", {
+          stage: action.stage,
+        });
         await action.close();
       } catch (error) {
         failures.push(error);
@@ -124,9 +125,27 @@ export async function startLinuxLifecycleFixture(
     return closing;
   }
 
+  function assertAcquiring(stage: string): void {
+    if (!closing) return;
+    logInvocation(invocation, "linux-lifecycle-cancelled", { stage });
+    throw new Error(`Linux lifecycle startup was cancelled during ${stage}`);
+  }
+
   registerCleanup(close);
 
   try {
+    assertAcquiring("registration");
+    root = await mkdtempReal("maister-linux-lifecycle-");
+    assertAcquiring("root");
+    const webRoot = path.join(root, "web");
+    const worktreesRoot = path.join(root, "worktrees");
+    const supervisorRoot = path.join(root, "supervisor");
+    const sentinel = path.join(supervisorRoot, "sentinel");
+
+    database = await startMainAndBrainPostgresTestDb({
+      databaseName: "linux_lifecycle",
+    });
+    assertAcquiring("database");
     await Promise.all(
       [webRoot, worktreesRoot, supervisorRoot].map((directory) =>
         mkdir(directory),
@@ -146,8 +165,7 @@ export async function startLinuxLifecycleFixture(
       : undefined;
 
     if (!build) await buildProductionWeb(buildLog);
-    if (closing)
-      throw new Error("Linux lifecycle startup was cancelled during build");
+    assertAcquiring("build");
     const state = path.join(supervisor.stateDir, "state.sqlite");
     const policy = await prepareLinuxWebPolicy({
       invocation,
@@ -161,6 +179,8 @@ export async function startLinuxLifecycleFixture(
       ],
     });
 
+    assertAcquiring("policy");
+
     web = await startRealWeb({
       build,
       databaseUrl: database.databaseUrl,
@@ -170,11 +190,13 @@ export async function startLinuxLifecycleFixture(
       isolation: { driver, deniedRoots: [supervisorRoot], policy },
       env: { TSX_DISABLE_CACHE: "1" },
     });
+    assertAcquiring("web readiness");
     logInvocation(invocation, "linux-lifecycle-ready", {
       webPid: web.pid,
       supervisorPid: supervisor.pid,
       buildId: web.buildId,
     });
+    acquisition.resolve();
 
     return {
       root,
@@ -187,6 +209,7 @@ export async function startLinuxLifecycleFixture(
       close,
     };
   } catch (error) {
+    acquisition.resolve();
     try {
       await close();
     } catch (cleanupError) {
