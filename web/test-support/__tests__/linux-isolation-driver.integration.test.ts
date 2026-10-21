@@ -9,7 +9,7 @@ import type { RealWeb } from "@/test-support/real-web";
 import { execFileSync, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { closeSync, openSync, realpathSync, statSync } from "node:fs";
-import {
+import filesystemPromises, {
   access,
   link,
   mkdtemp,
@@ -23,7 +23,7 @@ import {
 import { tmpdir } from "node:os";
 import { constants } from "node:os";
 import { createConnection, createServer, type Socket } from "node:net";
-import { createRequire } from "node:module";
+import { createRequire, syncBuiltinESMExports } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
@@ -100,6 +100,8 @@ type CancellationObservation = Readonly<{
 const cancellationObservations: CancellationObservation[] = [];
 let activeBuildRegistered = false;
 let buildFailureObserved = false;
+let directoryCancellationSupervisorStarts = 0;
+let supervisorCancellationBuildStarts = 0;
 
 async function observeCleanupJoin(
   control: string,
@@ -437,8 +439,69 @@ beforeAll(async () => {
   );
   const preparePolicy = webPolicies.prepareLinuxWebPolicy;
   const request = globalThis.fetch;
+  const writeFixtureFile = filesystemPromises.writeFile;
+  const startSupervisor = supervisorFixtures.startRealSupervisor;
 
   cancellationObservations.push(
+    await observeCancelledHandoff(
+      "LI-refusal/directory-cancellation",
+      (hold) => {
+        const supervisor = vi
+          .spyOn(supervisorFixtures, "startRealSupervisor")
+          .mockImplementation((options) => {
+            directoryCancellationSupervisorStarts += 1;
+
+            return startSupervisor(options);
+          });
+        const barrier = vi
+          .spyOn(filesystemPromises, "writeFile")
+          .mockImplementation(
+            (...args: Parameters<typeof writeFixtureFile>) => {
+              const written = writeFixtureFile(...args);
+              const file = args[0];
+
+              if (
+                typeof file === "string" &&
+                file.startsWith(
+                  path.join(realpathSync(tmpdir()), "maister-linux-lifecycle-"),
+                ) &&
+                file.endsWith(path.join("supervisor", "sentinel"))
+              )
+                return hold(written);
+
+              return written;
+            },
+          );
+
+        syncBuiltinESMExports();
+
+        return () => {
+          barrier.mockRestore();
+          syncBuiltinESMExports();
+          supervisor.mockRestore();
+        };
+      },
+    ),
+    await observeCancelledHandoff(
+      "LI-refusal/supervisor-cancellation",
+      (hold) => {
+        const barrier = vi
+          .spyOn(supervisorFixtures, "startRealSupervisor")
+          .mockImplementation((options) => hold(startSupervisor(options)));
+        const build = vi
+          .spyOn(webFixtures, "buildProductionWeb")
+          .mockImplementation((logFile) => {
+            supervisorCancellationBuildStarts += 1;
+
+            return buildWeb(logFile);
+          });
+
+        return () => {
+          barrier.mockRestore();
+          build.mockRestore();
+        };
+      },
+    ),
     await observeCancelledHandoff(
       "LI-refusal/build-handoff-cancellation",
       (hold) => {
@@ -503,6 +566,10 @@ beforeAll(async () => {
       },
     ),
   );
+  logInvocation(invocationFromEnvironment()!, "linux-cancelled-admissions", {
+    directoryCancellationSupervisorStarts,
+    supervisorCancellationBuildStarts,
+  });
 }, 600_000);
 
 afterAll(async () => {
@@ -1092,6 +1159,18 @@ it("LI-refusal: unavailable capabilities and invalid policies refuse launch and 
   };
 
   try {
+    expect
+      .soft(
+        directoryCancellationSupervisorStarts,
+        "directory cancellation must prevent supervisor admission",
+      )
+      .toBe(0);
+    expect
+      .soft(
+        supervisorCancellationBuildStarts,
+        "supervisor cancellation must prevent build admission",
+      )
+      .toBe(0);
     if (activeBuildRegistered)
       expect
         .soft(

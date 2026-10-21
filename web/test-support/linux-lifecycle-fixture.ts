@@ -154,11 +154,13 @@ export async function startLinuxLifecycleFixture(
     await writeFile(sentinel, "private-lifecycle-control");
     await seedAdmin(database.db);
     await seedPlatformRunner(database.db);
+    assertAcquiring("fixture preparation");
     supervisor = await startRealSupervisor({
       runtimeRoot: supervisorRoot,
       workspaceRoots: [worktreesRoot],
       fixtureArgs: ["--hang", "--supports-resume"],
     });
+    assertAcquiring("supervisor");
     const build: ProductionWebBuild | undefined = process.env
       .MAISTER_TEST_BUILT_WEB
       ? JSON.parse(process.env.MAISTER_TEST_BUILT_WEB)
