@@ -355,9 +355,10 @@ The current source has exactly five Linux titles and mandatory Linux55
 selection. Darwin's original50,19/31 parts, receipt implementation and two
 macOS jobs are preserved. An initial full Linux55 and separate preflight
 pass at Node24.15.0; final-source both-Node execution remains required after
-the interstage admission correction and changed-code lint cleanup. Complete phase regression
-is blocked by the unchanged concurrent-promotion control described below;
-fresh Darwin qualification also remains open. Historical
+the interstage admission correction and changed-code lint cleanup. The concurrent-promotion defect is corrected and owning controls qualify it;
+complete phase regression remains open. Git2.43 restoration failures are
+scoped to that historical runtime; the unchanged owner passes after the
+owner upgrade to Git2.55 described below. Fresh Darwin qualification remains open. Historical
 hosted receipts qualify only their recorded source. Continue A11 on the
 current restored source; do not repeat completed implementation.
 
@@ -835,7 +836,7 @@ minimum-Node candidate, not the upcoming production correction.
       Call-through barriers must reach their intended frontiers, release in
       `finally` and join every attempt. Expect exactly one merge and loser
       `CONFLICT`; setup/deadline failures are not RED.
-- [ ] **P2 — Correct ownership precedence and qualify the owner.** Under the
+- [x] **P2 — Correct ownership precedence and qualify the owner.** Under the
       existing workspace lock, preserve an initially ineligible/terminal run's
       `PRECONDITION`, authorize, then reject active workbench/promotion ownership
       before fresh status and target-drift checks. Preserve the nonshared fresh
@@ -908,10 +909,78 @@ in an invocation-owned disposable repository without calling promotion;
 `reset --hard <hex-sha> --` succeeds there. `web/lib/worktree.ts` is unchanged
 from the continuation source, SHA256
 `3ec0fe3851b5ca34b1802e7e82aa0795dbe828567fc2c51bc283cb852b664696`.
-No restore-helper change is authorized yet. The smallest requested extension
-is compatibility of that argument sequence while retaining hex validation.
-P2's owning behavior is qualified, but its broader consumer gate and P3 remain
-open; no complete phase qualification is claimed.
+The owner authorized the minimal Git2.43 compatibility correction on2026-10-22,
+retaining hex validation and every existing restoration check.
+That attempt qualified P2's owning behavior but left its broader consumer gate
+open. The successful current-Git rerun below closes P2; P3 and complete phase
+qualification remain open.
+
+### Git compatibility recheck and runtime repair (2026-10-22)
+
+The owner authorized a minimal Git2.43 restore correction, then requested a
+recheck after upgrading Git. No production restore change was made. The
+prepared case(h) resolution assertion was discovered with all65 original
+names, typechecked and linted, but `restore-red-24150/` stopped before workers
+at reaper acquisition: the running Docker29.5.3/containerd2.2.4 no longer
+matched installed Docker29.9.2/containerd2.4.2 shim binaries. That1.91s attempt
+is an environment prerequisite failure, not behavioral RED. Its outer sweep
+is clean and a later Testcontainers-label inspection finds no resources.
+
+Read-only inspection found six persistent services on this rootless daemon,
+with live restore disabled and `unless-stopped` restart policies. The owner
+explicitly authorized `systemctl --user restart docker.service` and their brief
+interruption, overriding the original no-restart restriction for this action
+only. The command succeeded; all six containers returned to running, including
+healthy MAIster PostgreSQL, nginx, site and docs; SearXNG/Redis have no configured
+healthcheck. No volumes, daemon configuration or security controls changed.
+`runtime-after-owner-upgrade.json` records packages/binary hashes and the new
+Docker29.9.2/containerd2.4.2/rootlesskit3.3.0 identities. Later qualification
+must use these identities rather than borrow earlier environment receipts.
+
+Git is now2.55.0 (`1:2.55.0-0ppa1~ubuntu24.04.2`). The actual original argv and
+proposed alternate both succeed in a disposable repository
+(`git-reset-current-probe.json`). The complete unchanged real sync-target
+owner then passes65/65 in45.41s, with exact titles, validator success and clean
+cleanup: `restore-current-git-24150/`, invocation
+`f75dd51c-d13e-4287-8c56-700f8eba55d6`, reporter SHA256
+`da23b996534007e5bb5ae74c50e15cb29925ee48639d0858f49b38015468c0f8`.
+The passing PostgreSQL owner also verifies new container creation after the
+restart. Production and test bytes match`bd4744d9f` exactly; only this plan
+and the then-proposed documentation differed during that run (full snapshot
+retained). The prepared assertion patch is retained outside the repository at
+`restore-prepared-test.patch`; its test and proposed spec are restored exactly.
+
+Disposition: the separate restore-argv correction is **not implemented and not
+needed for this upgraded qualification environment**. Git2.43 compatibility
+remains a known limitation with its original failed reports; no support claim
+for that version is inferred. No new test, fallback, timeout or assertion
+change resolves the gate. Continue the broader promotion consumers and full
+phase qualification on the unchanged production candidate with Git2.55.
+Unresolved questions: none for this recheck.
+
+The broader promotion consumer gate now passes18/282 in251.44s:
+`promote-consumers-current-git-24150/`, invocation
+`108db991-614a-4e00-90c9-446c50feb67c`, reporter SHA256
+`eaba965ba68e98721919c2369ad390533ee66234a8b995db3a66b40bbc7ea840`.
+Exact title reconciliation, the existing lane validator and clean outer
+cleanup pass. The source is`bd4744d9f` plus this plan's recorded diff; no
+production/test bytes differ. This closes P2's consumer gate at Git2.55,
+without erasing its failed Git2.43 receipt. P3/A11/full phase qualification
+and fresh Darwin remain pending.
+
+Before the environment upgrade, clean
+`bd4744d9f4529b027679e4045abd894f4246e8e9` passes the full web unit
+inventory884/9222 in340.16s (`promote-checkpoint-web-unit-24150/`, report SHA256
+`07ed6525fcbfda9d8bf7059a6de5448af54a6cffb1eb2a426cfcffe5337c637e`)
+and separate production clock owner1/6 in192.14s
+(`promote-checkpoint-clock-24150/`, invocation
+`7db1443b-c59c-4a97-be69-82c6f59f745d`, clean outer sweep).
+The prepared-test snapshot additionally passes supervisor unit50/495 in19.46s,
+runner/macOS-receipt34/34, runtime4/4, runtime check, web typecheck, scoped lint
+and contracts (`promote-checkpoint-supervisor-unit-24150/` and
+`restore-prepared-{runner,runtime,runtime-check,types,lint,contracts}/`). Their
+command receipts bind the exact snapshot; none replaces full final-source
+Linux, ordinary integration or Darwin qualification.
 
 ### Phase 0 — specification and environment receipts (2026-10-03)
 
