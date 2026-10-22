@@ -719,12 +719,12 @@ in230.54s. Its existing `promote-flow.integration.test.ts` two-racer control
 expects `CONFLICT` but receives the target-drift `PRECONDITION` after the
 winning promotion merges. `failure-audit.json` retains the assertion and proves
 both that test and `web/lib/runs/promote.ts` are byte-identical to the continuation
-HEAD. The current claim path checks target drift before `canReclaim`; no
-production correction or weakened expectation is made. This is an unresolved
-ordinary-regression blocker, not an isolation RED or a passing phase gate.
-The serial batch runner stops at this failure; later groups are not accepted.
-Scope clarification for a product correction is pending while independent
-Linux/static gates continue.
+HEAD. At that checkpoint the claim path checks target drift before
+`canReclaim`; no production correction or weakened expectation is made.
+The serial batch runner stops at this ordinary-regression failure; later groups
+are not accepted. The owner subsequently authorizes the correction recorded
+below. This original failed receipt remains failed, not an isolation RED or a
+passing phase gate.
 
 After the live lane closes, eight warnings in changed harness code are
 corrected only by import grouping, blank lines and assertion wrapping.
@@ -757,8 +757,9 @@ Read-only master recheck finds
 `8237993223fa5a7c3aafe9db42d9438612990938`. Only `gates-exec.ts` and its existing
 integration test differ; ADR allocations, promotion code and CI are unchanged.
 `a12-master-recheck.json` retains the check. No rebase is performed and no new
-ADR is allocated. The continuation's API/DB/config/deployment audit remains
-a no-production-delta finding; A12's qualified-candidate gate is still pending.
+ADR is allocated. This pre-correction audit records no production delta;
+the later authorized promotion correction requires a revised impact audit.
+A12's qualified-candidate gate is still pending.
 
 ### A8 follow-up — interstage cancellation admission
 
@@ -803,6 +804,114 @@ Correction commit `63c6e546b3da12a62953d8c9fa799018a9c1b869` contains only the
 fixture checks and their real call-through controls; both staged blobs match
 the restored-GREEN snapshot. A8 is complete at control level again. C3 is not
 accepted, and final-source both-Node Linux55/preflight remains the next gate.
+
+### A11 amendment — authorized concurrent-promotion correction
+
+The owner explicitly authorizes the minimal RED-first production correction
+after the ordinary regression's unchanged two-racer failure. This expands the
+previous harness-only scope to `web/lib/runs/promote.ts`, its existing real
+PostgreSQL/Git integration owner and the canonical workspace promotion contract.
+It does not authorize CI migration or any remote operation.
+
+Before this correction, clean source
+`490c7fe175d8fc38f1c5410ea910fbebb2707ea8` passes
+`a11-frozen-24150-preflight/` (1/1,13.06s, invocation
+`d9db8efe-0714-427a-ae92-7f38232c03a3`) and
+`a11-frozen-24150-linux55/` (8 files/55 exact titles,1495.96s, invocation
+`8c91c1de-26f5-4376-9b34-c7a793ab8ed9`). The latter report SHA256 is
+`3b19cb11174a50da063863f62e1bbf19fe0a7d82182ab117e04cf47c9a5dfc37`.
+Both existing validators, exact discovery reconciliation and clean outer
+sweeps pass; all nine lifecycle observations have zero survivors before
+containment and both foreign witnesses survive. The frozen source/runtime
+record is `qualification-source-490c7fe.json`. These receipts qualify only that
+minimum-Node candidate, not the upcoming production correction.
+
+- [x] **P1 — Specify and reproduce both claim-ordering windows.** Preserve the
+      existing two-racer title, but hold its contender's authorization under the
+      real workspace lock until the winner's actual Git merge advances the
+      target. Add one integration case that holds the contender's actual
+      PostgreSQL `Review` result until the winner finishes, then releases that
+      unchanged result before the contender acquires the workspace lock.
+      Call-through barriers must reach their intended frontiers, release in
+      `finally` and join every attempt. Expect exactly one merge and loser
+      `CONFLICT`; setup/deadline failures are not RED.
+- [ ] **P2 — Correct ownership precedence and qualify the owner.** Under the
+      existing workspace lock, preserve an initially ineligible/terminal run's
+      `PRECONDITION`, authorize, then reject active workbench/promotion ownership
+      before fresh status and target-drift checks. Preserve the nonshared fresh
+      status reread that protects rework, stale-claim recovery, readiness,
+      unattended-promotion fences and genuine target-drift refusal/override.
+      Execute the complete real owner, affected consumers and static gates;
+      review the minimal change, restore the old ordering as a valid
+      falsification, then restore exact GREEN bytes.
+- [ ] **P3 — Re-freeze the corrected candidate.** Commit the independently
+      validated correction locally. Reconcile discovery for the added case,
+      rerun the complete ordinary regression and applicable phase gates, then
+      qualify independent preflight plus fresh-build Linux55 serially on both
+      exact Nodes. Re-audit API/DB/config/deployment impact: production guard
+      ordering now changes, while existing error codes/shapes, schemas,
+      migrations, settings and hosting are intended to remain unchanged.
+      Fresh Darwin50/preflight still needs its own exact-source handoff.
+
+The observed target-drift failure and the additional stale-status window share
+one claim-ownership precedence defect. The correction belongs in the shared
+workspace promotion service, not individual routes. The scratch path has no
+reviewed-target drift gate and reads its run after locking the workspace; parked
+PR finalization already checks ownership before its fresh run-status read.
+Those paths retain their existing contracts and consumer regression coverage.
+No new ADR, API field, migration, dependency or production test flag is planned.
+Unresolved questions: none for this authorized correction.
+
+The complete real owner executes both intended REDs on unchanged production
+code. `promote-order-red-24150/` first records8/10 passing in16.70s.
+The strengthened controls then assert durable `Done`/`done` and exactly one
+actual Git merge before checking the loser's error code. Their retained cycle is:
+
+| Directory under the Ubuntu evidence root | Result | Invocation / seconds |
+|---|---|---|
+| `promote-order-positive-red-24150/` | 8 pass/2 fail; both reached `PRECONDITION` instead of `CONFLICT` | `58c3c787-0738-4895-8f7f-e163e42b264e`;14.57 |
+| `promote-order-green-24150/` | complete10/10 | `e8d09614-1255-4fd5-a108-3bd766db8aaf`;14.61 |
+| `promote-order-mutant-24150/` | exact original production bytes reproduce both failures;8/10 | `5aa32118-2b07-4049-82b9-a9ffb9a1e6ed`;15.52 |
+| `promote-order-restored-24150/` | exact restored GREEN;10/10 | `16e96243-0cca-41f1-9987-cb4b85929836`;13.25 |
+| `promote-order-restored-24190/` | same restored source;10/10 | `0430c36b-b601-425e-a912-2ff72e9aca01`;13.25 |
+
+All rows have clean outer cleanup and no skipped cases. Passing rows reconcile
+the exact discovered title set with the existing lane validator. GREEN and
+both restored runs bind HEAD`490c7fe175d8fc38f1c5410ea910fbebb2707ea8` plus
+diff SHA256`12e7385009d16196f8aa93c8fbc6eaf3642ddf1639d913e9f6fa50cbe8b322e6`.
+The production file restores exactly to
+SHA256`83fff5d653823d1ff80e523c3af12e8c4df309161709724e1ce15967bea12936`;
+`promote-order-{mutation,restoration}.json` binds the original-order mutant.
+Read-only adversarial review finds no blocking issue or justified refactor;
+the initial-status guard plus movement of the existing authorization/ownership
+checks preserves the nonshared reread and all claimable-request gates.
+
+`promote-unit-green-24150/` passes the existing4-file/69-case service/route
+regression in4.94s. Web/supervisor/MCP typechecks, scoped lint with zero warnings,
+MCP build and contract checks pass. `promote-green-docs/` records a sandbox
+`tsx` IPC `listen EPERM`; its unchanged-source native rerun
+`promote-green-docs-native/` passes. The installed Vitest discovery preserves
+all nine original promotion titles and adds one; complete web integration
+discovery is now5248 cases. `promote-discovery-audit.json` retains the before/
+after inventories; Linux55 and Darwin50 titles are unchanged.
+
+The18-file consumer sweep is recorded with its exact `rg` command/output in
+`promote-consumer-sweep.json`, plus the existing shared-tree rework fence.
+`promote-consumers-green-24150/` is **failed**, despite its attempt label:
+279/282 in253.47s, invocation`bc6b7329-9c0a-48d6-ab32-437b11820a50`.
+Exact title reconciliation passes, the lane validator correctly rejects it,
+and cleanup is clean. All three failures are the existing sync-target conflict
+restoration cases: Git2.43.0 rejects
+`reset --hard --end-of-options <sha>` before restoring the worktree.
+`git-reset-compatibility-probe.json` independently reproduces that rejection
+in an invocation-owned disposable repository without calling promotion;
+`reset --hard <hex-sha> --` succeeds there. `web/lib/worktree.ts` is unchanged
+from the continuation source, SHA256
+`3ec0fe3851b5ca34b1802e7e82aa0795dbe828567fc2c51bc283cb852b664696`.
+No restore-helper change is authorized yet. The smallest requested extension
+is compatibility of that argument sequence while retaining hex validation.
+P2's owning behavior is qualified, but its broader consumer gate and P3 remain
+open; no complete phase qualification is claimed.
 
 ### Phase 0 — specification and environment receipts (2026-10-03)
 

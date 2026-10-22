@@ -6,10 +6,25 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 
 import { type NodePgDatabase } from "drizzle-orm/node-postgres";
+import { NodePgPreparedQuery } from "drizzle-orm/node-postgres/session";
+import { type PreparedQueryConfig } from "drizzle-orm/pg-core";
 import { eq } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import * as schemaModule from "@/lib/db/schema";
+import * as worktree from "@/lib/worktree";
+import {
+  type PromoteRunContext,
+  type PromoteRunResult,
+} from "@/lib/runs/promote";
 import {
   testPlatformRunnerRow,
   testRunnerSnapshot,
@@ -72,10 +87,36 @@ const ctx = {
 async function promote(
   runId: string,
   input: Record<string, unknown>,
-): Promise<unknown> {
+  context: PromoteRunContext = ctx,
+): Promise<PromoteRunResult> {
   const { promoteRun } = await import("@/lib/runs/promote");
 
-  return promoteRun(runId, input as never, ctx as never, db as never);
+  return promoteRun(runId, input as never, context, db as never);
+}
+
+async function awaitPromotionBarrier(
+  reached: Promise<void>,
+  attempt: Promise<PromoteRunResult>,
+  description: string,
+): Promise<void> {
+  let timer: NodeJS.Timeout | undefined;
+  const deadline = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`Promotion barrier not reached: ${description}`));
+    }, 10_000);
+  });
+
+  try {
+    await Promise.race([
+      reached,
+      attempt.then(() => {
+        throw new Error(`Promotion settled before barrier: ${description}`);
+      }),
+      deadline,
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // ---- fixtures -------------------------------------------------------------
@@ -410,32 +451,146 @@ describe("promoteRun — two-racer (integration, real CAS)", () => {
     const { stdout: tip } = await git(repo, ["rev-parse", "main"]);
     const body = { mode: "local_merge", reviewedTargetCommit: tip.trim() };
 
-    const results = await Promise.allSettled([
-      promote(runId, body),
-      promote(runId, body),
-    ]);
+    const mergeEntered = Promise.withResolvers<void>();
+    const allowMerge = Promise.withResolvers<void>();
+    const merged = Promise.withResolvers<void>();
+    const originalMerge = worktree.promoteLocalMerge;
+    const mergeSpy = vi
+      .spyOn(worktree, "promoteLocalMerge")
+      .mockImplementation(async (args) => {
+        mergeEntered.resolve();
+        await allowMerge.promise;
+        const result = await originalMerge(args);
 
-    const fulfilled = results.filter((r) => r.status === "fulfilled");
-    const rejected = results.filter((r) => r.status === "rejected");
+        merged.resolve();
 
-    expect(fulfilled).toHaveLength(1);
-    expect(rejected).toHaveLength(1);
-    expect((rejected[0] as PromiseRejectedResult).reason).toMatchObject({
-      code: "CONFLICT",
+        return result;
+      });
+    const attempts: Promise<PromoteRunResult>[] = [];
+
+    try {
+      const winner = promote(runId, body);
+
+      attempts.push(winner);
+      await awaitPromotionBarrier(mergeEntered.promise, winner, "winner merge");
+      const contender = promote(runId, body, {
+        ...ctx,
+        authorize: async (authorizedProjectId: string): Promise<void> => {
+          expect(authorizedProjectId).toBe(projectId);
+          // This transaction holds the workspace lock, so the real winner can
+          // merge but cannot finalize until the contender releases its claim.
+          allowMerge.resolve();
+          await awaitPromotionBarrier(merged.promise, winner, "real Git merge");
+          const { stdout: advancedTip } = await git(repo, [
+            "rev-parse",
+            "main",
+          ]);
+
+          expect(advancedTip.trim()).not.toBe(tip.trim());
+          expect((await readWorkspace(runId)).promotionState).toBe("claiming");
+          expect((await readRun(runId)).status).toBe("Review");
+        },
+      });
+
+      attempts.push(contender);
+      const results = await Promise.allSettled(attempts);
+      const fulfilled = results.filter((r) => r.status === "fulfilled");
+      const rejected = results.filter((r) => r.status === "rejected");
+
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+      expect(mergeSpy).toHaveBeenCalledTimes(1);
+      expect((await readRun(runId)).status).toBe("Done");
+      expect((await readWorkspace(runId)).promotionState).toBe("done");
+
+      const { stdout: merges } = await git(repo, [
+        "rev-list",
+        "--merges",
+        "--count",
+        "main",
+      ]);
+
+      expect(Number(merges.trim())).toBe(1);
+      expect((rejected[0] as PromiseRejectedResult).reason).toMatchObject({
+        code: "CONFLICT",
+      });
+    } finally {
+      allowMerge.resolve();
+      await Promise.allSettled(attempts);
+      mergeSpy.mockRestore();
+    }
+  });
+
+  it("a contender that read Review before the winner finalized conflicts without a second merge", async () => {
+    await createRunBranch("maister/finalize-race", "finalize-race.txt");
+    const runId = await seedFlowReviewRun({
+      branch: "maister/finalize-race",
+      targetBranch: "main",
+      promotionMode: "local_merge",
     });
+    const { stdout: tip } = await git(repo, ["rev-parse", "main"]);
+    const body = { mode: "local_merge", reviewedTargetCommit: tip.trim() };
+    const runSelect = db
+      .select()
+      .from(schema.runs)
+      .where(eq(schema.runs.id, runId))
+      .toSQL();
+    const readReview = Promise.withResolvers<void>();
+    const releaseRead = Promise.withResolvers<void>();
+    const originalExecute = NodePgPreparedQuery.prototype.execute;
+    let matchingReads = 0;
+    const readSpy = vi
+      .spyOn(NodePgPreparedQuery.prototype, "execute")
+      .mockImplementation(async function (
+        this: NodePgPreparedQuery<PreparedQueryConfig>,
+        values?: Record<string, unknown>,
+      ): Promise<unknown> {
+        const query = this.getQuery();
+        const result = await originalExecute.call(this, values);
 
-    expect((await readRun(runId)).status).toBe("Done");
-    expect((await readWorkspace(runId)).promotionState).toBe("done");
+        if (query.sql === runSelect.sql && query.params[0] === runId) {
+          matchingReads += 1;
+          // The dispatch read precedes the claim transaction's initial read.
+          // Hold only the latter's actual PostgreSQL result, without a row lock.
+          if (matchingReads === 2) {
+            expect(result).toMatchObject([{ id: runId, status: "Review" }]);
+            readReview.resolve();
+            await releaseRead.promise;
+          }
+        }
 
-    // The merge produced exactly one merge commit on main (single side-effect).
-    const { stdout: merges } = await git(repo, [
-      "rev-list",
-      "--merges",
-      "--count",
-      "main",
-    ]);
+        return result;
+      });
+    const contender = promote(runId, body);
+    const outcome = Promise.allSettled([contender]);
 
-    expect(Number(merges.trim())).toBe(1);
+    try {
+      await awaitPromotionBarrier(
+        readReview.promise,
+        contender,
+        "claim Review",
+      );
+      expect((await promote(runId, body)).ok).toBe(true);
+      expect((await readRun(runId)).status).toBe("Done");
+      expect((await readWorkspace(runId)).promotionState).toBe("done");
+      releaseRead.resolve();
+      const settled = await outcome;
+      const { stdout: merges } = await git(repo, [
+        "rev-list",
+        "--merges",
+        "--count",
+        "main",
+      ]);
+
+      expect(Number(merges.trim())).toBe(1);
+      expect(settled).toMatchObject([
+        { status: "rejected", reason: { code: "CONFLICT" } },
+      ]);
+    } finally {
+      releaseRead.resolve();
+      await outcome;
+      readSpy.mockRestore();
+    }
   });
 });
 
