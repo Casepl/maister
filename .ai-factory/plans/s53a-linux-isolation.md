@@ -982,6 +982,103 @@ and contracts (`promote-checkpoint-supervisor-unit-24150/` and
 command receipts bind the exact snapshot; none replaces full final-source
 Linux, ordinary integration or Darwin qualification.
 
+### A11 follow-up — Docker port collision and failed-start allocation
+
+Full ordinary regression on `ce974c1392468d42d74e8f8e2e4f5a58f73fdea0`
+encountered two independent rootless Docker start failures:
+`a11-final-ce974c139-web-07-24150/` (port32964,169 passed/10 unexecuted)
+and `a11-final-ce974c139-web-11-24150/` (port33080,210 passed/10 unexecuted).
+Each left one container discovered and removed by terminal containment; both
+attempts are failed. Their unchanged-source retries passed179/179 and220/220,
+respectively, but **no cause was fixed between those attempts**. Retrying a
+package does not qualify the allocator or the failed-start cleanup path.
+Original reports and `failure-audit.json` remain in each failed evidence folder
+under `/tmp/maister-s53a-ubuntu-qlpo_wtn`.
+
+Installed Testcontainers10.28.0 creates the Docker object before invoking start,
+but its failed-start path does not remove it. The shared helper receives no
+started handle and only wraps the error. `docker-port-and-start-cleanup-audit.json`
+records source hashes and distinguishes this verified ownership gap from the
+port collision itself. The latter matches the rootless child/host namespace
+allocation problem described by [Moby53153](https://github.com/moby/moby/issues/53153)
+and [Moby52903](https://github.com/moby/moby/issues/52903). The occupants of32964
+and33080 were not observed. An earlier33066 receipt directly records TIME-WAIT;
+it does not identify the occupants of these later ports.
+
+- [x] **P4 — Reclaim rejected PostgreSQL allocations.** Extend the existing real
+  `pg-container.integration.test.ts` owner with an actual occupied-container-port
+  refusal, original-error identity, pre-containment absence and live sibling
+  SQL witness. Execute RED before the minimal per-allocation cleanup correction;
+  restore the old cleanup behavior as a falsification, then restored GREEN.
+  Preserve all existing titles, deadlines, terminal leak failures and Linux55 /
+  Darwin50 manifests. No startup retry or daemon configuration change belongs
+  to this correction.
+- [ ] **P6 — Remove the four direct PostgreSQL ownership bypasses.** The constructor
+  sweep found `observatory-overview.integration.test.ts`,
+  `observatory-kind-attribution.integration.test.ts`,
+  `repo-delivery-scan.integration.test.ts` and `outcome-bucket.integration.test.ts`
+  creating unlabelled SDK containers directly and receiving handles only after
+  successful start. Add invocation-ownership assertions inside their existing
+  cases, execute RED, then route those fixtures through the shared main-lineage
+  helper. Preserve all original titles, migrations and deadlines; qualify their
+  complete owners and falsify the constructor routing before claiming closure.
+- [ ] **P5 — Resolve the Docker allocator prerequisite and re-freeze.** Successful
+  repeated packages alone do not close this prerequisite. Reconcile complete
+  ordinary discovery and requalify affected gates on the corrected source;
+  P3/A11/A12/C3 remain open. Fresh Darwin execution remains required.
+
+The ordinary orchestrator stopped after accepted groups0–13. Group14 was
+explicitly interrupted via its recorded runner UID/PID/start identity to begin
+this correction: `requested-interruption.json`,1754.74s,exit1. Its finalizer
+removed one container, so it is a failed/interrupted receipt, not zero-leak
+qualification. Subsequent Docker inspection found no Testcontainers resources.
+No shared daemon or persistent service was stopped during this investigation.
+
+P4 real-control evidence (all under the same external evidence root):
+
+| Attempt | Result | Invocation; seconds |
+| --- | --- | --- |
+| `pg-start-red-24150/` |7 PASS /1 intended FAIL: allocation still exists before containment|`9fa2237e-45e8-4ea8-8215-ff587f441ac8`;82.788|
+| `pg-start-green-24150/` |8/8; initial CLI cleanup implementation|`b2d0d290-0114-4dd6-9391-5acaa0db40e5`;84.614|
+| `pg-start-refactor-green-24150/` |8/8; cleanup and independent oracle use the same SDK-selected daemon|`78980c44-af18-4122-8c5d-cd4f73538527`;78.508|
+| `pg-start-mutant-24150/` |exact original helper repeats the intended7/1 failure|`42b5d2f2-4ef1-4810-980e-966248a90962`;79.567|
+| `pg-start-restored-24150/` |8/8; exact restored helper|`82e29720-02bb-4fcf-9bc8-8f5702fd8429`;85.447|
+| `pg-start-restored-24190/` |same restored source,8/8|`43b55213-cc84-4965-b74f-a2184a3763ad`;80.581|
+
+The restored runs share source `ce974c139` plus full-index diff SHA256
+`afdf0e8c164c6335a9a51555edf64fd15cd30e0e6d0757c8bdac0d484fcff575`.
+Helper SHA256 is `2074c497bbe6a71d05b24b909c6d916745c85ceb7ed5c4f66ef77e4cbbc4f7df`.
+`pg-start-{mutation,restoration}.json` binds the exact original/restored bytes.
+Each receipt retains commands, source snapshots, report hashes and timings;
+`failure-audit.json` rejects RED/mutant reports and proves the intended assertion,
+while `qualification-audit.json` applies `validateLaneReport` and exact title-set
+comparison to GREEN reports. The negative control performs its own exact-ID
+containment after the failed assertion; accepted runs observe absence before
+containment. Terminal sweeps find zero leaks. The control also proves original
+Engine error identity, actual same-invocation labels and a successful sibling
+SQL query. Both restored versions retain all original seven owner titles plus
+one new ordinary-integration control; Linux55/Darwin50 are unchanged.
+
+The SDK refactor avoids a CLI/SDK endpoint mismatch. Installed Dockerode4.0.12
+and Docker Modem5.0.7 forward abort signals to real requests, including removal;
+list/inspect/remove remain bounded at30/10/30seconds. The existing mocked
+unit rejection remains Docker-free. Its2-file/3-case native owner passes;
+`pg-start-refactor-unit/` retains the sandbox `listen EPERM` failure and
+`pg-start-refactor-unit-native/` the unchanged-source pass. No startup retry,
+security setting, daemon configuration, product API or database schema changed.
+Focused P4 acceptance is complete. Final `CI=true` gates pass: web/supervisor/MCP
+typechecks, MCP build, changed-file ESLint, `validate:docs:all` and
+`validate:contracts` (`pg-final-*/` receipts). The first four static attempts
+failed before execution because sandbox access to the pnpm SQLite store was
+denied; `pg-final-frozen-deps/` verifies frozen/offline dependencies using the
+existing local store, followed by the successful `*-native/` checks. Lockfile
+and application dependencies are unchanged. The final static source is
+`ce974c139` plus diff SHA256
+`99a263667af5a35f94f74a8bfc4abf0026eb3545ae997dc06cd672410c25439e`;
+only evidence prose differs from restored owner GREEN. Independent adversarial
+review found no remaining P4 blocker. Full phase acceptance and P5/P6 remain
+open; this correction does not qualify Docker port allocation or Linux55.
+
 ### Phase 0 — specification and environment receipts (2026-10-03)
 
 - Live master was read over HTTPS after configured SSH lacked a usable key:

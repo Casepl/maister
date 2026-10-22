@@ -323,7 +323,7 @@ smoke (`linux-helper-final.log`), including exact-tag sibling protection and
 542 ms parent-death termination without a sweep. Hosted Intel CI is still
 pending; the Linux isolation driver remains S5.3.
 
-Container ownership is independent of Ryuk's shared session. The sole
+Container ownership is independent of Ryuk's shared session. The shared
 `pg-container.ts` constructor records allocation before start, labels its
 container with `maister.test.invocation=<minted ID>`, then records the returned
 container ID. After owned client processes have exited, terminal runner cleanup
@@ -335,6 +335,15 @@ SIGKILL, the surviving outer control/CI finalizer performs this same recorded
 cleanup after proving watchdog termination. Never prune a shared Docker daemon
 or stop its shared Ryuk container. The installed Testcontainers implementation
 can reuse one reaper across invocations; its liveness is not per-lane evidence.
+
+Rejected database acquisition must reclaim its own allocation before returning
+the original startup error. A per-allocation UUID label, assigned before Docker
+creation, distinguishes that allocation from live sibling databases sharing the
+invocation. Cleanup includes containers still in `created` state, rechecks the
+label on each full container ID and verifies absence after removal. Inspection
+or removal failure is retained alongside the startup error. This does not retry
+startup or turn a Docker prerequisite failure into a successful test. Terminal
+invocation cleanup remains the crash backstop and still fails on any survivor.
 
 Before spawning disposable web/isolation Vitest workers, the A/B runner acquires the public
 Testcontainers reaper through `lane-reaper.ts`. Its retained unreferenced socket
