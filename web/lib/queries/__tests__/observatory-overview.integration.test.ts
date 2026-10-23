@@ -7,21 +7,22 @@
 
 import { randomUUID } from "node:crypto";
 
-import {
-  PostgreSqlContainer,
-  type StartedPostgreSqlContainer,
-} from "@testcontainers/postgresql";
-import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { Pool } from "pg";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import * as schema from "@/lib/db/schema";
+import {
+  startMainPostgresTestDb,
+  type StartedPostgresTestDb,
+} from "@/test-support/pg-container";
 import { getObservatoryOverview } from "@/lib/queries/observatory-overview";
 import { withQueryCount } from "@/test-support/query-count";
+import {
+  INVOCATION_CONTAINER_LABEL,
+  invocationFromEnvironment,
+} from "@/test-support/process-invocation";
 
-let container: StartedPostgreSqlContainer;
-let pool: Pool;
+let testDatabase: StartedPostgresTestDb;
 let db: NodePgDatabase<typeof schema>;
 let alpha: ProjectFixture;
 let beta: ProjectFixture;
@@ -42,19 +43,14 @@ function at(iso: string): Date {
 }
 
 beforeAll(async () => {
-  container = await new PostgreSqlContainer("postgres:16-alpine")
-    .withDatabase("observatory_overview")
-    .withUsername("test")
-    .withPassword("test")
-    .start();
-  pool = new Pool({ connectionString: container.getConnectionUri() });
-  db = drizzle(pool, { schema });
-  await migrate(db, { migrationsFolder: "./lib/db/migrations" });
+  testDatabase = await startMainPostgresTestDb({
+    databaseName: "observatory_overview",
+  });
+  db = testDatabase.db;
 }, 180_000);
 
 afterAll(async () => {
-  await pool?.end();
-  await container?.stop();
+  await testDatabase?.stop();
 });
 
 beforeEach(async () => {
@@ -70,6 +66,10 @@ beforeEach(async () => {
 
 describe("getObservatoryOverview (ADR-178)", () => {
   it("counts runs by kind and by outcome bucket, per project and in the totals", async () => {
+    expect(
+      testDatabase.container.getLabels()[INVOCATION_CONTAINER_LABEL],
+      "PostgreSQL must belong to its lane invocation",
+    ).toBe(invocationFromEnvironment()?.id);
     await seedRun({ project: alpha, kind: "flow", status: "Running" });
     await seedRun({ project: alpha, kind: "flow", status: "Pending" });
     await seedRun({

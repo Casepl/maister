@@ -196,13 +196,13 @@ Hosting decision rule: a complete, valid, zero-leak hosted Linux pass at the own
 | Test-support driver and real-web process flow | Change `process-isolation.ts`, `real-web.ts`, trusted Linux launcher; canonical spec is `docs/system-analytics/test-infrastructure.md` (Purpose/entities/state/process/expectations/edge cases/linked artifacts). Expectations name policy guard, kernel primitive, ownership guard and owning test. |
 | Test-only selector | Extend existing `MAISTER_TEST_ISOLATION` with `bubblewrap`; unset selects supported platform driver, explicit cross-platform/unknown value fails. `docs/configuration.md`, existing test variable inventory and `web/CLAUDE.md` describe readers. No production env/config path added. |
 | CI tools/host recipe | Linux setup script, workflow and test prerequisites in `docs/getting-started.md`; distribution/profile/package authority and environment provenance in test-infrastructure. Tools are harness/CI-only. |
-| API/events/errors/auth | **Unchanged** `docs/api/{web,supervisor}.openapi.yaml`, `docs/api/async/{execution-host-events,supervisor-sse,web-runs}.asyncapi.yaml`, `docs/supervisor.md`, `docs/error-taxonomy.md`; no new route, wire identifier, body-controlled locator, status/enum, domain error or grant. Existing positive HTTP/Postgres/object controls prove authorized access. Run contract gates to verify this premise. |
+| API/events/errors/auth | **Wire contracts unchanged**: `docs/api/{web,supervisor}.openapi.yaml`, `docs/api/async/{execution-host-events,supervisor-sse,web-runs}.asyncapi.yaml`, `docs/supervisor.md`, `docs/error-taxonomy.md`; no new route, wire identifier, body-controlled locator, status/enum, domain error or grant. The separately authorized promotion correction changes guard precedence: a concurrent claimant observes existing `CONFLICT`, while a terminal follow-up remains `PRECONDITION`; authorization and rework fencing remain mandatory. Existing positive HTTP/Postgres/object controls prove authorized access. Run contract gates to verify this premise. |
 | Data | **Unchanged** web Drizzle schema/main and Brain lineages, supervisor SQLite schema/versions, `docs/database-schema.md`, `docs/db/*`/generated ERD. No migration, backfill, new ledger or migration-number reservation. |
 | Runtime config/DSL | **Unchanged** `maister.yaml`, Flow DSL, product config readers and runtime ports/credentials. No production web isolation toggle. Test policy is derived from trusted fixture setup, not request bodies. |
 | Production deployment | **Unchanged** `Dockerfile`, `compose.yml`, production overlay, `.env.example`, web/supervisor samples, `deploy/maister.env.example`, systemd units. Current same-user units and shared repository boundary remain as documented in `docs/deployment.md`. Test-only bwrap is not a supported production container/user layout. |
 | Architecture/security docs | Amend only qualification/test topology statements in `docs/architecture.md` and existing ADR/analytics links where needed; `.ai-factory/ARCHITECTURE.md`/rules/root instruction updates through owner commands only if a concrete assertion changes. `SECURITY.md` vulnerability-reporting policy unchanged. No public Linux-isolation deployment claim. |
 | ADR | A multi-component namespace/lifecycle decision merits a new ADR before code. At planning baseline the highest allocation is ADR-192; main lineage ends `0192_scratch_prompt_intent`, Brain `0006_brain_indexing_profiles`. These are observations, not reservations. A1 rechecks current master, allocates then writes the actual ADR body/hub/index before citing its number. Budget a collision/anchor recheck after rebase. No invented next number here. |
-| Public docs/UI/analytics | No UI, localization or product analytics schema change. No `site-docs/` update expected; any later public support promise triggers its EN/RU owner workflow. Test-infrastructure analytics and plan evidence change; product run-state analytics stay unchanged. |
+| Public docs/UI/analytics | No UI, localization or product analytics schema change. No `site-docs/` update expected; any later public support promise triggers its EN/RU owner workflow. Test-infrastructure analytics and plan evidence change; `workspaces.md` records the authorized promotion guard-precedence correction. |
 
 Dedicated deployment wiring task A3 distinguishes each test-only dependency from production surfaces. Do not add bwrap to the production image or change service users to satisfy a test. `getting-started.md` and `configuration.md` must explicitly say the test driver is not yet supported as production Docker isolation; the separate S5.3 deployment deliverable must provision users/groups, credentials, workspace/context materialization and mounts before that support is claimed.
 
@@ -1013,7 +1013,7 @@ it does not identify the occupants of these later ports.
   Preserve all existing titles, deadlines, terminal leak failures and Linux55 /
   Darwin50 manifests. No startup retry or daemon configuration change belongs
   to this correction.
-- [ ] **P6 — Remove the four direct PostgreSQL ownership bypasses.** The constructor
+- [x] **P6 — Remove the four direct PostgreSQL ownership bypasses.** The constructor
   sweep found `observatory-overview.integration.test.ts`,
   `observatory-kind-attribution.integration.test.ts`,
   `repo-delivery-scan.integration.test.ts` and `outcome-bucket.integration.test.ts`
@@ -1078,6 +1078,93 @@ and application dependencies are unchanged. The final static source is
 only evidence prose differs from restored owner GREEN. Independent adversarial
 review found no remaining P4 blocker. Full phase acceptance and P5/P6 remain
 open; this correction does not qualify Docker port allocation or Linux55.
+
+P6's four ordinary owners preserve their original27 titles (13+2+8+4), database
+names, main migration lineage and180-second setup ceilings. The shared helper
+provides the existing PG16/pgvector image, tmpfs/WAL limits, allocation ownership
+and pool-before-container teardown. No product query or scheduler behavior is
+changed. `pg-consumers-discovery/` records installed-Vitest discovery.
+
+| Attempt | Result | Invocation; seconds |
+| --- | --- | --- |
+| `pg-consumers-red-24150/` |23 PASS /4 intended ownership assertion failures after real database setup|`6d9a87ff-0524-4ebd-a473-6562411e703b`;59.288|
+| `pg-consumers-green-24150/` |27/27 after helper routing|`b9e36c5c-2ece-4fe7-be1c-97811b35b8b1`;46.830|
+| `pg-consumers-refactor-24150/` |27/27 after final fixture cleanup|`f99dafe6-df25-48f1-bef0-615a8ec27e98`;45.230|
+| `pg-consumers-mutant-24150/` |exact old fixtures restore the same23/4 behavioral result|`438619e7-8429-4925-94b5-5c99fd2e1941`;61.047|
+| `pg-consumers-restored-24150/` |27/27; exact restored source|`09e444ce-3222-4c23-8918-5a6cb4830bce`;43.274|
+| `pg-consumers-restored-24190/` |same source,27/27|`14db8d34-aa80-4b23-a3f2-17d93796a776`;44.150|
+
+The final three accepted receipts share `50eae3f01` plus full-index diff SHA256
+`2bc73a76b82f634d03f07dd2b58ffb63a97e2905720e8a1e7cfc5cc3fb614ccb`.
+`pg-consumers-{mutation,restoration}.json` records each exact source hash;
+each run preserves commands, reports and timings. Negative `failure-audit.json`
+checks all four intended assertions and validator rejection; accepted
+`qualification-audit.json` checks exact original title sets, report validation
+and zero terminal leaks. Independent review found no remaining routing blocker.
+
+The broader constructor sweep includes `.mjs`: the only remaining direct
+constructor outside the helper is `reaper-database-worker.mjs`. It is the
+independent O-reaper SDK/Ryuk death witness, already labelled and registered
+before start. Its first database deliberately survives SIGKILL; ready IDs are
+removed by O-reaper's finally block. A prereadiness-created object instead
+requires terminal containment and fails the lane. This explicit exception does
+not claim P4 immediate cleanup, and importing the application helper would
+change the native witness's dependency boundary. Ordinary consumers have no
+remaining direct constructor; no control or failure assertion was weakened.
+
+P5 now has a deterministic current-daemon reproduction:
+`docker-allocator-current/` and `docker-allocator-owned-probe/receipt.json`,
+invocation `f10027e5-18c8-4772-a327-c62f58a380b4`,UID1000,Docker29.9.2,
+containerd2.4.2,RootlessKit3.3.0,builtin port driver. After the first owned
+container receives33258, an owned host socket binds33259. The next automatic
+publication selects that occupied33259 and fails at RootlessKit AddPort; its
+container remains `created`. Both exact labelled containers and the socket
+are reclaimed, with no remaining probe IDs. This diagnostic's exit0 means the
+probe and containment completed, not that Docker passed the prerequisite.
+Unlike the earlier32964/33080 failures, the competing listener is now known.
+No retry, daemon restart, configuration change or sysctl change is made.
+An allocator-correct rootless endpoint is required before full qualification;
+the previous authorized restart corrected version mismatch only.
+
+P6 final `CI=true` web typecheck, changed-file lint, docs/contracts and34 runner
+controls pass (`pg-consumers-final-{types,lint,docs,contracts,runner}/`). Full
+installed-Vitest integration discovery is596files/5249cases; ordinary owners
+are584files/5185cases. `pg-consumers-final-discovery/discovery-audit.json` proves
+every prior title remains and the only addition is P4's failed-start control.
+`a12-current-impact-audit.json` confirms the only production code delta from
+the continuation baseline is the authorized `promote.ts` guard ordering;
+API/events/auth shapes, schemas, migration lineages, configuration, dependency
+lockfile, public UI/docs and deployment/CI files have no diff. Main journal ends
+at0193, Brain at0006. This is a source-impact audit, not A12 candidate acceptance.
+
+P5 prerequisite remediation uses a separate invocation-owned rootless daemon,
+not a shared-daemon downgrade. Official Docker28.5.2 static binaries and its
+matching rootless wrapper are pinned in `docker-28.5.2-download.json` and
+`docker-rootless-extras-28.5.2-download.json`; actual daemon build is89c5e8f.
+`owned-docker-endpoint.json` records the transient user unit, private data/state/
+socket paths, UID1000, installed RootlessKit3.3.0, seccomp and cgroupv2/systemd.
+No host security setting or shared service changes. The identical strict
+allocator gate fails on29.9.2 (`allocator-gate-29/`,occupied33261) and passes
+on28.5.2 (`allocator-gate-28/`,occupied32769 is skipped for32770). Both retain
+the live socket witness and clean every owned diagnostic resource.
+
+The complete8-case PostgreSQL owner passes on the new endpoint:
+`pg-owner-docker28-24190/`, invocation
+`da4771b8-f1a2-4098-b971-591cd1edb37f`,76.219s, including real PostgreSQL/main
+migrations, Ryuk, original-error preservation, failed-start cleanup and live
+sibling protection; exact report validation and terminal zero-leak checks pass.
+`with-owned-docker.py` pins the same explicit Unix endpoint for fresh SDK,
+worker and CLI/finalizer processes and checks daemon identity before each run.
+The original29.9.2 endpoint remains installed and unqualified for this allocator
+contract. P5 remains open for the corrected-source re-freeze and full affected
+qualification; Linux55/both-Node/phase/Darwin evidence is not inherited from
+the8-case endpoint prerequisite check.
+
+The owner subsequently authorized committing and pushing after completion,
+then clarified that S5.3a itself must be finished before push. Local qualified
+phase commits continue; no intermediate push, PR, shared-branch merge or manual
+CI dispatch/rerun is authorized. A fresh Darwin host has been requested while
+the Linux qualification continues; historical hosted receipts remain separate.
 
 ### Phase 0 — specification and environment receipts (2026-10-03)
 

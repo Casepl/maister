@@ -5,14 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
-import {
-  PostgreSqlContainer,
-  type StartedPostgreSqlContainer,
-} from "@testcontainers/postgresql";
 import { eq } from "drizzle-orm";
-import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { Pool } from "pg";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   afterAll,
   afterEach,
@@ -25,30 +19,32 @@ import {
 
 import * as schema from "@/lib/db/schema";
 import {
+  startMainPostgresTestDb,
+  type StartedPostgresTestDb,
+} from "@/test-support/pg-container";
+import {
   REPO_DELIVERY_WINDOW_DAYS,
   runRepoDeliveryScanJob,
 } from "@/lib/scheduler/handlers/repo-delivery-scan";
 import { runSchedulerTick } from "@/lib/scheduler/tick-service";
+import {
+  INVOCATION_CONTAINER_LABEL,
+  invocationFromEnvironment,
+} from "@/test-support/process-invocation";
 
 const execFileAsync = promisify(execFile);
 
-let container: StartedPostgreSqlContainer;
-let pool: Pool;
+let testDatabase: StartedPostgresTestDb;
 let db: NodePgDatabase<typeof schema>;
 let root: string | undefined;
 
 vi.mock("@/lib/db/client", () => ({ getDb: () => db }));
 
 beforeAll(async () => {
-  container = await new PostgreSqlContainer("postgres:16-alpine")
-    .withDatabase("repo_delivery_scan_test")
-    .withUsername("test")
-    .withPassword("test")
-    .start();
-  pool = new Pool({ connectionString: container.getConnectionUri() });
-  db = drizzle(pool, { schema });
-
-  await migrate(db, { migrationsFolder: "./lib/db/migrations" });
+  testDatabase = await startMainPostgresTestDb({
+    databaseName: "repo_delivery_scan_test",
+  });
+  db = testDatabase.db;
 }, 180_000);
 
 afterEach(async () => {
@@ -62,12 +58,15 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-  await pool?.end();
-  await container?.stop();
+  await testDatabase?.stop();
 });
 
 describe("runRepoDeliveryScanJob", () => {
   it("runs through the scheduler seed, claim, and dispatch path", async () => {
+    expect(
+      testDatabase.container.getLabels()[INVOCATION_CONTAINER_LABEL],
+      "PostgreSQL must belong to its lane invocation",
+    ).toBe(invocationFromEnvironment()?.id);
     const fixture = await createProjectFixture();
 
     const tick = await runSchedulerTick({ jobKind: "repo_delivery_scan" });

@@ -7,26 +7,27 @@
 
 import { randomUUID } from "node:crypto";
 
-import {
-  PostgreSqlContainer,
-  type StartedPostgreSqlContainer,
-} from "@testcontainers/postgresql";
 import { sql } from "drizzle-orm";
-import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { Pool } from "pg";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import * as schema from "@/lib/db/schema";
+import {
+  startMainPostgresTestDb,
+  type StartedPostgresTestDb,
+} from "@/test-support/pg-container";
 import { RUN_STATUS_VALUES } from "@/lib/runs/run-status-values";
+import {
+  INVOCATION_CONTAINER_LABEL,
+  invocationFromEnvironment,
+} from "@/test-support/process-invocation";
 import {
   latestWorkspaceLateralSql,
   runOutcomeBucketSql,
   type RunOutcomeBucket,
 } from "@/lib/runs/outcome-bucket";
 
-let container: StartedPostgreSqlContainer;
-let pool: Pool;
+let testDatabase: StartedPostgresTestDb;
 let db: NodePgDatabase<typeof schema>;
 let projectId: string;
 
@@ -184,19 +185,14 @@ function all(bucket: RunOutcomeBucket): Record<VariantName, RunOutcomeBucket> {
 }
 
 beforeAll(async () => {
-  container = await new PostgreSqlContainer("postgres:16-alpine")
-    .withDatabase("outcome_bucket")
-    .withUsername("test")
-    .withPassword("test")
-    .start();
-  pool = new Pool({ connectionString: container.getConnectionUri() });
-  db = drizzle(pool, { schema });
-  await migrate(db, { migrationsFolder: "./lib/db/migrations" });
+  testDatabase = await startMainPostgresTestDb({
+    databaseName: "outcome_bucket",
+  });
+  db = testDatabase.db;
 }, 180_000);
 
 afterAll(async () => {
-  await pool?.end();
-  await container?.stop();
+  await testDatabase?.stop();
 });
 
 beforeEach(async () => {
@@ -217,6 +213,10 @@ beforeEach(async () => {
 
 describe("runOutcomeBucketSql over real rows (ADR-178 D3)", () => {
   it("classifies every reachable run status x workspace shape per the D3 table", async () => {
+    expect(
+      testDatabase.container.getLabels()[INVOCATION_CONTAINER_LABEL],
+      "PostgreSQL must belong to its lane invocation",
+    ).toBe(invocationFromEnvironment()?.id);
     const expected = new Map<string, RunOutcomeBucket>();
 
     for (const status of RUN_STATUS_VALUES) {

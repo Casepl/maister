@@ -1,40 +1,36 @@
 import { randomUUID } from "node:crypto";
 
-import {
-  PostgreSqlContainer,
-  type StartedPostgreSqlContainer,
-} from "@testcontainers/postgresql";
-import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { Pool } from "pg";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import * as schema from "@/lib/db/schema";
+import {
+  startMainPostgresTestDb,
+  type StartedPostgresTestDb,
+} from "@/test-support/pg-container";
 import { withQueryCount } from "@/test-support/query-count";
 import { getProjectAgentization } from "@/lib/queries/observatory-agentization";
 import { getProjectObservatory } from "@/lib/queries/observatory";
+import {
+  INVOCATION_CONTAINER_LABEL,
+  invocationFromEnvironment,
+} from "@/test-support/process-invocation";
 
-let container: StartedPostgreSqlContainer;
-let pool: Pool;
+let testDatabase: StartedPostgresTestDb;
 let db: NodePgDatabase<typeof schema>;
 let projectId: string;
 
 const NOW = new Date("2026-07-12T12:00:00.000Z");
 
 beforeAll(async () => {
-  container = await new PostgreSqlContainer("postgres:16-alpine")
-    .withDatabase("observatory_kind_attribution")
-    .withUsername("test")
-    .withPassword("test")
-    .start();
-  pool = new Pool({ connectionString: container.getConnectionUri() });
-  db = drizzle(pool, { schema });
-  await migrate(db, { migrationsFolder: "./lib/db/migrations" });
+  testDatabase = await startMainPostgresTestDb({
+    databaseName: "observatory_kind_attribution",
+  });
+  db = testDatabase.db;
 }, 180_000);
 
 afterAll(async () => {
-  await pool?.end();
-  await container?.stop();
+  await testDatabase?.stop();
 });
 
 beforeEach(async () => {
@@ -56,6 +52,10 @@ beforeEach(async () => {
 
 describe("project Observatory kind attribution", () => {
   it("reconciles all-kind cost/budget totals and excludes legacy budget in a concrete kind", async () => {
+    expect(
+      testDatabase.container.getLabels()[INVOCATION_CONTAINER_LABEL],
+      "PostgreSQL must belong to its lane invocation",
+    ).toBe(invocationFromEnvironment()?.id);
     const flowRunId = await seedRun("flow", 10);
     const scratchRunId = await seedRun("scratch", 5);
 

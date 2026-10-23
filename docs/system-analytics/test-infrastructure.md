@@ -345,6 +345,14 @@ or removal failure is retained alongside the startup error. This does not retry
 startup or turn a Docker prerequisite failure into a successful test. Terminal
 invocation cleanup remains the crash backstop and still fails on any survivor.
 
+Ordinary PostgreSQL fixtures use this shared acquisition boundary. The native
+`reaper-database-worker.mjs` is an independent SDK/Ryuk witness: O-reaper
+deliberately leaves its first database alive after worker SIGKILL. It registers
+allocation and labels ownership before start, but does not claim the helper's
+immediate rejected-acquisition cleanup. If it fails before publishing readiness,
+strict terminal cleanup discovers any labelled survivor and fails the lane;
+containment never turns that failed control green.
+
 Before spawning disposable web/isolation Vitest workers, the A/B runner acquires the public
 Testcontainers reaper through `lane-reaper.ts`. Its retained unreferenced socket
 lasts until the actual runner process exits, including terminal invocation
