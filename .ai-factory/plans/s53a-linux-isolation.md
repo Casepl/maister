@@ -1166,6 +1166,135 @@ phase commits continue; no intermediate push, PR, shared-branch merge or manual
 CI dispatch/rerun is authorized. A fresh Darwin host has been requested while
 the Linux qualification continues; historical hosted receipts remain separate.
 
+### A11 ordinary-fixture corrections and measured load blocker (2026-10-23)
+
+The complete ordinary discovery at clean source
+`12ad4550bed3e75b842278442b62e22b7892b8bf` is 584 files / 5185 cases.
+All 25 serial groups executed on Node24.15.0; 23 groups (536 files / 4753
+cases) passed the existing report validator and exact-title reconciliation.
+Groups11 and16 retain three failures; they are not accepted by retrying their
+packages. External evidence remains under
+`/tmp/maister-s53a-ubuntu-qlpo_wtn`, including the frozen group inventory,
+`web-integration-accepted-12ad4550b-e3b0c44298fc.json` and each group's
+`command.json`, original reporter and qualification/failure audit.
+
+- [x] **P7 — Correct bounded-output transport and failed-case cleanup (Ubuntu).** The
+  owner authorized this narrow fixture correction. Group11's original
+  S2.8 assertion expected exhausted real HTTP409 retries but resolved; the
+  following S2.5 case then processed the failed case's pending command and
+  failed its own application assertion. The native transport must bound each
+  socket's receive buffer before connecting and hold only the two existing
+  8 MiB responses. Observe the actual two server SQLite response-spool IDs
+  across retry exhaustion/cancellation/held409, then their removal before
+  recovery. Reuse the invocation compiler watchdog and exact child registration;
+  join normal release, fail forced containment, join outstanding assertions,
+  independently attempt all cleanup, and remove only the failed synthetic
+  command before restarting projection. Keep all26 titles and deadlines.
+  Execute behavioral RED, minimal GREEN, transport/cleanup falsifications,
+  exact restoration and both-Node complete-owner GREEN; audit discovery and
+  affected group11. Fresh Darwin owning26 remains part of the handoff.
+- [ ] **P8 — Supply fixture Git identity and own publish bare roots.** Group16
+  failed before its publish assertion because bare `commit-tree` had no author
+  identity. That setup failure is not behavioral RED. The independently
+  executed `publish-original-root-red-24150` reached its absence assertion:
+  `/tmp/publish-bare-fP5TM5` survived completed teardown. Its recorded inode and
+  exact failed Git argv/parent SHA prove ownership; other correlated paths do
+  not automatically grant deletion authority. Reuse the per-command Git helper
+  and canonical registered temporary-home helper, create remotes under that
+  parent, attempt every cleanup and assert each allocated path absent before
+  outer containment. Preserve all10 titles. Falsify root placement, restore exact
+  sources, qualify both Nodes and affected group16, and retain allocation/absence
+  identities. Do not change production publish/worktree code or global Git config.
+
+Group11: invocation `50e94483-875c-4201-bd3d-c16944d95caa`, 374.873408s,
+218/220 passing; report SHA256
+`dd07c46c7a924ef0ae38dc18c15e57bb8ae7a1ac525f96ea19e6a00befab75fc`.
+Group16: invocation `ce008dbf-40a9-4b00-be36-6ccaf1674def`, 227.944968s,
+211/212 passing; report SHA256
+`c77681bfa3b7f5751cd3eeebac84901514661f03b012a8011c30e0b769ac6513`.
+Registered-resource cleanup passed those groups, but the independently found
+unregistered bare-root leak still fails resource acceptance.
+
+R20's original full run at this source remains invalid: 71.884813 rows/s below
+the unchanged360 floor (`a11-12ad4550b-d28-event-plane-load-24150`, invocation
+`8765f262-7a56-460b-9b7e-1454c2f7a008`, 1248.195464s, report SHA256
+`86831b58ba523af8dca69a114618b5b5bf5899ea997ddee619bae17b5c576b1b`).
+This is a missed load-profile prerequisite, not behavioral RED. A separate
+bounded observational run (`a11-r20-sqlite-diagnostic-24150`) used external
+SQLite method timing and parent-owned fsync tracing without repository edits.
+Its299.119s measured window spent235.574s in synchronous SQLite methods:
+132.712s COMMIT,59.472s preparation;72,966 WAL fsyncs consumed98.898s
+(overlapping COMMIT time). Instrumentation changes timing and proves no safe
+optimization. This diagnostic exited124 at its420s observation limit; terminal
+containment discovered10 processes and1 container, so it is explicitly failed
+and supplies no qualification. `cleanup-audit.json` verifies zero remaining
+owned processes/containers and both registered roots absent. A separate attempted
+early signal was refused because the runner's environment lacked the invocation
+tag; the guard was not bypassed. `timing-audit.json` retains the complete measured
+scope. The owner explicitly chose to leave R20 open and run the unchanged gate
+on Mac; production SQLite optimization is not authorized in this continuation.
+The handoff must include R20 without relabeling a Mac result as Ubuntu load
+qualification. A11/C3/G-LINUX remain open.
+
+### P7 — reached transport/cleanup evidence and exact restored source (2026-10-25)
+
+The original group11 failure above is the behavioral RED. Merely adding spool
+observations to the old transport passed26/26 (`bounded-spool-red-24150`);
+that nondeterministic attempt is not RED. The native two-socket fixture then
+passed26/26. Valid v2 falsifications run every original title: releasing the
+sockets before returning fails the actual held-spool assertion (25/26); an
+intentional interruption after acquisition retains the original error while
+removing the exact failed command (25/26); removing that deletion reaches
+`failed draft command survived fixture cleanup` with one real PostgreSQL row
+remaining (24/26, including the subsequent application failure). All runtime
+process/container sweeps were clean. Evidence directories are
+`bounded-holding-falsification-v2-24150`,
+`bounded-cleanup-failure-control-v2-24150`, and
+`bounded-cleanup-falsification-v2-24150`, each with its original reporter and
+`falsification-audit.json`. The first cleanup-removal attempt was insensitive
+and is explicitly rejected in `bounded-cleanup-falsification-24150/invalid-falsification.json`.
+
+`bounded-falsification-v2-restoration.json` proves exact source restoration;
+restored26/26 passed on both exact Nodes. The final review then moved worker
+shutdown before SQLite snapshot acquisition, so snapshot failure cannot
+replace a still-running worker. Both complete owners and the entire affected
+24-file group were executed again on these final code bytes:
+
+| Gate / evidence directory | Node | Cases | Duration | Invocation | Report SHA256 |
+|---|---|---|---|---|---|
+| `bounded-reviewed-green-24150` | 24.15.0 | 26/26 | 77.183470s | `0a054f53-0b43-416a-a94e-5f28c18964aa` | `84db2bcb13b38e23b776869a072971360ea90b520f14e5cea318bcb00e56f5de` |
+| `bounded-reviewed-green-24190` | 24.19.0 | 26/26 | 81.022682s | `4c719277-c273-4f41-8f9c-b00d18a60298` | `4a263299c4efdabc5d2572b6e8b3b82607ffb314f54b9dd7f3d90e111f2e785a` |
+| `bounded-reviewed-group11-24150` | 24.15.0 | 220/220 | 359.072228s | `97fa118b-3cc8-4e06-a269-179e0fdf3e9f` | `f4ea1bc1d2546d8fc457b7d4edf24befc3bc1b0e541523b7173d2d9d9f7d444f` |
+
+These receipts bind HEAD `12ad4550bed3e75b842278442b62e22b7892b8bf`
+plus the recorded dirty-source snapshots, not the later evidence-text commit.
+Each has exact original title reconciliation, existing validator success,
+zero pending/todo/runtime errors and zero terminal leaks. Final web typecheck,
+changed-source lint, contracts, docs and diff checks passed
+(`bounded-reviewed-*-24150`). All original26 titles, deadlines and8 MiB
+payloads remain. Fresh Darwin26 is still pending; P7's checkbox is local Ubuntu
+fixture acceptance only and does not close A11/C3.
+
+Final corrected code SHA256:
+
+- `web/lib/execution-host/__tests__/bounded-output.integration.test.ts`: `61f132e3eee356ada5217af5903725a4fae1bd3d917c3e29708076bb0e15a68e`.
+- `web/test-support/held-http-reads.ts`: `f7605699bc2145047e6a010c175ffacd7b9aa69f055e16c83aa224b0df0fb9fa`.
+- `web/test-support/fixtures/held-http-reads.c`: `4b6d46fb4782aacdf5fef12a266af2cb168bed595699e8835f2836dfe91d5927`.
+- `web/test-support/process-invocation.ts`: `f4a552ea58ea421dc7fa96e6a13fdae6f32e587203d8274918f9d26939ea935f`.
+
+A separate resource audit found that older external raw `vitest list` commands
+ran setup files without teardown. `discovery-root-leak-proof.json` identifies
+2078 empty roots from four exact discovery invocations using recorded inode,
+device and marker identities; its SHA256 is
+`b1ace625e7ef91173403e92cf2d8a66255ce6735f80bc1efb05287a426a3040f`.
+The guarded `discovery-proven-root-containment-24150` reclaimed only those
+proven roots; `discovery-root-cleanup-audit.json` confirms0 recorded survivors.
+Their original resource acceptance remains failed. New discovery uses a private
+invocation, joined real Vitest process and explicit `releaseInvocation`:
+`bounded-final-owned-discovery-24150` passes the unchanged37 titles across
+bounded-output/publish/R20, with all3 created roots absent. This does not
+convert the original raw-discovery leaks into accepted runs.
+
 ### Phase 0 — specification and environment receipts (2026-10-03)
 
 - Live master was read over HTTPS after configured SSH lacked a usable key:

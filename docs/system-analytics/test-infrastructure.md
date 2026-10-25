@@ -225,6 +225,27 @@ rejects pending waits, releases DB locks and removes test triggers while retaini
 the original failure. Timeout diagnoses failure; it never releases a barrier or
 proves a window. Production retry deadlines and lease expiry still run normally.
 
+The ordinary bounded-output owner must observe both real server response-spool
+reservations throughout read-cap exhaustion, cancellation and the held busy
+response. An unread Node HTTP response alone does not prove server occupancy:
+kernel buffering can let the server finish its stream. The test transport holds
+two loopback connections with bounded per-socket receive buffers, consumes only
+HTTP headers, and joins its invocation-owned native child when releasing them.
+The same two 8 MiB spool identities must remain until release and disappear
+before the recovery read. Forced child containment fails the fixture. Failed
+synthetic commands are removed by exact command/run/owner identity before the
+projection worker restarts; pending assertions are joined and cleanup failures
+retain the original error. These controls preserve the existing 26 cases,
+production retry policy and deadlines.
+
+Designed (P8, qualification pending): the ordinary package-publish fixture must
+supply Git author identity per command through the existing Git fixture helper.
+Its bare remotes must live beneath its registered canonical temporary home.
+Teardown must attempt every owned resource, then verify every allocated bare
+path is absent before invocation containment.
+A later root sweep cannot turn a fixture leak into passing acceptance. The
+existing ten publish cases and real Git/PostgreSQL behavior remain the owners.
+
 | ID / required window | Mechanism and owning scope | Mandatory evidence before action |
 | --- | --- | --- |
 | B1 host acceptance / before HTTP ACK | Hold the exact upstream command response before any downstream ACK bytes; direct receipt lookup confirms committed acceptance; explicitly drop the downstream connection. | Same command ID/request digest on host receipt; no downstream ACK; host remains healthy. |
