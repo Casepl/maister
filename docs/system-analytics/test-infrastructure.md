@@ -238,11 +238,10 @@ projection worker restarts; pending assertions are joined and cleanup failures
 retain the original error. These controls preserve the existing 26 cases,
 production retry policy and deadlines.
 
-Designed (P8, qualification pending): the ordinary package-publish fixture must
-supply Git author identity per command through the existing Git fixture helper.
-Its bare remotes must live beneath its registered canonical temporary home.
-Teardown must attempt every owned resource, then verify every allocated bare
-path is absent before invocation containment.
+The ordinary package-publish fixture supplies Git author identity per command
+through the existing Git fixture helper. Its bare remotes live beneath its
+registered canonical temporary home. Teardown attempts every owned resource,
+then verifies every allocated bare path is absent before invocation containment.
 A later root sweep cannot turn a fixture leak into passing acceptance. The
 existing ten publish cases and real Git/PostgreSQL behavior remain the owners.
 

@@ -1193,7 +1193,7 @@ packages. External evidence remains under
   Execute behavioral RED, minimal GREEN, transport/cleanup falsifications,
   exact restoration and both-Node complete-owner GREEN; audit discovery and
   affected group11. Fresh Darwin owning26 remains part of the handoff.
-- [ ] **P8 — Supply fixture Git identity and own publish bare roots.** Group16
+- [x] **P8 — Supply fixture Git identity and own publish bare roots (Ubuntu).** Group16
   failed before its publish assertion because bare `commit-tree` had no author
   identity. That setup failure is not behavioral RED. The independently
   executed `publish-original-root-red-24150` reached its absence assertion:
@@ -1294,6 +1294,46 @@ invocation, joined real Vitest process and explicit `releaseInvocation`:
 `bounded-final-owned-discovery-24150` passes the unchanged37 titles across
 bounded-output/publish/R20, with all3 created roots absent. This does not
 convert the original raw-discovery leaks into accepted runs.
+
+### P8 — Git identity and bare-root lifetime qualification (2026-10-25)
+
+The original Git identity setup failure is not behavioral RED. The independent
+real filesystem absence assertion (`publish-original-root-red-24150`) is RED;
+`publish-proven-root-archive.json` preserves the exact proven original leaked
+repository without deleting correlated but unproved paths. The corrected owner
+reuses `git` for the bare `commit-tree` identity and `mkdtempReal` for its
+canonical registered home, nests all ten bare remotes there, independently
+attempts cleanup and verifies all ten paths absent before containment.
+Production publish/worktree code and global Git config are unchanged.
+
+The placement-removal falsification runs all10 product assertions successfully,
+then fails the actual afterAll absence assertions for10 real surviving roots:
+`publish-placement-falsification-24150`, invocation
+`a1f81968-dc34-4a99-b33d-bf272d9f1799`,13.282897s, reporter SHA256
+`e42d5b880cf659f50c701d5758a2992c5b035653186e664bfa283ef23a6f1b2b`.
+The existing validator rejects that reporter. Its pre-containment proof records
+every exact allocation/path/device/inode; only those ten roots were archived
+under its external evidence directory. Containment does not change this failure.
+`publish-falsification-restoration.json` proves exact source restoration.
+
+| Gate / evidence directory | Node | Cases | Duration | Invocation | Report SHA256 |
+|---|---|---|---|---|---|
+| `publish-owned-green-24150` | 24.15.0 | 10/10 | 14.266043s | `41fbbb34-5a53-47af-bb86-a61eece991cb` | `88f072bed3626fb97330079e40b914962c852a5d46e90871b84cb534d522e627` |
+| `publish-restored-green-24150` | 24.15.0 | 10/10 | 13.759001s | `693161fb-7ee5-438a-98e0-06b1f518e6d5` | `adf24e1c0a6bf714401e6e84b8b728d299684b53dc78e6aad14fa37b215b9622` |
+| `publish-restored-green-24190` | 24.19.0 | 10/10 | 13.577993s | `5b51312d-b623-45c3-af70-157df1b634ca` | `6626fbd24ade4d653a560086f769b4c1109797c9c2af17709f51266739764570` |
+| `publish-final-group16-24150` | 24.15.0 | 212/212 | 218.124315s | `3576cd31-7f62-4699-bccb-00df71f0fdde` | `2c649c8effd60a2280ba89dda057404335b0ea9fce846db0188b2d3ab7996521` |
+
+All four GREEN receipts observe ten allocations and ten matching absences;
+exact original titles, report validators and terminal zero-leak checks pass.
+They bind HEAD `5085e5c000800826efb6066c37c63ea533630295` plus the
+recorded patch, whose publish test SHA256 is
+`a68acec2cf72570de57da4ac197014b6ae368905f82a5783ae8ef67b1dc4b567`.
+Final web typecheck, changed-file lint, contracts, docs and diff gates pass.
+`publish-final-owned-discovery-24150` confirms the unchanged37 titles with
+explicitly joined cleanup and all3 roots absent (discovery SHA256
+`af8a13b51918cbcbea1d74e2e66d53eaa86b49a7e0c9ea7d26c1c1c1f430d79e`). Fresh Darwin10 remains pending. The phase
+checkbox records Ubuntu fixture acceptance only; final combined-source Linux
+and the independent full-phase R20/Darwin gates remain open.
 
 ### Phase 0 — specification and environment receipts (2026-10-03)
 
