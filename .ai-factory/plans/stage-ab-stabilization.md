@@ -920,14 +920,17 @@ S4 rollback: before 0134, keep sources and all import checkpoints; stop maintena
   The implemented `IsolationDriver` in
   `web/test-support/process-isolation.ts` preserves the command-wrapping
   seam used by `real-web.ts`. Both `sandbox-exec` and
-  `bubblewrap` drivers are implemented; the latter has Phase-1 qualification.
-  Resume the S5.3a plan at A8 with real RED controls and reuse preflight and
-  I1–I4 to prove production startup,
-  authorized object access and restart. Add only missing descendant/escape
-  and cleanup-identity controls; the existing Linux process reader is not
-  itself a filesystem isolation driver. A local Linux container can provide
-  development evidence, but its capabilities, architecture and Node version
-  must be recorded separately from the eventual hosted environment.
+  `bubblewrap` drivers are implemented. S5.3a A8–A10 and their reached Linux
+  boundary/refusal/lifecycle controls are complete. Final code `3d97c9dcf`
+  passes native Ubuntu amd64 Linux55 plus independent preflight on exact
+  Node24.15.0 and24.19.0, with fresh builds and zero leaks. The existing S5.3a
+  plan retains source-labelled phase/corrective evidence and commands for the
+  owner's native Apple Silicon/Docker Desktop handoff. Fresh Darwin50/preflight,
+  the changed ordinary owners and R20 remain open; C3/S5.3a are not fully
+  qualified. Preserve the current macOS19/31 CI contract; A14 is excluded and
+  Linux hosted qualification remains unproved. Parent stabilization stays43/45.
+  No container/architecture substitution or old hosted receipt closes these
+  changed-source gates.
 
   The final corrective iteration also carries the unresolved Librarian
   Testcontainers initialization timeout into this gate: collect phase evidence

@@ -915,9 +915,12 @@ All five Linux controls are implemented and pass their native owning suite,
 including nested mounts, invalid restart, acquisition cancellation and process
 lifecycle cuts. The full selector requires Linux55 plus separate preflight1;
 Darwin retains50 plus separate preflight1 and its19/31 CI parts. Linux parts
-and unknown platforms refuse selection. Full final-source qualification on
-both exact Nodes and fresh Darwin regression remain pending. Hosting remains
-macOS; local Linux controls do not qualify hosted execution.
+and unknown platforms refuse selection. The final combined code `3d97c9dcf`
+passes native Ubuntu Linux55 and independent preflight on both exact Nodes with
+fresh builds and zero leaks; the existing S5.3a plan owns exact receipts and the
+Apple Silicon/Docker Desktop handoff. Fresh Darwin regression and the full-phase
+R20 load gate remain open, so C3 is not fully qualified. Hosting remains macOS;
+local Linux evidence does not qualify hosted execution.
 
 | Owning file | Exact case title | Disposition |
 |---|---|---|

@@ -5,9 +5,9 @@ Current continuation branch: `codex/s53a-qualification`; retain this explicit pl
 Created: 2026-10-02.
 Refined through `aif-improve`: 2026-10-20 on working baseline `8237993223fa5a7c3aafe9db42d9438612990938`; implementation, verification and local phase commits authorized. Original planning/qualification sources remain separately attributed.
 Planning source: `f43ac1570380d2be19f7c59a70cd993f24ace440`.
-Status: **A1–A7 complete through C2 on `codex/s53a-linux-isolation`. Native Ubuntu's then-current 52-case inventory and final-source Darwin/full phase regression qualify the Phase-1 driver subset. A8–A10 are complete at control/manifest level, including the interstage admission correction; A11–A12/C3 remain open. Initial Node24.15 Linux55 passes; final-source both-Node, ordinary-regression and fresh Darwin gates remain open. This continuation retains macOS hosting and excludes A14. Linux hosting is unqualified. CI-R9d and S5.2 are accepted on the exact hosted source below; stabilization is 43/45. S5.3/S5.4 remain open.**
+Status: **A1–A7 remain complete through C2. A8–A10 and focused corrections P1/P2/P4/P6/P7/P8 are implemented and locally qualified within their recorded scopes. The final combined code `3d97c9dcf` passes native Ubuntu Linux55 plus independent preflight on exact Node24.15.0 and24.19.0, with fresh builds and zero leaks. R20 remains open by owner decision; fresh Darwin50/preflight and changed ordinary owners still require the prepared Apple Silicon/Docker Desktop handoff. A11–A13/C3 are not complete. Current macOS CI is retained, A14 is excluded, and Linux hosting remains unproved. Historical CI-R9d/S5.2 receipts keep their original source identity; parent stabilization remains43/45 and S5.3/S5.4 stay open.**
 
-Implementation authorized 2026-10-03 through `aif-implement`: execute the whole plan, commit by qualified phases and mark tasks only after their acceptance evidence passes. Initial implementation HEAD is the planning source. The owner-push boundary remains binding.
+Implementation authorized 2026-10-03 through `aif-implement`: execute the whole plan, commit by qualified phases and mark tasks only after their acceptance evidence passes. Initial implementation HEAD is the planning source. The later explicit handoff-push authorization below governs this continuation; it does not close the qualified-hosting gate.
 
 ## Settings and authority
 
@@ -15,13 +15,14 @@ Owner amendment, 2026-10-20: CI-R9 below replaces the single macOS isolation
 job with two independent macOS jobs, serial within each. All seven suites and
 50 required cases, existing deadlines and runner sizes remain mandatory.
 Earlier unsharded-hosting language is historical for macOS; prospective Linux
-hosting still requires its own qualification. Push remains the owner's action.
+hosting still requires its own qualification. The later handoff authorization
+below permits publication of this branch without claiming hosted acceptance.
 
 - Testing: **yes**, SDD → executed RED → minimal GREEN → REFACTOR → valid falsification → restored GREEN. Real Linux processes, real PostgreSQL and production web/supervisor entrypoints. No acceptance skips, quarantines, substitutes, timeout increases or larger runners.
 - Logging: **verbose**, bounded structured DEBUG diagnostics; INFO for capability/launch/restart/exit/qualification; WARN for refused authority and bounded retries; ERROR for capability, inspection, cleanup and budget failures. Reuse `logInvocation`, existing fixture loggers and `LOG_LEVEL`; never log credential values, environment dumps, prompts, sentinel contents, SQLite contents or object bodies. Paths are role labels/digests in shared evidence; private local diagnostics may retain necessary owned paths.
 - Docs: **yes**, mandatory documentation checkpoint through `$aif-docs` during implementation. Complete normative analytics before behavior changes; mark Linux mechanisms Designed until actually executed. No new standalone summary report deliverable; use existing invocation/report/timing artifacts and evidence fields in owning plans.
 - Original planning invocation was planning only. The subsequent implementation authorization permits local code, specs, disposable test environments, validation and phase commits; it does not permit agent push, workflow dispatch/rerun or production infrastructure changes. The explicit plan path overrides filename discovery.
-- Push remains the owner's action. Local implementation authorization does not authorize remote publication. Task A15 has an explicit owner-push boundary, followed by read-only verification of the exact pushed SHA and hosted artifacts.
+- The owner later explicitly authorized committing and pushing this branch for a manual Mac handoff after available Ubuntu work. This supersedes the initial no-push instruction for that handoff only. No PR, shared-branch merge, manual CI dispatch/rerun or production-infrastructure change is authorized. Publication does not qualify A15 or any hosted attempt.
 - The original sequencing override permitted S5.3a while S5.2 was open. CI-R9d now supplies the separate hosted proof closing S5.2. Browser lifecycle expansion and separate-user production deployment stay distinct S5.3 deliverables.
 
 ## Roadmap Linkage
@@ -330,7 +331,7 @@ Implementation follows repository conventions: strict explicit types, immutable 
 - [ ] **A13 — Decide hosting from qualified Linux and accepted macOS evidence.** Owner **Design**. Depends: A12. Files: this plan, `docs/system-analytics/test-infrastructure.md`, parent S5.3a and R9 contract; allocated ADR metadata only if the actual decision requires it. Default to retaining the accepted two-part macOS recipe. Compare complete Linux local evidence and its prerequisites with the accepted macOS reports; record capability/maintenance/budget trade-offs, not an assumed speedup. If retention is selected, record A14 as not applicable by this decision (not implemented) and keep Linux hosting unqualified. If adoption is selected, apply D5's prospective contract amendment before A14. **Acceptance:** one explicit evidence-backed decision; all active contracts agree; S5.2 stays accepted at its original SHA, parent43/45 and S5.3/S5.4 remain open; no Linux hosted claim from local proof. **Logging:** INFO decision/source/evidence; ERROR contradictory status. Commit C4a before any CI code.
 
 - [ ] **A14 — Conditionally migrate qualified isolation hosting to standard Linux.** Owner **CI**. Depends: A13 explicitly selecting adoption. If A13 retains macOS, this task is not applicable and no recipe/finalizer implementation is required; preserve that disposition without an implementation checkbox. Files: `.github/workflows/ci.yml`, Linux setup script, new `scripts/finalize-isolation-linux-runtime.mjs`, invocation-reference publication in `scripts/run-stage-ab-tests.mjs`, existing cleanup suite's O2-runner control and `scripts/isolation-ci-workflow.test.mjs`; preserve O1/O1-default semantics and the Darwin provisioning script; adapt cleanup-shell controls by the explicitly configured workflow platform so a rollback is testable. RED existing workflow/script controls for wrong runtime/manifest/budget or borrowed cleanup, actual cleanup-shell timing/upload/cleanup failure cuts, plus real forced-runner-death finalization through O2-runner; GREEN standard ubuntu-24.04 setup and GNU timeout using unchanged formula, D5 reference/runner-death validation and reused `releaseInvocation`, safe shared-Docker finalization and actual artifact upload ordering. Validate the actual setup/timeout/finalization recipe on local Ubuntu 24.04 amd64 without dispatching hosted runs. After the last edit, repeat complete Linux55 plus independent preflight at both exact Nodes, Darwin50/preflight and full applicable phase gates; publish-reference crash windows, live/reused/unreadable runner refusal, replaced ledger/reference refusal and idempotent re-finalization must pass. **Acceptance:** both Node versions/four web legs/two runtime-supervisor legs remain on push; serial55 inventory + independent preflight;60-minute job/B unchanged; no shared daemon stop/prune; original failure preserved and survivors fail even after containment; full applicable suites/static/spec gates GREEN. **Logging:** bounded provisioning DEBUG, INFO capability/version/phase/timing/upload/cleanup, ERROR missing report/capability. No `set -x` over environment credentials.
-- [ ] **A15 — Commit final driver/hosting disposition and verify published changes.** Owner **Qualification**, push by **Owner** only. Depends: A12/A13 and, only for adoption, A14 with C4 validation. Files: this plan and existing parent/R9/canonical status fields. Reconcile every LNX requirement with the final source and reports; commit locally by the qualified checkpoints. For retention, record complete local driver qualification and the accepted macOS hosting decision separately; Linux hosting remains unqualified, and no Linux workflow is published. For adoption, present the final candidate to the owner and stop for owner push, then independently verify exact-SHA Linux55/preflight, all four web/two supervisor reports, remaining mandatory jobs, capabilities, timing/headroom and zero leaks under D5. Any subsequent pushed code requires its own applicable regression evidence; the old CI-R9d receipts do not qualify it. **Acceptance:** explicit driver qualification and hosting disposition with no borrowed source/platform evidence; S5.2's accepted historical checkpoint is preserved, S5.3/S5.4/C11 stay open for their other deliverables. Missing/failed Linux hosted evidence never becomes acceptance. **Logging:** INFO source/run/artifact/validator/headroom/decision; ERROR mismatch/incomplete/failure. No agent push, merge, dispatch or rerun.
+- [ ] **A15 — Commit final driver/hosting disposition and verify published changes.** Owner **Qualification**; hosting adoption remains owner-pushed. This continuation separately authorizes the agent to publish the unclosed Mac handoff branch. Depends: A12/A13 and, only for adoption, A14 with C4 validation. Files: this plan and existing parent/R9/canonical status fields. Reconcile every LNX requirement with the final source and reports; commit locally by the qualified checkpoints. For retention, record complete local driver qualification and the accepted macOS hosting decision separately; Linux hosting remains unqualified, and no Linux workflow is published. For adoption, present the final candidate to the owner and stop for owner push, then independently verify exact-SHA Linux55/preflight, all four web/two supervisor reports, remaining mandatory jobs, capabilities, timing/headroom and zero leaks under D5. Any subsequent pushed code requires its own applicable regression evidence; the old CI-R9d receipts do not qualify it. **Acceptance:** explicit driver qualification and hosting disposition with no borrowed source/platform evidence; S5.2's accepted historical checkpoint is preserved, S5.3/S5.4/C11 stay open for their other deliverables. Missing/failed Linux hosted evidence never becomes acceptance. **Logging:** INFO source/run/artifact/validator/headroom/decision; ERROR mismatch/incomplete/failure. No unsolicited publication, shared-branch merge, manual dispatch or rerun; the explicitly authorized Mac handoff push is separate from this acceptance gate.
 
 **Phase-3 exit:** complete G-LINUX and A12 audit, followed by either recorded
 retention of accepted macOS hosting (Linux hosting still unqualified), or
@@ -338,7 +339,7 @@ G-HOSTED for the owner-pushed Linux candidate. Failed or missing qualification
 is an open gate, not a completed disposition. S5.2 historical acceptance is
 not erased by an unqualified Linux candidate.
 
-## Current refinement and execution frontier (2026-10-21)
+## Current refinement and execution frontier (2026-10-26)
 
 `aif-improve` reviewed all 15 tasks against the continuation source. Completed
 A1–A7 are preserved. Changes affect A8 and A10–A15: cancellation ownership and
@@ -353,14 +354,18 @@ correction makes namespace success observable before process exit.
 
 The current source has exactly five Linux titles and mandatory Linux55
 selection. Darwin's original50,19/31 parts, receipt implementation and two
-macOS jobs are preserved. An initial full Linux55 and separate preflight
-pass at Node24.15.0; final-source both-Node execution remains required after
-the interstage admission correction and changed-code lint cleanup. The concurrent-promotion defect is corrected and owning controls qualify it;
-complete phase regression remains open. Git2.43 restoration failures are
-scoped to that historical runtime; the unchanged owner passes after the
-owner upgrade to Git2.55 described below. Fresh Darwin qualification remains open. Historical
-hosted receipts qualify only their recorded source. Continue A11 on the
-current restored source; do not repeat completed implementation.
+macOS jobs are preserved. The final combined code `3d97c9dcf` passes Linux55
+and independent preflight on both exact Nodes in the recorded native Ubuntu
+amd64 environment. P7 and P8 correct the observed ordinary fixture failures
+with real falsifications and restored complete affected groups. Promotion's
+ownership ordering is corrected; Git2.43 restoration remains a historical
+limitation and no worktree-argv change was applied after Git2.55 passed.
+R20's unchanged load profile remains invalid on this Ubuntu host. The owner
+chose to keep it open and run it on Mac rather than authorize SQLite changes.
+Fresh Darwin50/preflight and the two corrected ordinary owners remain pending.
+A11/G-LINUX/C3 and the dependent A12/A13 acceptance gates are therefore open.
+Continue with the exact-source Mac commands below; do not repeat A8–A10
+implementation or borrow historical hosted receipts for changed source.
 
 The earlier refinement ran on Darwin ARM64; Docker Desktop reported
 `aarch64`, kernel `6.12.76-linuxkit`;
@@ -1163,8 +1168,10 @@ the8-case endpoint prerequisite check.
 The owner subsequently authorized committing and pushing after completion,
 then clarified that S5.3a itself must be finished before push. Local qualified
 phase commits continue; no intermediate push, PR, shared-branch merge or manual
-CI dispatch/rerun is authorized. A fresh Darwin host has been requested while
-the Linux qualification continues; historical hosted receipts remain separate.
+CI dispatch/rerun is authorized. The owner will execute the prepared commands
+on native Apple Silicon with Docker Desktop after pulling the committed branch.
+That explicit manual handoff permits publication with the recorded Darwin/R20
+gates still open; historical hosted receipts remain separate.
 
 ### A11 ordinary-fixture corrections and measured load blocker (2026-10-23)
 
@@ -1334,6 +1341,505 @@ explicitly joined cleanup and all3 roots absent (discovery SHA256
 `af8a13b51918cbcbea1d74e2e66d53eaa86b49a7e0c9ea7d26c1c1c1f430d79e`). Fresh Darwin10 remains pending. The phase
 checkbox records Ubuntu fixture acceptance only; final combined-source Linux
 and the independent full-phase R20/Darwin gates remain open.
+
+### Final Ubuntu candidate, requirement audit and remaining gates (2026-10-25)
+
+The final tested code commit is `3d97c9dcf6c200c6b54ce0c8258c7766f7fdac3d` (tree
+`09497e1f716abc811a6213146aac3e36e0f86a45`). P7 is `5085e5c000800826efb6066c37c63ea533630295`;
+P8 is this final code commit. A subsequent evidence/handoff commit changes only
+documentation and does not relabel these commands as executed at that later SHA.
+Each complete Linux55 invocation below starts from the clean frozen code tree
+and uses its own fresh production build, with a separate preflight on the same
+Node version. All four reports validate the exact inventory and finish with
+zero terminal leaks; original failed attempts remain separately recorded.
+
+| Gate / external evidence directory | Node | Cases | Duration | Invocation | Report SHA256 |
+|---|---|---|---|---|---|
+| `a11-3d97c9dcf-d28-preflight-24150` | 24.15.0 | 1/1 | 13.146073s | `d4e3fc04-9347-42a4-9504-b0128327cb4b` | `ae75ec49d33fc79f6b014cd1ba16a710c661e728f45485fb442282cb9a770bba` |
+| `a11-3d97c9dcf-d28-linux55-24150` | 24.15.0 | 55/55 | 1644.042760s | `6377e1c5-67e8-4999-b2f6-cbf9b3ad6645` | `8584413f88365cd192265a3eb3529cfa1123629bd8ade1bb978b44e5b4630f7c` |
+| `a11-3d97c9dcf-d28-preflight-24190` | 24.19.0 | 1/1 | 11.738693s | `2c5152bb-4ada-4def-aef9-63c956057b03` | `bc9806ca59484674312b44c3bcfe96e6c455ee458c0568adf4ec59fbbf45ac74` |
+| `a11-3d97c9dcf-d28-linux55-24190` | 24.19.0 | 55/55 | 1554.554620s | `12b3c844-a642-417f-b50e-5d431b94d769` | `461749283a8659ccfd752ff925e5d9da221ed3a00c10b81cb2e69fbd0ab7c337` |
+
+The external evidence root remains `/tmp/maister-s53a-ubuntu-qlpo_wtn`.
+`qualification-source-3d97c9dcf.json` records Ubuntu24.04.5, kernel6.8.0-147,
+x86_64, non-root UID1000, exact Nodes, pnpm11.6.0, Git2.55.0,
+Bubblewrap0.9.0-1ubuntu0.3 and its binary/AppArmor identities. Existing Yama1
+and restricted user namespaces1 remain enabled. Test databases use the task-owned
+rootless Docker28.5.2 endpoint and the pinned runtime cohort; the shared29.9.2
+allocator remains unqualified and was not repaired by changing application code.
+During this final qualification, no host security setting, shared Docker
+service or production data changed.
+`static-final-3d97c9dcf.json` records all11 final static/runner/runtime/contract/
+docs/lint/diff gates passing at the clean source.
+
+After qualification, the task-owned Docker unit was stopped on 2026-10-26
+only after its container and volume inventories were both empty. The private
+endpoint no longer serves; the shared daemon and all nine container records
+(including six running services) have identical IDs, states, start times and
+restart counts before/after. Yama, namespace restrictions and the AppArmor
+profile hash are unchanged. `owned-docker-final-cleanup.json` retains these
+checks; external evidence and the pinned runtime files remain available.
+`handoff-source-equivalence.json` verifies that the handoff changes only the
+three existing documentation files and that its embedded commands exactly
+match the syntax-checked artifact. Final docs/contracts receipts remain in
+the same external evidence root under `handoff-recorded-docs-24190` and
+`handoff-recorded-contracts-24190`.
+
+The original complete ordinary inventory ran at `12ad4550b`:584 files/5185
+cases, with three failures in groups11/16. Its23 unaffected groups have accepted
+exact-source receipts for536 files/4753 cases. P7 then passes the complete
+24-file/220-case group11, and P8 passes the complete24-file/212-case group16.
+Those source-labelled receipts cover all original5185 titles; they are not
+represented as one fresh whole-ordinary invocation at the final HEAD. The
+unchanged ordinary source files and production code are compared explicitly in
+`a12-final-candidate-3d97c9dcf.json`. The only shared helper delta since12ad is
+exporting the existing native compiler function for P7; its body and all
+ownership guards are byte-identical. P7's new behavior has its own reached
+RED/falsifications and restored owning qualification, followed by final Linux55.
+
+The full phase receipts at12ad retain their source identity:
+
+| Gate / external evidence directory | Files / cases | Duration | Report SHA256 |
+|---|---|---|---|
+| `a11-12ad4550b-d28-web-unit-24150` | 884/9222 | 352.202873s | `3addce418c2b0ae1399087a5238271da610091b1cb5e5f0dcb51dda454aa10ed` |
+| `a11-12ad4550b-d28-supervisor-unit-24150` | 50/495 | 18.747410s | `6a7ff0e1425a90b5a9d86e41c78173fa73e364126f6373d0b7fe795974e04a43` |
+| `a11-12ad4550b-d28-supervisor-integration-24150` | 36/310 | 408.990084s | `cf05d14367013626c0eb210ba9e608225c1658f499812341e69b89e9c20c6bea` |
+| `a11-12ad4550b-d28-scheduler-clock-24150` | 1/6 | 181.038510s | `455866f07be049f28bbd3752b48e0201289773e9ba32b1e62ad0e4425439ae56` |
+| `a11-12ad4550b-d28-host-span-load-24150` | 1/1 | 139.291442s | `76d14bdee114d8d79a5ba2755eee574f20ea740fca8bf58670cecf9bc99f57be` |
+
+Their code paths remain unchanged by P7/P8. R20 is the explicit outstanding
+full-phase failure, not a skipped or waived case. No claim of complete C3 or
+G-LINUX follows from the passing isolation lanes alone.
+
+The independent requirement/source audit is complete as preparatory work;
+A12's qualified-candidate checkbox remains open because its G-LINUX dependency
+is not satisfied. Final read-only review found no remaining P7/P8 blocker.
+
+| Requirement | Current exact-source evidence / remaining boundary |
+|---|---|
+| LNX-01 | I1/I4 and separate preflight pass in both final Linux lanes; actual protected storage denial and positive supervisor witnesses remain mandatory. |
+| LNX-02 | I2 and LI-boundary retain required reads, exact allowed writes and actual read-only failures; both final lanes pass. |
+| LNX-03 | LI-boundary passes descendant/setsid, alias/proc/FD/namespace and privilege escape assertions with the original policy; no widened mounts. |
+| LNX-04 | LI-refusal and O-identity pass typed capability/policy/ownership refusal before app execution. |
+| LNX-05 | O-identity and LI-kill retain exact signal authority and live foreign-process witnesses. The unchanged guard's original valid falsification/restoration remains source-labelled. |
+| LNX-06 | LI-term observes code137/null separately from null/SIGKILL; production drain and existing O-signal pass. |
+| LNX-07 | All9 namespace lifecycle cuts report0 survivors before containment; both foreign witnesses remain alive on each exact Node. |
+| LNX-08 | I3 remains the continuity owner. LI-refusal observes one invalid-policy attempt/no replacement and all8 reached acquisition/handoff cancellations; late work is joined, no later launch is admitted and original errors survive. |
+| LNX-09 | Existing local O-controls and invocation cleanup pass; shared resources remain outside authority. A14's proposed Linux hosted finalizer is excluded and is not claimed implemented. |
+| LNX-10 | Final Linux55+separate1 exact reports and strict runner/receipt validators pass; original Darwin50 and19/31 contract are unchanged. Fresh Darwin reports remain pending. |
+| LNX-11 | Valid enforcement/namespace/watchdog/identity falsifications and exact restorations are retained; unchanged guards plus fresh both-Node Linux execution are audited. Full-phase R20 and fresh Darwin prevent C3 completion. |
+| LNX-12 | Current two-job macOS hosting is retained by the owner's scope constraint. Linux hosted execution is unproved; no A14 recipe, migration or hosted claim exists. Formal A13 acceptance still depends on A12. |
+
+The actual API/DB/config/deployment audit against8ad23a5fc finds one production
+code change: promotion claim-order precedence in `web/lib/runs/promote.ts`.
+It retains the existing CONFLICT/PRECONDITION codes and payloads. Routes,
+events, auth grants, main/Brain schemas and migrations, supervisor SQLite
+schema14, configuration, dependencies and deployment artifacts are unchanged.
+Main migration remains0193_numerous_spectrum; Brain remains0006_brain_indexing_profiles.
+The macOS workflow SHA256 remains
+`84401cb7cdf1dda675f0bd7249bc4dc2d8297c6ee6de1c65fd0f85b7067c12a7`.
+Git2.43 compatibility was not changed; Git2.55 passed the unchanged restore owner.
+No production SQLite optimization was authorized or implemented.
+
+The read-only origin recheck resolves master to
+`698b8cb35151b089d492c13cf3bcdc28a3858281` and the handoff branch
+to its original8ad23a5fc tip. Highest actual ADR remains193; ADR193, its hub
+and both migration journals are identical to that master source. No new
+allocation or rebase was needed. Both required357ae6cfd/8ad23a5fc ancestors
+are present (`a12-pre-handoff-remote.json`).
+
+Remaining gates are explicit: fresh native Darwin50 and independent preflight,
+Darwin bounded-output26/publish10, and the owner's unchanged R20 measurement.
+A Mac R20 result must keep its platform label and cannot retrospectively turn
+Ubuntu's71.884813 rows/s attempt into an accepted load profile. P3/P5's complete
+phase clauses and A11/A12/A13/C3 remain open accordingly. A14 is excluded;
+A15/hosted acceptance is not completed by the authorized branch handoff push.
+Historical CI-R9d/S5.2 remain closed at their original exact hosted source;
+parent stabilization stays43/45, S5.3/S5.4 remain open. Unresolved execution
+questions: none; the next action is the owner's Mac run below.
+
+### Owner handoff — native Apple Silicon with Docker Desktop
+
+Fresh Darwin evidence is pending. Run these commands on the owner's native
+macOS ARM64 host, with Docker Desktop running, a non-root shell, Git, Apple
+command-line tools (`cc`), and GNU `gtimeout` (the `coreutils` package). Do not
+run the Intel/Colima CI provisioning recipe on this host. This is local Darwin
+regression, not hosted Intel or Linux qualification. Do not change Docker
+resources, test deadlines or the R20 load profile to obtain a pass.
+
+Use exact Node24.19.0 and pnpm11.6.0. If they are not already selected, this
+optional private tool installation changes only its newly created `/tmp` tree:
+
+```bash
+set -euo pipefail
+test "$(uname -s)" = Darwin
+test "$(uname -m)" = arm64
+export S53A_TOOLS="$(mktemp -d /tmp/maister-s53a-tools-XXXXXX)"
+curl --fail --show-error --location https://nodejs.org/dist/v24.19.0/node-v24.19.0-darwin-arm64.tar.gz --output "$S53A_TOOLS/node-v24.19.0-darwin-arm64.tar.gz"
+printf '%s  %s\n' 8294b7aa9b03997481c06babf1e8b270c859358f27da57a11509afe537ac381d "$S53A_TOOLS/node-v24.19.0-darwin-arm64.tar.gz" | shasum -a 256 --check
+tar -xzf "$S53A_TOOLS/node-v24.19.0-darwin-arm64.tar.gz" -C "$S53A_TOOLS"
+export PATH="$S53A_TOOLS/node-v24.19.0-darwin-arm64/bin:$PATH"
+npm install --prefix "$S53A_TOOLS/pnpm" --no-save --package-lock=false pnpm@11.6.0
+export PATH="$S53A_TOOLS/pnpm/node_modules/.bin:$PATH"
+node --version
+pnpm --version
+```
+
+From the repository root, set the **full handoff commit SHA supplied by the
+agent after its final documentation commit**. The tested Linux code source is
+recorded in the final candidate table; the handoff commit may add only these
+documentation/evidence instructions. The script refuses a different HEAD or
+any dirty source. Preserve unrelated Mac work before selecting this commit.
+
+```bash
+export S53A_EXPECTED_SHA=PASTE_THE_FULL_HANDOFF_SHA
+test -z "$(git status --porcelain)"
+git fetch origin codex/s53a-qualification
+git switch --detach "$S53A_EXPECTED_SHA"
+export S53A_HANDOFF_SCRIPT="$(mktemp /tmp/maister-s53a-command-XXXXXX)"
+node --input-type=module - "$S53A_HANDOFF_SCRIPT" <<'JS'
+import assert from "node:assert/strict";
+import { readFileSync, writeFileSync } from "node:fs";
+const plan = readFileSync(".ai-factory/plans/s53a-linux-isolation.md", "utf8");
+const match = /^<!-- S53A_DARWIN_LOCAL_BEGIN -->\n```bash\n([\s\S]*?)\n```\n<!-- S53A_DARWIN_LOCAL_END -->$/m.exec(plan);
+assert(match, "missing exact Darwin handoff command block");
+writeFileSync(process.argv[2], match[1] + "\n", { mode: 0o600 });
+JS
+bash "$S53A_HANDOFF_SCRIPT"
+```
+
+The five stages run serially: independent preflight1, bounded-output26,
+publish10, fresh-build Darwin50 and unchanged R20. Each uses the existing lane
+and report validators. The ordinary37-title snapshot comes from joined,
+invocation-owned final discovery; this recipe does not run raw `vitest list`,
+which previously leaked setup roots. R20 remains independently failed/open on
+Ubuntu regardless of a later Mac outcome.
+
+An untagged outer controller publishes a private invocation descriptor before
+launch; only the child runner receives its ownership tag. After the runner is
+proved dead, existing `releaseInvocation` verifies and reclaims that invocation.
+A live or uninspectable runner, changed ledger or changed cleanup implementation
+refuses release. A missing runner record never authorizes signaling live
+processes. Test failures, timing failures and containment leaks remain failed;
+a final receipt is written only after successful tests and successful outer
+cleanup. A cleanup failure stops later stages; a cleanly finalized test failure
+retains the failure and allows the remaining independent stages.
+
+The shell and Node syntax checks passed locally. Portable real-process controls
+at `darwin-control-portable-xcofdf/audit.json` on Linux/Node24.19.0 verify both
+registered and unregistered live-runner refusal, unchanged live roots, joined
+dead-runner cleanup and preservation of failure without an accepted receipt.
+They do not execute or qualify Darwin. A Mac prerequisite/compile/runtime
+failure is not behavioral RED. Keep the printed evidence directory, including
+original logs, invocation descriptors, reports, provisional/accepted receipts
+and outer cleanup records; do not relabel a contained failure as acceptance.
+
+<!-- S53A_DARWIN_LOCAL_BEGIN -->
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+: "${S53A_EXPECTED_SHA:?Set the exact SHA supplied with the handoff}"
+test -z "${NODE_OPTIONS:-}"
+node --input-type=module -e 'import assert from "node:assert/strict"; assert.equal(process.platform,"darwin"); assert.equal(process.arch,"arm64"); assert.equal(process.versions.node,"24.19.0"); assert.notEqual(process.getuid(),0)'
+test "$(git rev-parse HEAD)" = "$S53A_EXPECTED_SHA"
+test -z "$(git status --porcelain)"
+test -x /usr/bin/sandbox-exec
+command -v gtimeout
+command -v cc
+command -v lsof
+node --input-type=module -e 'import assert from "node:assert/strict"; import {execFileSync} from "node:child_process"; assert.equal(execFileSync("pnpm",["--version"],{encoding:"utf8"}).trim(),"11.6.0")'
+export S53A_EVIDENCE="$(mktemp -d /tmp/maister-s53a-darwin-XXXXXX)"
+trap 'printf "Evidence retained: %s\n" "$S53A_EVIDENCE"' EXIT
+umask > "$S53A_EVIDENCE/original-umask.txt"
+umask 022
+export CI=true
+node --input-type=module -e 'import assert from "node:assert/strict"; const keys=Object.keys(process.env).filter(key=>key.startsWith("MAISTER_")||key.startsWith("TESTCONTAINERS_")); assert.deepEqual(keys,[],"Remove ambient MAISTER_/TESTCONTAINERS_ overrides before qualification")'
+if test -n "${DOCKER_CONTEXT:-}"; then
+  export DOCKER_HOST="$(docker context inspect "$DOCKER_CONTEXT" --format '{{.Endpoints.docker.Host}}')"
+elif test -z "${DOCKER_HOST:-}"; then
+  export DOCKER_HOST="$(docker context inspect --format '{{.Endpoints.docker.Host}}')"
+fi
+unset DOCKER_CONTEXT
+node --input-type=module -e 'import assert from "node:assert/strict"; import {existsSync,readFileSync} from "node:fs"; import {homedir} from "node:os"; import {join} from "node:path"; assert.match(process.env.DOCKER_HOST??"",/^unix:\/\//); const path=join(homedir(),".testcontainers.properties"); if(existsSync(path)) assert(!/^\s*tc\.host\s*=/m.test(readFileSync(path,"utf8")),"Reconcile tc.host with the selected Docker endpoint before running")'
+# Docker Desktop exposes this socket inside its Linux VM.
+export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
+export TESTCONTAINERS_HOST_OVERRIDE=127.0.0.1
+sw_vers > "$S53A_EVIDENCE/os.txt"
+uname -a >> "$S53A_EVIDENCE/os.txt"
+id >> "$S53A_EVIDENCE/os.txt"
+sysctl hw.logicalcpu hw.memsize > "$S53A_EVIDENCE/host-resources.txt"
+node --version > "$S53A_EVIDENCE/node.txt"
+pnpm --version > "$S53A_EVIDENCE/pnpm.txt"
+git --version > "$S53A_EVIDENCE/git.txt"
+cc --version > "$S53A_EVIDENCE/compiler.txt"
+gtimeout --version > "$S53A_EVIDENCE/timeout.txt"
+printf '%s\n' "$DOCKER_HOST" > "$S53A_EVIDENCE/docker-endpoint.txt"
+docker version > "$S53A_EVIDENCE/docker-version.txt"
+docker info --format '{"id":{{json .ID}},"version":{{json .ServerVersion}},"os":{{json .OperatingSystem}},"arch":{{json .Architecture}},"kernel":{{json .KernelVersion}},"cpus":{{json .NCPU}},"memory":{{json .MemTotal}},"security":{{json .SecurityOptions}}}' > "$S53A_EVIDENCE/docker-identity.json"
+node --input-type=module -e 'import assert from "node:assert/strict"; import {readFileSync} from "node:fs"; assert.match(JSON.parse(readFileSync(`${process.env.S53A_EVIDENCE}/docker-identity.json`,"utf8")).os,/Docker Desktop/)'
+git rev-parse HEAD > "$S53A_EVIDENCE/source.txt"
+shasum -a 256 pnpm-lock.yaml > "$S53A_EVIDENCE/lock-sha256.txt"
+pnpm install --frozen-lockfile 2>&1 | tee "$S53A_EVIDENCE/install.log"
+pnpm --filter @maister/mcp build 2>&1 | tee "$S53A_EVIDENCE/mcp-build.log"
+cat > "$S53A_EVIDENCE/ordinary-titles.json" <<'JSON'
+{
+  "lib/execution-host/__tests__/bounded-output.integration.test.ts": [
+    "AT-01 bounded output on the production supervisor > AT-06 v2: agrees on original private failure bytes after hydrating a canonical command content reference",
+    "AT-01 bounded output on the production supervisor > AT-06 v2: reconstructs original command output from durable evidence after releasing its assignment",
+    "AT-01 bounded output on the production supervisor > AT-07: delivery ignores a changed caller payload and verifies the stored v2 request again",
+    "AT-01 bounded output on the production supervisor > AT-07: reset ACK and blocked receipts past the outbound budget survive a web process restart",
+    "AT-01 bounded output on the production supervisor > AT-07: stalled_body ACK and blocked receipts past the outbound budget survive a web process restart",
+    "AT-01 bounded output on the production supervisor > AT-07: startup handles an unsent v2 prompt after dispatch claim 1 with its frozen identity",
+    "AT-01 bounded output on the production supervisor > AT-07: startup handles an unsent v2 prompt after dispatch claim 3 with its frozen identity",
+    "AT-01 bounded output on the production supervisor > S2.5: a deadlock in the owner's apply keeps it retryable without consuming failure attempts",
+    "AT-01 bounded output on the production supervisor > S2.5: a stale commit cannot overwrite a successor application",
+    "AT-01 bounded output on the production supervisor > S2.5: a stale failure cannot overwrite a successor application",
+    "AT-01 bounded output on the production supervisor > S2.5: an unconfirmed shutdown release preserves the claim and reports failure",
+    "AT-01 bounded output on the production supervisor > S2.5: query applies verified owner output and its marker exactly once",
+    "AT-01 bounded output on the production supervisor > S2.5: refuses owner application after only a prefix of verified output",
+    "AT-01 bounded output on the production supervisor > S2.5: renews preparation and releases only its claim on worker shutdown",
+    "AT-01 bounded output on the production supervisor > S2.5: rolls back domain writes and recovers an expired claim with two workers",
+    "AT-01 bounded output on the production supervisor > S2.5: unavailable output storage keeps owner application retryable without consuming failure attempts",
+    "AT-01 bounded output on the production supervisor > S2.8: domain deferral keeps the result pending without poisoning or running cleanup",
+    "AT-01 bounded output on the production supervisor > S2.8: draft adapter extension receives complete original output and applies once",
+    "AT-01 bounded output on the production supervisor > accepts the exact 1-MiB framed boundary",
+    "AT-01 bounded output on the production supervisor > failed-create-lifecycle: a refused resume cannot poison the next native incarnation",
+    "AT-01 bounded output on the production supervisor > failed-create-lifecycle: an initial refused resume records only a binding-free logical session",
+    "AT-01 bounded output on the production supervisor > fails only the producer when a frame exceeds 1 MiB",
+    "AT-01 bounded output on the production supervisor > preserves a 65,537-byte multibyte ACP message and keeps a sibling usable",
+    "AT-01 bounded output on the production supervisor > preserves a 65536-byte tool result through the transcript consumer",
+    "AT-01 bounded output on the production supervisor > preserves a 65537-byte tool result through the transcript consumer",
+    "AT-01 bounded output on the production supervisor > reconstructs accepted output after releasing the original assignment"
+  ],
+  "lib/execution-host/__tests__/event-plane-load.integration.test.ts": [
+    "event-plane throughput under load (R20) > keeps host-to-manager lag flat with no stream close and one ACK per batch"
+  ],
+  "lib/local-packages/__tests__/publish.integration.test.ts": [
+    "PR-to-source publish (integration) > a non-fast-forward push → CONFLICT (two-phase: markers not updated on failure)",
+    "PR-to-source publish (integration) > a stale publish lock is reclaimable (a crashed publish never wedges)",
+    "PR-to-source publish (integration) > configured base_branch becomes the PR target branch",
+    "PR-to-source publish (integration) > pushes the package branch and falls back to push-only for an unsupported provider",
+    "PR-to-source publish (integration) > re-publish updates the SAME stable branch (fast-forward), never duplicating",
+    "PR-to-source publish (integration) > refuses to publish a committed invalid package baseline",
+    "PR-to-source publish (integration) > rejects a targetSourceId that is not a registered source with CONFLICT",
+    "PR-to-source publish (integration) > serializes concurrent publishes of the same package — the loser gets CONFLICT",
+    "PR-to-source publish (integration) > stores the PR url when the provider adapter opens a PR",
+    "PR-to-source publish (integration) > upstream_moved on a fork with lineage → canSync: true"
+  ]
+}
+JSON
+cat > "$S53A_EVIDENCE/control.mjs" <<'JS'
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { lstat, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+
+const [operation, stage, stageExit, logExit] = process.argv.slice(2);
+const evidence = process.env.S53A_EVIDENCE;
+const sourceSha = process.env.S53A_EXPECTED_SHA;
+assert(evidence && /^[a-f0-9]{40}$/.test(sourceSha ?? ""));
+assert(["preflight", "bounded-output", "publish", "darwin50", "r20"].includes(stage));
+assert.equal(process.env.MAISTER_TEST_WORKTREE_INVOCATION_ID, undefined, "outer control must stay untagged");
+const sourceMatches = () => execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim() === sourceSha &&
+  execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim() === "";
+const helperFiles = ["process-invocation.ts", "process-environment.c", "process-group-liveness.c", "fixture-compiler-watchdog.mjs", "worktree-test-root.ts"];
+const helperHashes = async () => Object.fromEntries(await Promise.all(helperFiles.map(async (file) => [file,
+  createHash("sha256").update(await readFile(join(process.cwd(), "web/test-support", file))).digest("hex")])));
+const loadApi = () => import(pathToFileURL(join(process.cwd(), "web/test-support/process-invocation.ts")));
+const descriptorPath = join(evidence, `${stage}-invocation.json`);
+
+if (operation === "prepare") {
+  assert(sourceMatches(), "source must be frozen before preparation");
+  const api = await loadApi();
+  const invocation = await api.createInvocation(join(evidence, stage));
+  const identity = await lstat(invocation.directory);
+  const descriptor = { stage, sourceSha, uid: process.getuid(), invocation,
+    preparedAt: Date.now(), helperHashes: await helperHashes(),
+    ledgerDevice: identity.dev, ledgerInode: identity.ino };
+  await writeFile(descriptorPath, JSON.stringify(descriptor, null, 2) + "\n", { flag: "wx", mode: 0o600 });
+} else if (operation === "finalize") {
+  assert(/^\d+$/.test(stageExit) && /^\d+$/.test(logExit));
+  const descriptor = JSON.parse(await readFile(descriptorPath, "utf8"));
+  assert.equal(descriptor.stage, stage);
+  assert.equal(descriptor.sourceSha, sourceSha);
+  assert.equal(descriptor.uid, process.getuid());
+  assert.deepEqual(await helperHashes(), descriptor.helperHashes, "cleanup implementation changed; restore the exact handoff source before finalizing this descriptor");
+  const api = await loadApi();
+  const sourceDrift = !sourceMatches();
+  const { invocation } = descriptor;
+  assert.match(invocation.id, /^[a-f0-9-]{36}$/);
+  assert.equal(invocation.directory, join(evidence, stage, "processes", invocation.id));
+  const identity = await lstat(invocation.directory);
+  assert(identity.isDirectory() && !identity.isSymbolicLink());
+  assert.equal(identity.uid, process.getuid());
+  assert.equal(identity.mode & 0o777, 0o700);
+  assert.equal(identity.dev, descriptor.ledgerDevice);
+  assert.equal(identity.ino, descriptor.ledgerInode);
+  const records = await api.invocationRecords(invocation);
+  const runners = records.filter((record) => record.kind === "process" && record.role === "runner");
+  assert(runners.length <= 1, "unexpected runner authority");
+  if (runners.length === 1) {
+    const current = await api.findProcessIdentity(invocation, runners[0].identity.pid);
+    assert(!current || !api.sameProcess(current, runners[0].identity), "refusing cleanup while the recorded runner is alive");
+  } else {
+    const live = (await api.readProcessSnapshot(invocation)).filter((row) => row.owned && !row.zombie);
+    assert.equal(live.length, 0, "missing runner record does not authorize signaling live processes");
+  }
+  const errors = await api.releaseInvocation(invocation, `Darwin handoff ${stage}`);
+  const acceptanceErrors = [];
+  if (sourceDrift || !sourceMatches()) acceptanceErrors.push(new Error("source changed during qualification"));
+  if (runners.length !== 1) acceptanceErrors.push(new Error("stage never registered its runner"));
+  for (const record of records.filter((row) => row.kind === "root")) {
+    try { await assert.rejects(lstat(record.root), { code: "ENOENT" }); }
+    catch (error) { errors.push(error); }
+  }
+  const durationSeconds = (Date.now() - descriptor.preparedAt) / 1000;
+  const limitSeconds = stage === "darwin50" ? 2340 : stage === "r20" ? 1560 : 600;
+  if (durationSeconds >= limitSeconds) acceptanceErrors.push(new Error(`stage including finalization exceeded ${limitSeconds}s`));
+  const result = { stage, sourceSha, invocationId: invocation.id, durationSeconds, limitSeconds,
+    stageExitCode: Number(stageExit), logExitCode: Number(logExit),
+    cleanupErrors: errors.map((error) => String(error)), acceptanceErrors: acceptanceErrors.map((error) => String(error)), completedAt: new Date().toISOString(),
+    hostedEvidence: false };
+  await writeFile(join(evidence, `${stage}-outer-cleanup.json`), JSON.stringify(result, null, 2) + "\n", { flag: "wx" });
+  console.log(JSON.stringify(result));
+  if (Number(stageExit) !== 0 || Number(logExit) !== 0 || errors.length || acceptanceErrors.length) {
+    process.exitCode = 1;
+  } else {
+    const provisional = JSON.parse(await readFile(join(evidence, `${stage}-provisional.json`), "utf8"));
+    assert.equal(provisional.stage, stage);
+    assert.equal(provisional.accepted, false);
+    assert.equal(provisional.hostedEvidence, false);
+    assert.equal(provisional.sourceSha, sourceSha);
+    assert.equal(provisional.invocationId, invocation.id);
+    await writeFile(join(evidence, `${stage}-receipt.json`), JSON.stringify({ ...provisional,
+      outerCleanup: result, accepted: true }, null, 2) + "\n", { flag: "wx" });
+  }
+} else {
+  throw new Error("usage: control.mjs prepare|finalize stage [stage-exit log-exit]");
+}
+JS
+cat > "$S53A_EVIDENCE/run.mjs" <<'JS'
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+
+const repo = process.cwd();
+const stage = process.argv[2];
+const evidence = process.env.S53A_EVIDENCE;
+const expectedSha = process.env.S53A_EXPECTED_SHA;
+const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).trim();
+const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
+assert(evidence && /^[a-f0-9]{40}$/.test(expectedSha ?? ""));
+const api = await import(pathToFileURL(join(repo, "web/test-support/process-invocation.ts")));
+const descriptor = JSON.parse(await readFile(join(evidence, `${stage}-invocation.json`), "utf8"));
+assert.equal(descriptor.stage, stage);
+assert.equal(descriptor.sourceSha, expectedSha);
+assert.equal(descriptor.uid, process.getuid());
+assert.deepEqual(api.invocationFromEnvironment(), descriptor.invocation);
+const invocation = descriptor.invocation;
+await api.registerProcess(invocation, { role: "runner", caseName: stage, rootRole: "invocation", root: null, bootId: invocation.id, logFile: null }, process.pid);
+assert.equal(process.platform, "darwin");
+assert.equal(process.arch, "arm64");
+assert.equal(process.versions.node, "24.19.0");
+assert.notEqual(process.getuid(), 0);
+assert.match(expectedSha ?? "", /^[a-f0-9]{40}$/);
+assert.equal(git("rev-parse", "HEAD"), expectedSha);
+assert.equal(git("status", "--porcelain"), "");
+assert.equal(process.env.MAISTER_TEST_BUILT_WEB, undefined);
+assert(evidence);
+const { runStageAbLane, isolationFiles, validateLaneReport } = await import(pathToFileURL(join(repo, "scripts/run-stage-ab-tests.mjs")));
+const { validateIsolationReport, isolationPreflightFiles } = await import(pathToFileURL(join(repo, "scripts/isolation-ci-evidence.mjs")));
+const definitions = {
+  preflight: { files: isolationPreflightFiles, slice: "isolation", cases: 1, limit: 600 },
+  "bounded-output": { files: ["lib/execution-host/__tests__/bounded-output.integration.test.ts"], slice: "web", cases: 26, limit: 600 },
+  publish: { files: ["lib/local-packages/__tests__/publish.integration.test.ts"], slice: "web", cases: 10, limit: 600 },
+  darwin50: { files: isolationFiles("darwin"), slice: "isolation", cases: 50, limit: 2340 },
+  r20: { files: ["lib/execution-host/__tests__/event-plane-load.integration.test.ts"], slice: "web", cases: 1, limit: 1560 },
+};
+assert(Object.hasOwn(definitions, stage));
+const definition = definitions[stage];
+const { files } = definition;
+for (const key of Object.keys(process.env).filter((key) => key.startsWith("MAISTER_")))
+  assert(["MAISTER_TEST_WORKTREE_INVOCATION_ID", "MAISTER_TEST_PROCESS_LEDGER"].includes(key), `Remove ambient override: ${key}`);
+if (stage === "r20") process.env.MAISTER_EVENT_PLANE_LOAD = "1";
+const inventoryBytes = await readFile(join(evidence, "ordinary-titles.json"));
+const inventory = JSON.parse(inventoryBytes);
+const sourceTree = git("rev-parse", "HEAD^{tree}");
+const startedAt = new Date().toISOString();
+const start = performance.now();
+let completed = false;
+try {
+const result = await runStageAbLane({ slice: definition.slice, files, evidenceDirectory: evidence, owningInvocation: invocation });
+const durationSeconds = (performance.now() - start) / 1000;
+const bytes = await readFile(result.reportPath);
+const report = JSON.parse(bytes);
+validateLaneReport(report, files);
+const cases = definition.slice === "isolation" ? validateIsolationReport(report, files) : report.numTotalTests;
+assert.equal(cases, definition.cases);
+if (definition.slice !== "isolation") {
+  for (const file of files) {
+    const suite = report.testResults.find(row => row.name === join(repo, "web", file));
+    const expected = inventory[file];
+    assert(expected?.length > 0);
+    assert.deepEqual(suite.assertionResults.map(row => [...row.ancestorTitles, row.title].filter(Boolean).join(" > ")).sort(), expected);
+  }
+}
+assert.equal(git("rev-parse", "HEAD"), expectedSha);
+assert.equal(git("status", "--porcelain"), "");
+assert(durationSeconds < definition.limit);
+await writeFile(join(evidence, `${stage}-provisional.json`), JSON.stringify({
+  kind: "local-darwin-regression", hostedEvidence: false, sourceSha: expectedSha,
+  sourceTree, stage, platform: process.platform, arch: process.arch,
+  node: process.versions.node, uid: process.getuid(), startedAt, durationSeconds,
+  invocationId: result.invocation.id, directory: result.directory,
+  files, cases, reportPath: result.reportPath, reportSha256: hash(bytes),
+  ordinaryInventorySha256: hash(inventoryBytes), accepted: false,
+  outcome: result.status, cleanup: "passed-without-containment-leaks",
+}, null, 2) + "\n", { flag: "wx" });
+completed = true;
+} finally {
+  await writeFile(join(evidence, `${stage}-attempt.json`), JSON.stringify({
+    stage, sourceSha: expectedSha, sourceTree, startedAt,
+    durationSeconds: (performance.now() - start) / 1000,
+    platform: process.platform, arch: process.arch, node: process.versions.node,
+    sourceUnchanged: git("rev-parse", "HEAD") === expectedSha && git("status", "--porcelain") === "",
+    completed, hostedEvidence: false,
+  }, null, 2) + "\n", { flag: "wx" });
+}
+JS
+overall_status=0
+for stage in preflight bounded-output publish darwin50 r20; do
+  case "$stage" in
+    darwin50) limit=2340 ;;
+    r20) limit=1560 ;;
+    *) limit=600 ;;
+  esac
+  node "$S53A_EVIDENCE/control.mjs" prepare "$stage"
+  invocation_id="$(node --input-type=module -e 'import {readFileSync} from "node:fs"; console.log(JSON.parse(readFileSync(process.argv[1],"utf8")).invocation.id)' "$S53A_EVIDENCE/$stage-invocation.json")"
+  invocation_ledger="$(node --input-type=module -e 'import {readFileSync} from "node:fs"; console.log(JSON.parse(readFileSync(process.argv[1],"utf8")).invocation.directory)' "$S53A_EVIDENCE/$stage-invocation.json")"
+  set +e
+  gtimeout --signal=TERM --kill-after=30s "${limit}s" env MAISTER_TEST_WORKTREE_INVOCATION_ID="$invocation_id" MAISTER_TEST_PROCESS_LEDGER="$invocation_ledger" node "$S53A_EVIDENCE/run.mjs" "$stage" 2>&1 | tee "$S53A_EVIDENCE/$stage.log"
+  stage_status=("${PIPESTATUS[@]}")
+  gtimeout --signal=TERM --kill-after=5s 60s node "$S53A_EVIDENCE/control.mjs" finalize "$stage" "${stage_status[0]}" "${stage_status[1]}" 2>&1 | tee "$S53A_EVIDENCE/$stage-finalization.log"
+  cleanup_status=("${PIPESTATUS[@]}")
+  set -e
+  if test "${stage_status[0]}" -ne 0 || test "${stage_status[1]}" -ne 0 || test "${cleanup_status[0]}" -ne 0 || test "${cleanup_status[1]}" -ne 0; then
+    overall_status=1
+    printf 'FAILED stage=%s command=%s log=%s finalizer=%s finalizer_log=%s\n' "$stage" "${stage_status[0]}" "${stage_status[1]}" "${cleanup_status[0]}" "${cleanup_status[1]}" >&2
+    # A failed outer finalizer leaves an unresolved resource boundary; stop here.
+    test -f "$S53A_EVIDENCE/$stage-outer-cleanup.json" || exit 1
+    node --input-type=module -e 'import assert from "node:assert/strict"; import {readFileSync} from "node:fs"; const audit=JSON.parse(readFileSync(process.argv[1],"utf8")); assert.equal(audit.cleanupErrors.length,0,"Resolve the recorded cleanup failure before another stage")' "$S53A_EVIDENCE/$stage-outer-cleanup.json"
+  fi
+done
+printf 'Evidence: %s\n' "$S53A_EVIDENCE"
+exit "$overall_status"
+```
+<!-- S53A_DARWIN_LOCAL_END -->
 
 ### Phase 0 — specification and environment receipts (2026-10-03)
 
@@ -2557,7 +3063,9 @@ separate acceptance work. One accepted attempt does not prove a flake rate.
 ## Commit Plan
 
 Implementation commits preserve focused boundaries; qualification binds each
-recorded source candidate. No remote visibility before owner push.
+recorded source candidate. The owner explicitly authorized publication of this
+continuation branch for the pending manual Mac handoff; no hosted acceptance
+is inferred from that push.
 
 For CI-R8, phase commits separate the fixes and their focused RED/GREEN controls.
 Complete regression receipts qualify their recorded source candidates and the
