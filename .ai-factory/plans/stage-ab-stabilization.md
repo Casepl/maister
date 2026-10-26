@@ -925,9 +925,12 @@ S4 rollback: before 0134, keep sources and all import checkpoints; stop maintena
   passes native Ubuntu amd64 Linux55 plus independent preflight on exact
   Node24.15.0 and24.19.0, with fresh builds and zero leaks. The existing S5.3a
   plan retains source-labelled phase/corrective evidence and commands for the
-  owner's native Apple Silicon/Docker Desktop handoff. Fresh Darwin50/preflight,
-  the changed ordinary owners and R20 remain open; C3/S5.3a are not fully
-  qualified. Preserve the current macOS19/31 CI contract; A14 is excluded and
+  owner's native Apple Silicon/Docker Desktop handoff. At `f16ec6124`, fresh
+  Darwin50/preflight and publish10 pass. Bounded-output passes25/26 with a
+  Darwin C-fixture compile failure; diagnostic R20 fails after PostgreSQL
+  reports storage exhaustion. Exact reports and limits are in the
+  [Mac handoff results](s53a-linux-isolation.md#native-darwin-handoff-results-2026-10-26).
+  C3/S5.3a are not fully qualified. Preserve the current macOS19/31 CI contract; A14 is excluded and
   Linux hosted qualification remains unproved. Parent stabilization stays43/45.
   No container/architecture substitution or old hosted receipt closes these
   changed-source gates.

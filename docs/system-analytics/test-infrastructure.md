@@ -918,9 +918,13 @@ Darwin retains50 plus separate preflight1 and its19/31 CI parts. Linux parts
 and unknown platforms refuse selection. The final combined code `3d97c9dcf`
 passes native Ubuntu Linux55 and independent preflight on both exact Nodes with
 fresh builds and zero leaks; the existing S5.3a plan owns exact receipts and the
-Apple Silicon/Docker Desktop handoff. Fresh Darwin regression and the full-phase
-R20 load gate remain open, so C3 is not fully qualified. Hosting remains macOS;
-local Linux evidence does not qualify hosted execution.
+Apple Silicon/Docker Desktop handoff. Native Darwin50/preflight and publish10
+pass at `f16ec6124`; the bounded-output fixture's Darwin compiler failure and
+R20 PostgreSQL storage exhaustion keep full-phase qualification open. The
+[Mac handoff results](../../.ai-factory/plans/s53a-linux-isolation.md#native-darwin-handoff-results-2026-10-26)
+retain the diagnostic-load limitation and exact receipts. C3 is not fully
+qualified. Hosting remains macOS; local Linux evidence does not qualify hosted
+execution.
 
 | Owning file | Exact case title | Disposition |
 |---|---|---|

@@ -5,7 +5,7 @@ Current continuation branch: `codex/s53a-qualification`; retain this explicit pl
 Created: 2026-10-02.
 Refined through `aif-improve`: 2026-10-20 on working baseline `8237993223fa5a7c3aafe9db42d9438612990938`; implementation, verification and local phase commits authorized. Original planning/qualification sources remain separately attributed.
 Planning source: `f43ac1570380d2be19f7c59a70cd993f24ace440`.
-Status: **A1–A7 remain complete through C2. A8–A10 and focused corrections P1/P2/P4/P6/P7/P8 are implemented and locally qualified within their recorded scopes. The final combined code `3d97c9dcf` passes native Ubuntu Linux55 plus independent preflight on exact Node24.15.0 and24.19.0, with fresh builds and zero leaks. R20 remains open by owner decision; fresh Darwin50/preflight and changed ordinary owners still require the prepared Apple Silicon/Docker Desktop handoff. A11–A13/C3 are not complete. Current macOS CI is retained, A14 is excluded, and Linux hosting remains unproved. Historical CI-R9d/S5.2 receipts keep their original source identity; parent stabilization remains43/45 and S5.3/S5.4 stay open.**
+Status: **A1–A7 remain complete through C2. A8–A10 and focused corrections P1/P2/P4/P6/P7/P8 are implemented and locally qualified within their recorded scopes. The final combined code `3d97c9dcf` passes native Ubuntu Linux55 plus independent preflight on exact Node24.15.0 and24.19.0, with fresh builds and zero leaks. Native Darwin ARM64/Node24.19.0 at handoff `f16ec6124` now passes fresh-build Darwin50, independent preflight and publish10. Bounded-output passes25/26: the held-read C fixture does not compile under Darwin's POSIX feature visibility. The owner-authorized diagnostic Mac R20 run fails with PostgreSQL ENOSPC and subsequent connection refusal; no final R20 summary is available. Ubuntu R20 remains separately open. A11–A13/C3 are not complete. Current macOS CI is retained, A14 is excluded, and Linux hosting remains unproved. Historical CI-R9d/S5.2 receipts keep their original source identity; parent stabilization remains43/45 and S5.3/S5.4 stay open.**
 
 Implementation authorized 2026-10-03 through `aif-implement`: execute the whole plan, commit by qualified phases and mark tasks only after their acceptance evidence passes. Initial implementation HEAD is the planning source. The later explicit handoff-push authorization below governs this continuation; it does not close the qualified-hosting gate.
 
@@ -362,10 +362,13 @@ ownership ordering is corrected; Git2.43 restoration remains a historical
 limitation and no worktree-argv change was applied after Git2.55 passed.
 R20's unchanged load profile remains invalid on this Ubuntu host. The owner
 chose to keep it open and run it on Mac rather than authorize SQLite changes.
-Fresh Darwin50/preflight and the two corrected ordinary owners remain pending.
-A11/G-LINUX/C3 and the dependent A12/A13 acceptance gates are therefore open.
-Continue with the exact-source Mac commands below; do not repeat A8–A10
-implementation or borrow historical hosted receipts for changed source.
+The Mac handoff below now supplies fresh Darwin50/preflight and publish10.
+Bounded-output's Darwin compiler failure and the failed diagnostic R20 run
+remain unresolved; A11/G-LINUX/C3 and dependent A12/A13 acceptance stay open.
+The next correction must address the held-read fixture's POSIX portability
+and diagnose R20 PostgreSQL storage exhaustion before requalification. Preserve
+the failed reports and unchanged budgets; do not repeat A8–A10 implementation
+or borrow historical hosted receipts for changed source.
 
 The earlier refinement ran on Darwin ARM64; Docker Desktop reported
 `aarch64`, kernel `6.12.76-linuxkit`;
@@ -1448,19 +1451,79 @@ and both migration journals are identical to that master source. No new
 allocation or rebase was needed. Both required357ae6cfd/8ad23a5fc ancestors
 are present (`a12-pre-handoff-remote.json`).
 
-Remaining gates are explicit: fresh native Darwin50 and independent preflight,
+At the Linux handoff, the remaining gates were fresh native Darwin50 and independent preflight,
 Darwin bounded-output26/publish10, and the owner's unchanged R20 measurement.
 A Mac R20 result must keep its platform label and cannot retrospectively turn
 Ubuntu's71.884813 rows/s attempt into an accepted load profile. P3/P5's complete
 phase clauses and A11/A12/A13/C3 remain open accordingly. A14 is excluded;
 A15/hosted acceptance is not completed by the authorized branch handoff push.
 Historical CI-R9d/S5.2 remain closed at their original exact hosted source;
-parent stabilization stays43/45, S5.3/S5.4 remain open. Unresolved execution
-questions: none; the next action is the owner's Mac run below.
+parent stabilization stays43/45, S5.3/S5.4 remain open. The subsequent Mac run
+below supplies the current disposition of these pending gates.
+
+### Native Darwin handoff results (2026-10-26)
+
+Executed the exact command block below on clean
+`f16ec6124a5b55df1618cc4606148937b8610e2c` (tree
+`ebe5b55c90089afe571b4677ca3041c0363c6b46`). Its code is unchanged from
+`3d97c9dcf`; the intervening commit changes documentation only. Environment:
+macOS26.6.2/Darwin25.6.0 ARM64, Node24.19.0, pnpm11.6.0, Docker Desktop29.4.2
+with its existing12 CPUs/20,942,036,992 bytes. Node's archive matches the
+handoff SHA256. No runtime code, SQLite setting, deadline, load profile,
+Docker resource setting or CI recipe was changed.
+
+Evidence root: `/private/tmp/maister-s53a-darwin-z4kVXS`. Each stage retains
+its original log, invocation descriptor, attempt and outer-cleanup JSON;
+only passing stages have an accepted receipt. Reporter paths below are
+relative to that root. Receipt report hashes were independently recomputed;
+passing reporters have no failed or pending cases.
+
+| Stage | Result | Lane duration | Reporter |
+|---|---|---|---|
+| Independent preflight | 1/1 passed | 5.350s | `maister-ab-isolation-HezOUW/vitest.json` |
+| Bounded-output | 25 passed,1 failed | 34.054s | `maister-ab-web-wufREm/vitest.json` |
+| Publish | 10/10 passed | 5.864s | `maister-ab-web-PFYO7c/vitest.json` |
+| Darwin50 | 50/50 in all7 suites passed | 573.266s;574.458s including outer finalization, below2340s | `maister-ab-isolation-L99QE9/vitest.json` |
+| R20 | 0/1,7 reported unhandled errors; diagnostic only | 393.880s | `maister-ab-web-TixzxR/vitest.json` |
+
+All five lane sweeps report zero leaks; all five outer finalizers have empty
+cleanup/acceptance-error lists. Failed test exit codes remain1, and the
+overall script exits1. This cleanup result does not turn either failure green.
+Darwin50 invocation is `68e90fd0-92c8-4f4b-8d86-1a9906e69da6`; its reporter
+SHA256 is `0630a49d02ee7a4fa340c6136b6f08b718e4d5f78d5997e35c7471b4183f7c40`.
+
+Bounded-output fails before the draft adapter assertion:
+`held-http-reads.c:73` uses `INADDR_LOOPBACK` while defining
+`_POSIX_C_SOURCE=200809L`. The installed Darwin SDK exposes that macro only
+without `_POSIX_C_SOURCE` or with `_DARWIN_C_SOURCE`. This is a fixture
+portability/compile failure, not behavioral RED. Preserve P7's Linux proof;
+repair the portable loopback-address construction and rerun the complete26
+owner before claiming Darwin qualification.
+
+The owner explicitly selected diagnosis under current background load after
+the quiet-host prerequisite failed. Recorded R20 load averages are15–17
+(one-minute), above the test's less-than8 guidance; observations are in
+`load-observations.jsonl`. At220.925s, the stream records PostgreSQL
+`could not extend file "base/16384/19382": No space left on device`.
+The fixture configures PGDATA as512MiB tmpfs. Later queries fail with SQLSTATE
+53100 and finally `the database system is not yet accepting connections` at
+the post-window query; `r20Summary` is absent. The exhausted relation/WAL
+breakdown was not measured before fixture cleanup, so no storage optimization
+or capacity amendment is inferred or applied.
+
+Independent calculation from330 raw samples, using the test's post-warmup
+head-delta formula, gives392.812 rows/s. This is a diagnostic derivation, not
+an accepted R20 summary. Maximum sampled host-to-manager lag is23,414; the
+last sample has589 subscriber pauses and10 disconnects. Neither throughput
+alone nor the clean teardown satisfies the load gate. Ubuntu's71.884813
+rows/s failure retains its own platform/source identity. Remaining work is
+the bounded-output portability correction, R20 storage/failure diagnosis and
+qualified reruns; A11–A13/C3, S5.3/S5.4/C11 and Linux hosting remain open.
 
 ### Owner handoff — native Apple Silicon with Docker Desktop
 
-Fresh Darwin evidence is pending. Run these commands on the owner's native
+The first execution and its remaining failures are recorded above. For a new
+candidate, run these commands on the owner's native
 macOS ARM64 host, with Docker Desktop running, a non-root shell, Git, Apple
 command-line tools (`cc`), and GNU `gtimeout` (the `coreutils` package). Do not
 run the Intel/Colima CI provisioning recipe on this host. This is local Darwin
