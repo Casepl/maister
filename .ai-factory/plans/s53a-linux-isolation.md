@@ -5,7 +5,7 @@ Current continuation branch: `codex/s53a-qualification`; retain this explicit pl
 Created: 2026-10-02.
 Refined through `aif-improve`: 2026-10-20 on working baseline `8237993223fa5a7c3aafe9db42d9438612990938`; implementation, verification and local phase commits authorized. Original planning/qualification sources remain separately attributed.
 Planning source: `f43ac1570380d2be19f7c59a70cd993f24ace440`.
-Status: **A1–A7 remain complete through C2. A8–A10 and focused corrections P1/P2/P4/P6/P7/P8 are implemented and locally qualified within their recorded scopes. The final combined code `3d97c9dcf` passes native Ubuntu Linux55 plus independent preflight on exact Node24.15.0 and24.19.0, with fresh builds and zero leaks. Native Darwin ARM64/Node24.19.0 at handoff `f16ec6124` now passes fresh-build Darwin50, independent preflight and publish10. Bounded-output passes25/26: the held-read C fixture does not compile under Darwin's POSIX feature visibility. The owner-authorized diagnostic Mac R20 run fails with PostgreSQL ENOSPC and subsequent connection refusal; no final R20 summary is available. Ubuntu R20 remains separately open. A11–A13/C3 are not complete. Current macOS CI is retained, A14 is excluded, and Linux hosting remains unproved. Historical CI-R9d/S5.2 receipts keep their original source identity; parent stabilization remains43/45 and S5.3/S5.4 stay open.**
+Status: **A1–A7 remain complete through C2. A8–A10 and focused corrections P1/P2/P4/P6/P7/P8 are implemented and locally qualified within their recorded scopes. Code `3d97c9dcf` passes native Ubuntu Linux55 and independent preflight on exact Node24.15.0 and24.19.0, with fresh builds and zero leaks. Handoff `f16ec6124` passes native Darwin ARM64/Node24.19.0 Darwin50, independent preflight and publish10. The current corrective source fixes the held-read compiler failure and PostgreSQL test-database vacuum scheduling; bounded-output26 passes on Darwin24.19 and both Ubuntu Nodes. SQLite optimization is in qualification. Current Darwin24.19 R20 passes393rows/s with all nine canonical settlements and zero leaks; host load is diagnostic context, with no admission threshold. Ubuntu R20 and complete regression for the corrective source remain open. A11–A13/C3 are not complete. Current macOS CI is retained, A14 is excluded, and Linux hosting remains unproved. Historical CI-R9d/S5.2 receipts keep their original source identity; parent stabilization remains43/45 and S5.3/S5.4 stay open.**
 
 Implementation authorized 2026-10-03 through `aif-implement`: execute the whole plan, commit by qualified phases and mark tasks only after their acceptance evidence passes. Initial implementation HEAD is the planning source. The later explicit handoff-push authorization below governs this continuation; it does not close the qualified-hosting gate.
 
@@ -285,7 +285,7 @@ Mandatory falsifications, sequentially in disposable local trees with restoratio
 
 Before any full run, prove discovery with the installed Vitest `list --project=integration` equivalent for the exact selected files. New Linux file family must be included on Linux and explicitly excluded from Darwin's platform suite. Preflight uses `runStageAbLane({slice:"isolation", files:[preflight]})` separately; then execute `pnpm --filter maister-web test:integration:isolation` for the complete platform inventory. Do not mistake a test-name/file subset for full qualification.
 
-At every code-phase exit require full web unit and integration suite GREEN, plus supervisor unit/integration GREEN when the changed fixture touches that tier. Use existing scripts (`pnpm --filter maister-web test:unit`, `pnpm --filter maister-web test:integration`, supervisor `test:unit`/`test:integration`), on a quiet host, with the explicit platform configuration. If aggregates are impractical, execute a frozen complete discovered inventory in bounded serial file groups and prove no missing/duplicate/skipped cases; interrupted aggregates are not green. Keep logs/reports and failure sets. No acceptance quarantine is allowed; unresolved failures block the phase rather than borrow the skill's general quarantine option.
+At every code-phase exit require full web unit and integration suite GREEN, plus supervisor unit/integration GREEN when the changed fixture touches that tier. Use existing scripts (`pnpm --filter maister-web test:unit`, `pnpm --filter maister-web test:integration`, supervisor `test:unit`/`test:integration`), without another qualification lane on the same host, with the explicit platform configuration. Host load is diagnostic context, not an admission threshold. If aggregates are impractical, execute a frozen complete discovered inventory in bounded serial file groups and prove no missing/duplicate/skipped cases; interrupted aggregates are not green. Keep logs/reports and failure sets. No acceptance quarantine is allowed; unresolved failures block the phase rather than borrow the skill's general quarantine option.
 
 Also require relevant typechecks, read-only lint invocation (avoid unrelated `--fix`), `pnpm test:stage-ab-lane`, `pnpm test:runtime`, `pnpm runtime:check`, `pnpm validate:contracts`, `pnpm validate:docs:all`, and `git --no-pager diff --check`. ADR body/stub/bijection/anchors and relative links must validate. No DB generation/migration needed when the data diff remains empty; if that premise changes, stop and revise scope/allocations before writing a migration.
 
@@ -1519,6 +1519,88 @@ alone nor the clean teardown satisfies the load gate. Ubuntu's71.884813
 rows/s failure retains its own platform/source identity. Remaining work is
 the bounded-output portability correction, R20 storage/failure diagnosis and
 qualified reruns; A11–A13/C3, S5.3/S5.4/C11 and Linux hosting remain open.
+
+### Active corrective pass after the Mac handoff (2026-10-26)
+
+The owner authorized fixing the remaining failures and completing A11–A13/C3.
+Preserve macOS hosting and no-push scope. First replace the held-read helper's
+non-POSIX loopback macro with POSIX address parsing; its two loopback sockets,
+bounded receive buffers, held bodies and release contract remain unchanged.
+The existing compiler failure is portability RED, not behavioral falsification;
+the full26-case owner must reach and pass its original transport assertion.
+Measure R20's actual PostgreSQL relation/index/WAL footprint before choosing a
+storage correction; retain its load, durability, deadlines and acceptance
+assertions. Requalify affected source on Darwin and native Ubuntu at both exact
+Nodes before changing completion checkboxes. Evidence remains outside git.
+
+The repeated Mac storage diagnostic reaches ENOSPC with roughly256MiB of
+`run_messages` TOAST for18 live messages (11MiB logical /193KiB compressed
+values), while autovacuum visits the table about once per minute. Qualify a
+one-second test-database autovacuum interval against the unchanged R20 owner;
+keep512MiB, WAL64/32, default vacuum workers/costs and enabled durability.
+The existing bare-lineage control verifies the effective setting. This is a
+test-fixture scheduling correction, with no production configuration/schema
+change. A diagnostic success alone cannot close R20 acceptance for a later source.
+
+The owner explicitly removes the `load < 8` admission condition. Record host
+load and mains power in evidence, but judge R20 by its unchanged throughput,
+lag, settlement, pressure and leak assertions. Do not run another qualification
+lane on the same host. Higher host load alone does not disqualify a passing run;
+historical failed assertions remain failures.
+
+The current corrective source passes native Darwin ARM64 R20 on Node24.19.0
+with AC power and starting load19.285:393rows/s, maximum lag52, first/last
+minute unacknowledged maxima52/50, all nine canonical settlements, zero
+pressure/refusals/producer pauses/stream errors and zero leaks. The complete
+386.040s invocation `e7fa18df-7c3d-4745-83d5-352970505d42` records1/1 and
+unchanged tracked source at base `7bad3a8b6` plus its captured corrective diff
+in `/private/tmp/maister-s53a-closeout-20261026/r20-current-24190/`.
+This is current local Darwin acceptance, not hosted or Linux acceptance.
+The full web unit suite on the same production source passes9222/9222.
+
+The owner now explicitly authorizes production SQLite optimization with TDD,
+unchanged durability and the360rows/s floor. Start with bounded per-connection
+prepared-statement reuse: observe real SQLite compilation on repeated durable
+outbox appends, verify replay after reopening, and preserve independent active
+iterators. Do not alter transaction boundaries, WAL/FULL, admission accounting,
+publication-after-commit or error propagation. Measure restored R20 on both
+platforms before claiming the optimization sufficient; further transaction
+changes need their own documented invariants and reached RED controls.
+The fresh Mac acceptance attempt starts on AC at load5.95 but fails the
+unchanged last-minute/first-minute unacknowledged maximum ratio (82 >70),
+despite393rows/s and nine canonical settlements. Keep that failure distinct
+from the preceding diagnostic GREEN395rows/s. C3 remains open.
+
+Prepared statement reuse is committed as `7bad3a8b6`: real compilation RED,
+reopen replay GREEN, shared-cursor falsification and restored full supervisor
+807/807 on both Mac Nodes, plus complete Ubuntu integration on24.19. This is a
+qualified optimization phase, not R20 acceptance. Its native Linux R20 fails
+the throughput floor at approximately87rows/s. The next candidate moves only boot-scoped parser credits
+to transactional SQLite TEMP tables: all admission snapshots include them,
+failed durable spends roll back them, persistent wallets/files/events/ACKs keep
+WAL/FULL, and legacy persistent credits are audited before boot retirement.
+Require real frame-only no-main-commit RED, live quota, rollback and reopened
+event controls before treating that change as qualified. No durability mode,
+load profile, floor, deadline or CI change is authorized by this optimization.
+
+The frame-credit candidate passes808/808 on both Mac Nodes and its quota-omission
+mutant fails the real live-budget assertion. Continue the same corrective phase
+with recoverable producer log/spool progress in TEMP, while retaining durable
+capacity before bytes: reserve raw-log growth in64KiB blocks, include current
+progress in every live budget/read, seal exact bytes, and inventory interrupted
+files on restart. No object-upload progress is deferred. Require a reached
+real-file/no-extra-main-commit RED and restored accounting/restart control,
+then complete both-platform regression and unchanged R20 for the combined source.
+The combined transient-credit/progress candidate reaches208rows/s on native
+Ubuntu24.19, with nine canonical settlements and zero leaks, but fails the
+unchanged360 floor. Its complete1226.837s receipt and frozen source are retained
+under `closeout-r20-sqlite-transient-24190` on the Ubuntu evidence root.
+The next read-cost candidate combines the fresh admission budget in one SQL
+statement and avoids pressure/debug statistics reads when their results are
+unused. Real SQLite controls reach RED (six reads instead of one; two unused
+publisher reads instead of zero), then GREEN with fresh values, durable replay
+and enabled debug output preserved. The full supervisor suite passes811/811 on
+both Mac Nodes; current Ubuntu R20 is pending. Persistent SQLite remains WAL/FULL.
 
 ### Owner handoff — native Apple Silicon with Docker Desktop
 

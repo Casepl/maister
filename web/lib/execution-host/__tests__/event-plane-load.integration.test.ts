@@ -15,9 +15,9 @@
 // producer pause, retained rows never at hard, every retained-pressure episode
 // ending below low, and at most MAX_SAMPLES_AT_SOFT samples in a row at soft.
 //
-// Run it alone on a quiet, mains-powered host (`pmset -g log` for sleep,
-// `uptime` load < 8), never beside another lane. It prints one JSON line per
-// 1 s sample and a final `r20Summary` line; the summary is the number the plan
+// Run it on a mains-powered host, never beside another qualification lane.
+// Record host load as diagnostic context, not an admission gate. It prints one
+// JSON line per 1 s sample and a final `r20Summary` line; the summary is the number the plan
 // records, printed before any assertion so a failing run still reports it.
 import type { Db } from "@/lib/execution-host/db";
 import type { FlowYamlV1 } from "@/lib/config.schema";
