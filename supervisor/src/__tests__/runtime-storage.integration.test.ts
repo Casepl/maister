@@ -19,6 +19,7 @@ import {
   validateRuntimeLimits,
 } from "../runtime-limits";
 import { createSqliteStorage } from "../sqlite-storage";
+import { reuseSqliteStatements } from "../sqlite-statements";
 
 import {
   bootHost,
@@ -26,6 +27,34 @@ import {
   createSession,
   waitFor,
 } from "./_fixtures/boot-host";
+
+it("keeps cached reads fresh and simultaneous SQLite cursors independent", () => {
+  const database = reuseSqliteStatements(new DatabaseSync(":memory:"));
+
+  try {
+    database.exec("CREATE TABLE samples (value INTEGER PRIMARY KEY)");
+    database.exec("INSERT INTO samples VALUES (1), (2), (3)");
+    const query = "SELECT value FROM samples WHERE value >= ? ORDER BY value";
+    const first = database.prepare(query).iterate(1);
+
+    expect(first.next().value).toEqual({ value: 1 });
+    expect(database.prepare(query).get(3)).toEqual({ value: 3 });
+    const second = database.prepare(query).iterate(2);
+
+    expect(second.next().value).toEqual({ value: 2 });
+    expect(Array.from(first)).toEqual([{ value: 2 }, { value: 3 }]);
+    expect(Array.from(second)).toEqual([{ value: 3 }]);
+    database.exec("BEGIN IMMEDIATE");
+    expect(database.isTransaction).toBe(true);
+    database.prepare("INSERT INTO samples VALUES (?)").run(4);
+    expect(database.prepare(query).get(4)).toEqual({ value: 4 });
+    database.exec("ROLLBACK");
+    expect(database.isTransaction).toBe(false);
+    expect(database.prepare(query).get(4)).toBeUndefined();
+  } finally {
+    database.close();
+  }
+});
 
 // ADR-183: the per-kind gate replaces the dead assertCanAcceptMutatingCommand;
 // a `new_work` receipt runs the physical, soft and hard admission checks.

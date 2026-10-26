@@ -10,6 +10,14 @@ on a supervisor runtime filesystem. The manager owns canonical redacted event
 metadata; the host owns ACP processes, private SQLite outbox state, and private
 files.
 
+SQLite statement reuse is being qualified for the host connection. The bounded
+cache owns prepared SQL only, never query results; bindings and reads remain
+fresh, active iterators remain independent, and closing the connection releases
+its cache. WAL with `synchronous=FULL`, existing transaction boundaries and
+publication only after commit remain mandatory. The owning durable outbox
+control must observe preparation reuse and preserve replay across reopening;
+R20 remains the unchanged end-to-end throughput and lag gate.
+
 ## Domain entities
 
 - `RuntimeEventEnvelope` is the closed v1 spine with open negotiated payload.

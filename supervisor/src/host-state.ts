@@ -10,6 +10,7 @@ import {
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
+import { reuseSqliteStatements } from "./sqlite-statements";
 import { commandReceiptPayloadV2 } from "./command-event";
 import {
   DEFAULT_RUNTIME_LIMITS,
@@ -934,6 +935,7 @@ export function openHostState(opts: OpenHostStateOptions = {}): HostState {
       db.exec("PRAGMA synchronous = FULL");
     }
     applySchema(db);
+    db = reuseSqliteStatements(db, log);
   } catch (err) {
     throw new HostStateUnwritableError(stateDir ?? ":memory:", err);
   }

@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { HostRuntimeEventError } from "../host-runtime-errors";
 import { SupervisorHealthResponseSchema } from "../types";
@@ -694,6 +694,45 @@ describe("Stage B durable host event outbox", () => {
       ).toEqual(["0"]);
       restarted.close();
     } finally {
+      rmSync(stateDir, { force: true, recursive: true });
+    }
+  });
+
+  it("reuses compiled SQL across durable appends without losing replay on reopen", () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "maister-outbox-statements-"));
+    // Observe real native preparation; every call still executes SQLite.
+    const preparation = vi.spyOn(DatabaseSync.prototype, "prepare");
+
+    try {
+      const first = openHostState({ stateDir });
+      const streamId = first.getRuntimeEventStreamId();
+      let repeatedPreparations = 0;
+
+      try {
+        first.appendRuntimeEvent(eventDraft());
+        preparation.mockClear();
+        for (let index = 0; index < 32; index += 1)
+          first.appendRuntimeEvent(eventDraft());
+        repeatedPreparations = preparation.mock.calls.length;
+      } finally {
+        first.close();
+      }
+      preparation.mockRestore();
+      const reopened = openHostState({ stateDir });
+
+      try {
+        expect(reopened.getRuntimeEventStreamId()).toBe(streamId);
+        expect(
+          reopened
+            .pendingRuntimeEvents(streamId)
+            .map(({ sequence }) => sequence),
+        ).toEqual(Array.from({ length: 33 }, (_, index) => String(index)));
+      } finally {
+        reopened.close();
+      }
+      expect(repeatedPreparations).toBe(0);
+    } finally {
+      preparation.mockRestore();
       rmSync(stateDir, { force: true, recursive: true });
     }
   });
