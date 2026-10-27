@@ -47,6 +47,9 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 COPY web/ ./web/
 COPY supervisor/ ./supervisor/
+# `next build` type-checks web's whole tsconfig program, which includes tests
+# that import mcp/src (the librarian toolset contract).
+COPY mcp/ ./mcp/
 COPY runtime/ ./runtime/
 COPY scripts/ ./scripts/
 RUN NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter maister-web build
