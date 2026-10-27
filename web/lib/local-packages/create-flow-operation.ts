@@ -16,7 +16,7 @@ export type LocalPackageCreationJournal = {
   originalManifest?: string;
 };
 
-const operationIdSchema = z.string().uuid();
+const operationIdSchema = z.string().guid();
 const journalSchema = z
   .object({
     flow: createFlowInputSchema,

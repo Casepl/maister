@@ -46,7 +46,7 @@ const postgresStorage = {
 } as const;
 
 // Daemon reachability has a short absent-Docker guard. SDK construction also
-// discovers Compose and DNS, which must not consume that guard after a genuine
+// resolves the runtime host (DNS), which must not consume that guard after a genuine
 // Engine response. Its separate ceiling matches the existing known-Docker lanes.
 const dockerProbeTimeoutMs =
   Number(process.env.MAISTER_TEST_DOCKER_PROBE_TIMEOUT_MS) || 3_000;

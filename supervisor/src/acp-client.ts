@@ -7,8 +7,9 @@ import type { Logger } from "pino";
 
 import { randomUUID } from "node:crypto";
 
-import * as acp from "@agentclientprotocol/sdk";
+import * as acp from "@agentclientprotocol/sdk/unstable";
 
+import { connectAcpClient, type AcpConnection } from "./acp-connection";
 import { readSessionModels, type SessionModelView } from "./session-models";
 import { boundedAcpStream, type BoundedAcpClient } from "./bounded-acp-stream";
 import {
@@ -77,7 +78,7 @@ export type CreateAcpConnectionArgs = {
 };
 
 export type CreateAcpConnectionResult = {
-  connection: acp.ClientSideConnection;
+  connection: AcpConnection;
   acpSessionId: string;
   capabilities: SessionCapabilities;
 };
@@ -990,7 +991,7 @@ export async function createAcpConnection(
   });
 
   record.settlePermissionCallbacks = stream.settlePermissionCallbacks;
-  const connection = new acp.ClientSideConnection(() => clientImpl, stream);
+  const connection = connectAcpClient(stream);
 
   logger.info({ sessionId }, "acp connection-init");
 
@@ -1156,7 +1157,7 @@ export async function createAcpConnection(
 }
 
 type ApplyModelArgs = {
-  connection: acp.ClientSideConnection;
+  connection: AcpConnection;
   runner: RunnerLaunch | undefined;
   models: SessionModelView;
   acpSessionId: string;
@@ -1265,7 +1266,7 @@ export async function applyAndVerifyModel(args: ApplyModelArgs): Promise<void> {
 }
 
 export async function sendPromptOnConnection(
-  conn: acp.ClientSideConnection,
+  conn: AcpConnection,
   args: {
     adapter: ExecutorAgent;
     acpSessionId: string;
@@ -1363,7 +1364,7 @@ const REFUSING_OUTCOMES: ReadonlySet<string> = new Set([
 // typed 409; an ACP error is the `error` outcome, a missed deadline `timeout`.
 // A late answer after the deadline is dropped (its promise is kept handled).
 export async function steerOnConnection(
-  conn: acp.ClientSideConnection,
+  conn: AcpConnection,
   args: {
     adapter: ExecutorAgent;
     acpSessionId: string;

@@ -17,6 +17,7 @@ import {
   hashPassword,
   verifyPassword,
 } from "@/lib/password";
+import { isUniqueViolation } from "@/lib/db/pg-error";
 
 const log = pino({ name: "users", level: process.env.LOG_LEVEL ?? "info" });
 const {
@@ -36,14 +37,6 @@ function db(): NodePgDatabase<typeof schema> {
   return getDb();
 }
 
-function isUniqueViolation(err: unknown): boolean {
-  return (
-    typeof err === "object" &&
-    err !== null &&
-    "code" in err &&
-    (err as { code: unknown }).code === "23505"
-  );
-}
 
 export type CredentialFailureReason = "invalid" | "pending" | "disabled";
 

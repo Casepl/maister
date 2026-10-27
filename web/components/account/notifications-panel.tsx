@@ -58,7 +58,7 @@ type State =
   | "failed";
 
 /** The VAPID public key crosses the wire base64url and must reach `subscribe` as bytes. */
-function urlBase64ToUint8Array(base64: string): Uint8Array {
+function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
   const normalized = (base64 + padding).replace(/-/gu, "+").replace(/_/gu, "/");
   const raw = window.atob(normalized);

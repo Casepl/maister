@@ -3266,7 +3266,7 @@ export async function discardWorktree(worktreePath: string): Promise<void> {
 // so they outlive the worktree, the internal branch (`removeBranch` deletes
 // `refs/heads/*` only) and the preserve path.
 const RESCUE_REF_ROOT = "refs/maister/rescue";
-const runIdSchema = z.string().uuid();
+const runIdSchema = z.string().guid();
 
 export type RescueRef = { ref: string; sha: string; createdAt: string };
 

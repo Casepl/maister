@@ -38,7 +38,7 @@ export const librarianCardProposalSchema = z.discriminatedUnion("action", [
   z
     .object({
       action: z.literal("statement_accept"),
-      taskId: z.string().uuid(),
+      taskId: z.string().guid(),
       expectedRevision: z.number().int().nonnegative(),
       statement: taskStatementSchema,
     })
@@ -46,15 +46,15 @@ export const librarianCardProposalSchema = z.discriminatedUnion("action", [
   z
     .object({
       action: z.literal("hitl_respond"),
-      runId: z.string().uuid(),
-      hitlRequestId: z.string().uuid(),
+      runId: z.string().guid(),
+      hitlRequestId: z.string().guid(),
       response: z.record(z.string(), z.unknown()),
     })
     .strict(),
   z
     .object({
       action: z.literal("run_promote"),
-      runId: z.string().uuid(),
+      runId: z.string().guid(),
       mode: z.enum(["local_merge", "rebase_merge", "pull_request"]),
       reviewedTargetCommit: z.string().regex(/^[0-9a-f]{40,64}$/),
     })
@@ -62,7 +62,7 @@ export const librarianCardProposalSchema = z.discriminatedUnion("action", [
   z
     .object({
       action: z.literal("run_discard"),
-      runId: z.string().uuid(),
+      runId: z.string().guid(),
     })
     .strict(),
 ]);

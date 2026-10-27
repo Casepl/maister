@@ -148,7 +148,7 @@ export function vitestArgs({ files, reportPath, concurrency }) {
   return [
     "node_modules/vitest/vitest.mjs", "run", ...files, "--project=integration",
     "--reporter=json", `--outputFile=${reportPath}`, "--reporter=default",
-    `--maxWorkers=${concurrency}`, "--minWorkers=1",
+    `--maxWorkers=${concurrency}`,
   ];
 }
 
@@ -292,7 +292,7 @@ export async function runStageAbLane({ slice, files = slice === "isolation" ? is
   const env = { ...process.env, ...await fixtureProcessEnvironment(invocation), MAISTER_TEST_DOCKER_PROBE_TIMEOUT_MS: "30000" };
   const args = ["--import", FIXTURE_WATCHDOG, ...vitestArgs({ files, reportPath, concurrency })];
 
-  if (workspace) args.push("--workspace", workspace);
+  if (workspace) args.push("--config", workspace);
   let child;
   let escalation;
   let caughtSignal;

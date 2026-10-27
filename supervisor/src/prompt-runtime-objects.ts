@@ -1,4 +1,4 @@
-import type * as acp from "@agentclientprotocol/sdk";
+import type * as acp from "@agentclientprotocol/sdk/unstable";
 import type { ReserveRuntimeObjectPayload } from "./types";
 
 import { pathToFileURL } from "node:url";

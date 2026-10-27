@@ -434,7 +434,7 @@ describe("scratch_runs owner XOR CHECK (ADR-097)", () => {
         dialogStatus: "Running",
         createdByUserId: userId,
       }),
-    ).rejects.toThrow(/scratch_runs_owner_xor_check/);
+    ).rejects.toHaveProperty("cause.message", expect.stringMatching(/scratch_runs_owner_xor_check/));
 
     await db.delete(runs).where(eq(runs.id, runId));
     await db.delete(schema.projects).where(eq(schema.projects.id, projectId));
@@ -467,7 +467,7 @@ describe("scratch_runs owner XOR CHECK (ADR-097)", () => {
         dialogStatus: "Running",
         createdByUserId: userId,
       }),
-    ).rejects.toThrow(/scratch_runs_owner_xor_check/);
+    ).rejects.toHaveProperty("cause.message", expect.stringMatching(/scratch_runs_owner_xor_check/));
 
     await db.delete(runs).where(eq(runs.id, runId));
   });

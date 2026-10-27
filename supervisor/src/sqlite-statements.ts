@@ -1,25 +1,41 @@
-import type { DatabaseSync, StatementSync } from "node:sqlite";
+import type {
+  DatabaseSync,
+  SQLInputValue,
+  SQLOutputValue,
+  StatementResultingChanges,
+} from "node:sqlite";
 import type { Logger } from "pino";
 
 const MAX_CACHED_STATEMENTS = 256;
+
+type Row = Record<string, SQLOutputValue>;
+
+type CachedStatement = {
+  run(...params: SQLInputValue[]): StatementResultingChanges;
+  get(...params: SQLInputValue[]): Row | undefined;
+  all(...params: SQLInputValue[]): Row[];
+  iterate(...params: SQLInputValue[]): NodeJS.Iterator<Row>;
+};
 
 /** Own preparation reuse for one connection; never cache results or bindings. */
 export function reuseSqliteStatements(
   database: DatabaseSync,
   logger?: Logger,
 ): DatabaseSync {
-  const statements = new Map<string, StatementSync>();
+  const statements = new Map<string, CachedStatement>();
   let hits = 0;
   let misses = 0;
 
-  return {
+  // The state store calls only these members; the cast keeps every store
+  // signature on the native `DatabaseSync` type.
+  const wrapped = {
     get isTransaction() {
       return database.isTransaction;
     },
-    exec(sql) {
+    exec(sql: string) {
       database.exec(sql);
     },
-    prepare(sql) {
+    prepare(sql: string): CachedStatement {
       const cached = statements.get(sql);
 
       if (cached) {
@@ -29,7 +45,7 @@ export function reuseSqliteStatements(
       }
       misses += 1;
       const native = database.prepare(sql);
-      const statement: StatementSync = {
+      const statement: CachedStatement = {
         run: (...params) => native.run(...params),
         get: (...params) => native.get(...params),
         all: (...params) => native.all(...params),
@@ -60,4 +76,6 @@ export function reuseSqliteStatements(
       statements.clear();
     },
   };
+
+  return wrapped as unknown as DatabaseSync;
 }

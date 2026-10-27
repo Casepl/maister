@@ -266,8 +266,10 @@ describe("Durable agent turn admission", () => {
     await expect(
       db.update(agentTurns).set(binding).where(eq(agentTurns.id, next.id)),
     ).rejects.toMatchObject({
+      cause: {
       code: "23505",
       constraint: "agent_turns_active_run_uq",
+    },
     });
     await expect(
       db
@@ -275,8 +277,10 @@ describe("Durable agent turn admission", () => {
         .set({ assignmentEpoch: assignment.epoch + 1 })
         .where(eq(agentTurns.id, first.id)),
     ).rejects.toMatchObject({
+      cause: {
       code: "23514",
       constraint: "agent_turns_binding_immutable",
+    },
     });
     const operationKey = `agent_turn:persistent_message:${first.id}:${first.ordinal}`;
     const command = await issueOwnedPrompt(db, {
@@ -345,13 +349,13 @@ describe("Durable agent turn admission", () => {
           commandId: null,
         })
         .where(eq(agentTurns.id, first.id)),
-    ).rejects.toMatchObject({ code: "23514" });
+    ).rejects.toMatchObject({ cause: { code: "23514" } });
     // The command is protected evidence, so the run cannot be hard-deleted
     // around the retirement protocol (D6) — the cascade resumes only once the
     // command is a tombstone.
     await expect(
       db.delete(runs).where(eq(runs.id, runId)),
-    ).rejects.toMatchObject({ code: "23514" });
+    ).rejects.toMatchObject({ cause: { code: "23514" } });
     await db
       .update(executionCommands)
       .set({ retiredAt: new Date() })

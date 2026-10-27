@@ -1,11 +1,11 @@
 import type { FrameAdmission, LogWriteAdmission } from "./producer-pressure";
 import type {
   AnyMessage,
-  Client,
+  SessionNotification,
   Stream,
   RequestPermissionRequest,
   RequestPermissionResponse,
-} from "@agentclientprotocol/sdk";
+} from "@agentclientprotocol/sdk/unstable";
 import type { WriteStream } from "node:fs";
 import type { FileHandle } from "node:fs/promises";
 import type {
@@ -27,7 +27,7 @@ import { setImmediate as nextTurn } from "node:timers/promises";
 import {
   zRequestPermissionRequest,
   zSessionNotification,
-} from "../node_modules/@agentclientprotocol/sdk/dist/schema/zod.gen.js";
+} from "../node_modules/@agentclientprotocol/sdk/dist/v1/unstable/schema/zod.gen.js";
 
 import { SupervisorError, type SupervisorErrorDetails } from "./types";
 
@@ -115,7 +115,8 @@ export function retainedOutputBudget(): {
   };
 }
 
-export type BoundedAcpClient = Client & {
+export type BoundedAcpClient = {
+  sessionUpdate(params: SessionNotification): Promise<void>;
   requestPermission(
     params: RequestPermissionRequest,
     onPrepared?: () => void,
@@ -495,7 +496,7 @@ export function boundedAcpStream(input: {
   client: BoundedAcpClient;
   onLine?: (line: string) => void;
   onUpdateFrame?: (
-    params: Parameters<Client["sessionUpdate"]>[0],
+    params: SessionNotification,
     line: string,
   ) => Promise<void>;
   onFailure: (error: SupervisorError) => void;

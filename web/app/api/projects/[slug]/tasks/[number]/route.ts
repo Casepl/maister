@@ -7,7 +7,7 @@ import { z } from "zod";
 import { requireActiveSession, requireProjectAction } from "@/lib/authz";
 import { isMaisterError, MaisterError } from "@/lib/errors";
 import { executionPolicySchema } from "@/lib/runs/execution-policy";
-import { updateTask } from "@/lib/services/tasks";
+import { updateTask, type UpdateTaskInput } from "@/lib/services/tasks";
 import { resolveProjectTaskByNumber } from "@/lib/social/task-lookup";
 
 const log = pino({
@@ -108,7 +108,7 @@ function parseTaskNumber(raw: string): number | null {
 
 type RouteParams = { params: Promise<{ slug: string; number: string }> };
 
-async function handleTaskUpdate<T extends z.ZodTypeAny>(
+async function handleTaskUpdate<T extends z.ZodType<UpdateTaskInput>>(
   req: NextRequest,
   { params }: RouteParams,
   bodySchema: T,

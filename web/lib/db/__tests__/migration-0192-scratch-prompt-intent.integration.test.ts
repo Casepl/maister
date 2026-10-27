@@ -94,7 +94,9 @@ describe("S1 migration 0192: scratch prompt intent", () => {
         WHERE run_id = ${legacyRuns[1]}
       `),
     ).rejects.toMatchObject({
+      cause: {
       constraint: "scratch_runs_prompt_intent_shape_check",
+    },
     });
     await expect(
       database.db.execute(sql`
@@ -102,7 +104,9 @@ describe("S1 migration 0192: scratch prompt intent", () => {
         WHERE run_id = ${legacyRuns[1]}
       `),
     ).rejects.toMatchObject({
+      cause: {
       constraint: "scratch_runs_prompt_intent_shape_check",
+    },
     });
     await expect(
       database.db.execute(sql`
@@ -110,7 +114,9 @@ describe("S1 migration 0192: scratch prompt intent", () => {
         WHERE run_id = ${legacyRuns[1]}
       `),
     ).rejects.toMatchObject({
+      cause: {
       constraint: "scratch_runs_prompt_intent_shape_check",
+    },
     });
     await expect(
       database.db.execute(sql`
@@ -118,7 +124,9 @@ describe("S1 migration 0192: scratch prompt intent", () => {
         WHERE run_id = ${legacyRuns[1]}
       `),
     ).rejects.toMatchObject({
+      cause: {
       constraint: "scratch_runs_prompt_intent_shape_check",
+    },
     });
     await expect(
       database.db.execute(sql`
@@ -129,7 +137,9 @@ describe("S1 migration 0192: scratch prompt intent", () => {
         WHERE run_id = ${legacyRuns[1]}
       `),
     ).rejects.toMatchObject({
+      cause: {
       constraint: "scratch_runs_prompt_intent_shape_check",
+    },
     });
   });
 

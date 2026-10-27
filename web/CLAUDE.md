@@ -24,12 +24,12 @@ is template demo material to be **replaced** as we implement MAIster routes.
 
 | Layer       | Choice                                            |
 | ----------- | ------------------------------------------------- |
-| Framework   | Next.js `16.2.6` (App Router)                     |
-| React       | `19.2.6`                                          |
-| Language    | TypeScript `5.6.3`, strict, `@/*` → `./*`         |
-| UI library  | `@heroui/react` `3.0.4` + `@heroui/styles`        |
-| Styling     | Tailwind CSS `4.1.11` via `@tailwindcss/postcss`  |
-| Variants    | `tailwind-variants` `3.2.2`                       |
+| Framework   | Next.js `16.4.3` (App Router)                     |
+| React       | `19.3.1`                                          |
+| Language    | TypeScript `6.0.3`, strict, `@/*` → `./*`         |
+| UI library  | `@heroui/react` `3.2.6` + `@heroui/styles`        |
+| Styling     | Tailwind CSS `4.3.3` via `@tailwindcss/postcss`   |
+| Variants    | `tailwind-variants` `3.3.1`                       |
 | Theming     | Local script-free theme provider (default `dark`) |
 | Lint        | ESLint `9` flat config + Prettier                 |
 | Pkg manager | pnpm                                              |

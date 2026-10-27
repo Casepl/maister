@@ -28,6 +28,7 @@ import { OBJECT_CONTENT_READ_ATTEMPTS as HOST_SPAN_BUSY_ATTEMPTS } from "./runti
 
 import { executionCommands, executionEventStreams } from "@/lib/db/schema";
 import { isMaisterError } from "@/lib/errors";
+import { pgErrorOf } from "@/lib/db/pg-error";
 
 const log = pino({
   name: "prompt-reconciliation",
@@ -333,7 +334,7 @@ async function attemptHostSpan(
     // A failed fast-feed write is no more evidence than an unreadable span:
     // the canonical feed still settles the command. Surface it here, because
     // a flow wait turns any thrown error into a cause-less continuation yield.
-    const sqlState = (error as { code?: unknown } | null)?.code;
+    const sqlState = pgErrorOf(error)?.code;
     const retryable =
       typeof sqlState === "string" && RETRYABLE_WRITE_SQLSTATE.test(sqlState);
 

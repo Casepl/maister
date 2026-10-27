@@ -30,6 +30,7 @@ import {
 } from "@/lib/flows/artifact-validate";
 import { compileManifest } from "@/lib/flows/graph/compile";
 import { parseGraphOnlyFlowManifest } from "@/lib/flows/manifest-parser";
+import { isUniqueViolation } from "@/lib/db/pg-error";
 
 export type { AuthoredCapabilityKind };
 
@@ -1064,13 +1065,6 @@ function mapAuthoredCapabilityCreateError(
   return err;
 }
 
-function isUniqueViolation(err: unknown, constraint: string): boolean {
-  if (err === null || typeof err !== "object") return false;
-
-  const record = err as Record<string, unknown>;
-
-  return record.code === "23505" && record.constraint === constraint;
-}
 
 function nullableDate(value: Date | string | null): Date | null {
   return value === null ? null : dateValue(value);

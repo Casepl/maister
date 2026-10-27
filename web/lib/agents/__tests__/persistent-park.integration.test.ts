@@ -23,6 +23,7 @@ import {
   describe,
   expect,
   it,
+  type Mock,
   vi,
 } from "vitest";
 
@@ -45,7 +46,7 @@ vi.mock("@/lib/db/client", () => ({ getDb: () => db }));
 
 let consumeAgentSession: typeof ConsumeFn;
 let parkPersistentAgent: typeof ParkFn;
-let releaseSlotSpy: ReturnType<typeof vi.fn>;
+let releaseSlotSpy: Mock<(args: unknown) => Promise<{ promotedRunId: null }>>;
 
 vi.mock("@/lib/scheduler", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/scheduler")>();

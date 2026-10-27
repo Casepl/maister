@@ -59,7 +59,9 @@ import {
 import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
 
-import * as acp from "@agentclientprotocol/sdk";
+import * as acp from "@agentclientprotocol/sdk/unstable";
+
+import { serveAgent } from "./acp-agent-app.mjs";
 
 const STOP_REASON = process.env.MOCK_ACP_STOP_REASON ?? "end_turn";
 const REQUEST_PERMISSION = process.env.MOCK_ACP_REQUEST_PERMISSION === "1";
@@ -561,7 +563,7 @@ const stream = acp.ndJsonStream(
   Readable.toWeb(process.stdin),
 );
 
-new acp.AgentSideConnection(
+serveAgent(
   (connToAgent) => new MockAgent(connToAgent),
   stream,
 );

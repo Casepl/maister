@@ -13,7 +13,9 @@ import { randomUUID } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { Readable, Writable } from "node:stream";
 
-import * as acp from "@agentclientprotocol/sdk";
+import * as acp from "@agentclientprotocol/sdk/unstable";
+
+import { serveAgent } from "./acp-agent-app.mjs";
 
 const RECORD_PATH = process.env.MOCK_ACP_NEWSESSION_RECORD_PATH ?? null;
 
@@ -82,7 +84,7 @@ const stream = acp.ndJsonStream(
   Readable.toWeb(process.stdin),
 );
 
-new acp.AgentSideConnection(
+serveAgent(
   (connToAgent) => new RecordingAgent(connToAgent),
   stream,
 );

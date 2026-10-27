@@ -1,8 +1,6 @@
-import { execFile, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import {
-  chmod,
-  copyFile,
   mkdir,
   mkdtemp,
   readFile,
@@ -12,7 +10,6 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
 
 import { PostgreSqlContainer } from "@testcontainers/postgresql";
 import { getContainerRuntimeClient } from "testcontainers";
@@ -155,17 +152,7 @@ async function runRealDockerDiscovery(
 ): Promise<Readonly<{ outcome: unknown; records: readonly unknown[] }>> {
   const directory = await mkdtemp(join(tmpdir(), "maister-docker-discovery-"));
   const invocation = await createInvocation(directory);
-  const evidence = join(directory, "compose.jsonl");
-  const wrapper = join(directory, "docker");
-  const { stdout: dockerPath } = await promisify(execFile)("which", ["docker"]);
-
-  await copyFile(
-    fileURLToPath(
-      new URL("./fixtures/docker-compose-delay.mjs", import.meta.url),
-    ),
-    wrapper,
-  );
-  await chmod(wrapper, 0o700);
+  const evidence = join(directory, "discovery.jsonl");
   const child = spawn(
     process.execPath,
     [
@@ -175,6 +162,10 @@ async function runRealDockerDiscovery(
       "./scripts/_register-shim.mjs",
       "--import",
       FIXTURE_WATCHDOG,
+      "--import",
+      fileURLToPath(
+        new URL("./fixtures/docker-discovery-delay.mjs", import.meta.url),
+      ),
       fileURLToPath(
         new URL("./fixtures/docker-probe-child.ts", import.meta.url),
       ),
@@ -185,9 +176,7 @@ async function runRealDockerDiscovery(
       env: {
         ...process.env,
         ...(await fixtureProcessEnvironment(invocation)),
-        PATH: `${directory}:${process.env.PATH ?? ""}`,
         MAISTER_TEST_DOCKER_PROBE_TIMEOUT_MS: "3000",
-        MAISTER_DOCKER_CONTROL_BINARY: dockerPath.trim(),
         MAISTER_DOCKER_CONTROL_EVIDENCE: evidence,
         MAISTER_DOCKER_CONTROL_DELAY_MS: String(delayMs),
       },
@@ -221,7 +210,7 @@ async function runRealDockerDiscovery(
         invocation,
         {
           role: "fixture",
-          caseName: "docker-compose-discovery",
+          caseName: "docker-sdk-discovery",
           rootRole: "database",
           root: null,
           bootId: invocation.id,
@@ -238,7 +227,7 @@ async function runRealDockerDiscovery(
             () =>
               reject(
                 new Error(
-                  "real Compose/Postgres discovery control exceeded its deadline",
+                  "real SDK/Postgres discovery control exceeded its deadline",
                 ),
               ),
             40_000,
@@ -269,18 +258,18 @@ async function runRealDockerDiscovery(
       (await readFile(evidence, "utf8")).trim(),
     );
 
-    expect(discovery).toMatchObject({ event: "real-compose-discovery" });
+    expect(discovery).toMatchObject({ event: "real-host-discovery" });
     expect((discovery as { delayMs: number }).delayMs).toBeGreaterThanOrEqual(
       delayMs,
     );
     logInvocation(invocation, "docker-discovery-control", {
       role: "fixture",
-      caseName: "docker-compose-discovery",
+      caseName: "docker-sdk-discovery",
       pid: process.pid,
       rootRole: "database",
       outcome: "observed",
       daemonDeadlineMs: 3_000,
-      composeDelayMs: (discovery as { delayMs: number }).delayMs,
+      discoveryDelayMs: (discovery as { delayMs: number }).delayMs,
     });
   } catch (error) {
     failure = error;
@@ -316,7 +305,7 @@ async function runRealDockerDiscovery(
   if (failure) throw failure;
   logInvocation(invocation, "docker-discovery-cleanup", {
     role: "fixture",
-    caseName: "docker-compose-discovery",
+    caseName: "docker-sdk-discovery",
     pid: process.pid,
     rootRole: "database",
     outcome: "clean",
@@ -327,7 +316,7 @@ async function runRealDockerDiscovery(
 }
 
 describe("shared Testcontainers Postgres helper", () => {
-  it("separates fast daemon contact from slow real Compose discovery", async () => {
+  it("separates fast daemon contact from slow real SDK discovery", async () => {
     const result = await runRealDockerDiscovery(4_000);
 
     expect(result.outcome).toMatchObject({ name: "ready", value: 1 });
@@ -558,7 +547,7 @@ describe("shared Testcontainers Postgres helper", () => {
           migrationsFolder: invalid,
           migrationsSchema: "rollback_checks",
         }),
-      ).rejects.toMatchObject({ code: "22012" });
+      ).rejects.toMatchObject({ cause: { code: "22012" } });
       expect(
         (
           await batched.pool.query<{ relation: string | null }>(

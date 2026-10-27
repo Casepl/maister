@@ -432,16 +432,19 @@ const ATTACHMENT_ORIGIN = "package-attachment";
 // host failure yields `Unknown` for every row and the attach still commits.
 async function packageReadinessByRef(install: any): Promise<ReadinessByRef> {
   const manifest = manifestOf(install);
+  // The stored spec was normalized at install (`normalizePackageManifest`), so
+  // `env` is the slot map even though the schema type still admits `string[]`.
   const templates = manifest.spec.mcps.map(
-    (mcp: {
-      id: string;
-      env?: Record<string, string>;
-      headers?: Record<string, string>;
-      bearerTokenEnv?: string | null;
-      transport?: "stdio" | "http";
-      command?: string;
-      url?: string;
-    }) => mcp,
+    (mcp) =>
+      mcp as {
+        id: string;
+        env?: Record<string, string>;
+        headers?: Record<string, string>;
+        bearerTokenEnv?: string | null;
+        transport?: "stdio" | "http";
+        command?: string;
+        url?: string;
+      },
   );
 
   if (templates.length === 0) return new Map();

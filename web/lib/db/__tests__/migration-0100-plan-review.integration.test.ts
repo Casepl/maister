@@ -112,13 +112,13 @@ describe("migration 0100 — plan-review decision requests", () => {
 
     await expect(
       insertDecisionRequest({ ...source, decisionId: "database" }),
-    ).rejects.toThrow(/hitl_requests_decision_request_uq/);
+    ).rejects.toHaveProperty("cause.message", expect.stringMatching(/hitl_requests_decision_request_uq/));
     await expect(
       db.execute(sql`
         INSERT INTO hitl_requests (id, run_id, step_id, kind, prompt)
         VALUES (${id()}, ${source.runId}, 'review_plan', 'decision_request', 'Missing provenance')
       `),
-    ).rejects.toThrow(/hitl_requests_decision_request_shape_check/);
+    ).rejects.toHaveProperty("cause.message", expect.stringMatching(/hitl_requests_decision_request_shape_check/));
   });
 
   it("rejects decision-only provenance on a non-decision request", async () => {
@@ -135,7 +135,7 @@ describe("migration 0100 — plan-review decision requests", () => {
           ${source.parentHitlRequestId}, ${source.artifactId}, 'database'
         )
       `),
-    ).rejects.toThrow(/hitl_requests_decision_request_shape_check/);
+    ).rejects.toHaveProperty("cause.message", expect.stringMatching(/hitl_requests_decision_request_shape_check/));
   });
 
   it("creates the pending-decision index for the parent review queue", async () => {

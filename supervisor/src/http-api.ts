@@ -1,7 +1,7 @@
 import type { ImmutableObjectReference } from "../../runtime/command-evidence";
 import type { ReceiptAdmission } from "./outbox-budget";
 import type { FastifyInstance, FastifyReply } from "fastify";
-import type * as acp from "@agentclientprotocol/sdk";
+import type * as acp from "@agentclientprotocol/sdk/unstable";
 import type { Logger } from "pino";
 import type {
   AppendRuntimeEventInput,
@@ -14,6 +14,7 @@ import type {
   RegistryEntry,
 } from "./registry";
 import type { WorkspaceResolution } from "./workspace-registry";
+import type { AcpConnection } from "./acp-connection";
 
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -21,7 +22,7 @@ import { constants as fsConstants } from "node:fs";
 import { access } from "node:fs/promises";
 import { delimiter, dirname, join } from "node:path";
 
-import { z, ZodError, type ZodType, type ZodTypeDef } from "zod";
+import { z, ZodError, type ZodType } from "zod";
 
 import { safeDownloadHeaders } from "../../runtime/safe-download";
 import { objectDigest, objectEtag } from "../../runtime/object-integrity";
@@ -143,7 +144,7 @@ const InputBodySchema = z
   .object({
     kind: z.literal("permission"),
     action: z.enum(["select", "cancel"]),
-    requestId: z.string().uuid(),
+    requestId: z.string().guid(),
     optionId: z.string().min(1).optional(),
     reason: z.string().min(1).max(256).optional(),
   })
@@ -713,7 +714,7 @@ export function registerRoutes(opts: RegisterRoutesOptions): void {
   function parseCommandBody<T>(
     body: unknown,
     kind: CommandKind,
-    payloadSchema: ZodType<T, ZodTypeDef, unknown>,
+    payloadSchema: ZodType<T, unknown>,
     options: { route: string; guard?: (payload: unknown) => void },
   ): ParsedCommand<T> {
     if (!isEnvelopedBody(body)) {
@@ -1351,7 +1352,7 @@ export function registerRoutes(opts: RegisterRoutesOptions): void {
     })) as acp.ContentBlock[];
 
     assertSteerable(entry, sessionId, commandId, parentCommandId);
-    const connection = entry.connection as acp.ClientSideConnection;
+    const connection = entry.connection as AcpConnection;
     const acpSessionId = entry.acpSessionId as string;
     let release: () => void = () => undefined;
     const current = new Promise<void>((resolve) => {
@@ -1944,7 +1945,7 @@ export function registerRoutes(opts: RegisterRoutesOptions): void {
   app.get("/runtime-objects/:id", async (req, reply) => {
     const parsed = z
       .string()
-      .uuid()
+      .guid()
       .safeParse((req.params as { id?: unknown }).id);
 
     if (!parsed.success) {
@@ -1967,7 +1968,7 @@ export function registerRoutes(opts: RegisterRoutesOptions): void {
   app.put("/runtime-objects/:id/content", async (req, reply) => {
     const objectId = z
       .string()
-      .uuid()
+      .guid()
       .safeParse((req.params as { id?: unknown }).id);
 
     if (!objectId.success) {
@@ -2092,7 +2093,7 @@ export function registerRoutes(opts: RegisterRoutesOptions): void {
   app.get("/runtime-objects/:id/content", async (req, reply) => {
     const objectId = z
       .string()
-      .uuid()
+      .guid()
       .safeParse((req.params as { id?: unknown }).id);
 
     if (!objectId.success) {
@@ -2147,7 +2148,7 @@ export function registerRoutes(opts: RegisterRoutesOptions): void {
   app.delete("/runtime-objects/:id", async (req, reply) => {
     const objectId = z
       .string()
-      .uuid()
+      .guid()
       .safeParse((req.params as { id?: unknown }).id);
 
     if (!objectId.success) {
@@ -2731,7 +2732,7 @@ export function registerRoutes(opts: RegisterRoutesOptions): void {
           throw new SupervisorError("SPAWN", "child has no stdin for ACP");
         }
 
-        let connection: acp.ClientSideConnection;
+        let connection: AcpConnection;
         let acpSessionId: string;
         let capabilities: Awaited<
           ReturnType<typeof createAcpConnection>

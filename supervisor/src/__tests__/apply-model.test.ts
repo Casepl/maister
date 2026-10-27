@@ -2,7 +2,7 @@
 // session/set_config_option call on the adapter's "model" select;
 // claude is verified only (settings channel); a residual mismatch emits an
 // advisory session.update and NEVER fails the run.
-import type * as acp from "@agentclientprotocol/sdk";
+import type * as acp from "@agentclientprotocol/sdk/unstable";
 import type { SessionModelView } from "../session-models";
 import type { RunnerLaunch, SessionEvent, SessionRecord } from "../types";
 
@@ -11,6 +11,7 @@ import { EventEmitter } from "node:events";
 import pino from "pino";
 import { describe, expect, it, vi } from "vitest";
 
+import type { AcpConnection } from "../acp-connection";
 import { applyAndVerifyModel } from "../acp-client";
 import { SESSION_EVENT_CHANNEL } from "../registry";
 
@@ -71,10 +72,10 @@ function capture(emitter: EventEmitter): SessionEvent[] {
 
 function fakeConnection(
   setModel: ReturnType<typeof vi.fn>,
-): acp.ClientSideConnection {
+): AcpConnection {
   return {
     setSessionConfigOption: setModel,
-  } as unknown as acp.ClientSideConnection;
+  } as unknown as AcpConnection;
 }
 
 const state = (

@@ -224,7 +224,7 @@ describe("migration 0093 — MCP management v2 (ADR-129)", () => {
         INSERT INTO project_mcp_bindings (id, project_id, ref_id, target_kind, target_id)
         VALUES (${id()}, ${projectId}, 'github', 'project', ${id()})
       `),
-    ).rejects.toThrow(/project_mcp_bindings_project_ref_uq/);
+    ).rejects.toHaveProperty("cause.message", expect.stringMatching(/project_mcp_bindings_project_ref_uq/));
 
     // target_kind CHECK
     await expect(
@@ -232,7 +232,7 @@ describe("migration 0093 — MCP management v2 (ADR-129)", () => {
         INSERT INTO project_mcp_bindings (id, project_id, ref_id, target_kind, target_id)
         VALUES (${id()}, ${projectId}, 'other-ref', 'bogus', ${id()})
       `),
-    ).rejects.toThrow(/project_mcp_bindings_target_kind_check/);
+    ).rejects.toHaveProperty("cause.message", expect.stringMatching(/project_mcp_bindings_target_kind_check/));
 
     // cascade on project delete removes the binding
     await db.execute(sql`DELETE FROM projects WHERE id = ${projectId}`);

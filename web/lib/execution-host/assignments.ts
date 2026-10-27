@@ -17,6 +17,7 @@ import {
   type ExecutionAssignment,
 } from "@/lib/db/schema";
 import { MaisterError } from "@/lib/errors";
+import { isUniqueViolation } from "@/lib/db/pg-error";
 
 const defaultLog = pino({
   name: "execution-host",
@@ -51,14 +52,6 @@ export function isAdmissible(
   }
 }
 
-function isUniqueViolation(err: unknown): boolean {
-  return (
-    typeof err === "object" &&
-    err !== null &&
-    "code" in err &&
-    (err as { code: unknown }).code === "23505"
-  );
-}
 
 export async function getActiveAssignment(
   db: Db,

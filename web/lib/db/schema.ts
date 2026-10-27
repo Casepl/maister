@@ -6020,7 +6020,7 @@ export const artifactInstances = pgTable(
     monotonicId: integer("monotonic_id"),
     // ON DELETE SET NULL — keeps the audit row but clears the forward pointer
     supersededById: text("superseded_by_id").references(
-      (): ReturnType<typeof text> => artifactInstances.id,
+      (): AnyPgColumn => artifactInstances.id,
       { onDelete: "set null" },
     ),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
@@ -6585,7 +6585,7 @@ export const reviewComments = pgTable(
     // 1-based gate visit number — iteration tag for re-review carry.
     gateAttempt: integer("gate_attempt").notNull(),
     parentId: text("parent_id").references(
-      (): ReturnType<typeof text> => reviewComments.id,
+      (): AnyPgColumn => reviewComments.id,
       { onDelete: "cascade" },
     ),
     authorUserId: text("author_user_id").references(() => users.id, {

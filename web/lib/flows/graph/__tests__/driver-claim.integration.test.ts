@@ -243,7 +243,7 @@ describe("Flow traversal database fences", () => {
         .update(runs)
         .set({ currentStepId: "stale" })
         .where(eq(runs.id, input.runId)),
-    ).rejects.toThrow(FlowDriverClaimLost);
+    ).rejects.toHaveProperty("cause", expect.any(FlowDriverClaimLost));
     await expect(renewFlowDriverClaim(db, original)).rejects.toThrow(
       FlowDriverClaimLost,
     );

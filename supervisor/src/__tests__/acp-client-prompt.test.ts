@@ -1,8 +1,9 @@
 import type { Logger } from "pino";
 
-import * as acp from "@agentclientprotocol/sdk";
+import * as acp from "@agentclientprotocol/sdk/unstable";
 import { describe, expect, it, vi } from "vitest";
 
+import type { AcpConnection } from "../acp-connection";
 import { sendPromptOnConnection } from "../acp-client";
 
 function fakeLogger(): Logger {
@@ -16,8 +17,8 @@ function fakeLogger(): Logger {
 
 function fakeConn(
   promptSpy: ReturnType<typeof vi.fn>,
-): acp.ClientSideConnection {
-  return { prompt: promptSpy } as unknown as acp.ClientSideConnection;
+): AcpConnection {
+  return { prompt: promptSpy } as unknown as AcpConnection;
 }
 
 // T5.4 A: the supervisor forwards structured content blocks verbatim when the

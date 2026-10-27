@@ -18,6 +18,7 @@ import {
 import { defaultTransport } from "./default-transport";
 
 import { getDb } from "@/lib/db/client";
+import { isUniqueViolation } from "@/lib/db/pg-error";
 
 const defaultLog = pino({
   name: "execution-host",
@@ -126,14 +127,6 @@ export type EnsureLocalHostOptions = {
   healthTimeoutMs?: number;
 };
 
-function isUniqueViolation(err: unknown): boolean {
-  return (
-    typeof err === "object" &&
-    err !== null &&
-    "code" in err &&
-    (err as { code: unknown }).code === "23505"
-  );
-}
 
 function withinMarkWindow(hostId: string, now: Date): boolean {
   const last = state.unavailableMarkedAt.get(hostId);

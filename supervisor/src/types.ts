@@ -66,7 +66,7 @@ const adoptPathSchema = z
 
 const RuntimeObjectOutputBindingSchema = z
   .object({
-    objectId: z.string().uuid(),
+    objectId: z.string().guid(),
     kind: z.enum([
       "session_log",
       "raw_transcript",
@@ -486,8 +486,8 @@ export const StartSessionRequestSchema = z
       .max(128)
       .regex(SAFE_PATH_SEGMENT, safeSegmentMessage("resumeSessionId"))
       .optional(),
-    capabilityProfileObjectId: z.string().uuid().optional(),
-    capabilityInstructionsObjectId: z.string().uuid().optional(),
+    capabilityProfileObjectId: z.string().guid().optional(),
+    capabilityInstructionsObjectId: z.string().guid().optional(),
     outputObjects: z.array(RuntimeObjectOutputBindingSchema).max(32).optional(),
     adapterLaunch: AdapterLaunchSchema.optional(),
     mcpServers: z.array(McpServerInputSchema).max(64).optional(),
@@ -546,7 +546,7 @@ export type CommandKind = z.infer<typeof CommandKindSchema>;
 export const FenceSchema = z
   .object({
     hostKey: HOST_KEY_SCHEMA,
-    assignmentId: z.string().uuid(),
+    assignmentId: z.string().guid(),
     assignmentEpoch: z.number().int().min(1),
     runId: runIdSchema,
   })
@@ -556,7 +556,7 @@ export type CommandFence = z.infer<typeof FenceSchema>;
 
 export const CommandHeaderSchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.string().guid(),
     kind: CommandKindSchema,
     issuedAt: z.string().datetime({ offset: true }),
   })
@@ -610,7 +610,7 @@ export const RuntimeObjectRetentionClassSchema = z.enum([
   "delivery",
   "ephemeral",
 ]);
-const runtimeObjectIdSchema = z.string().uuid();
+const runtimeObjectIdSchema = z.string().guid();
 const runtimeObjectLogicalNameSchema = z
   .string()
   .min(1)
@@ -660,9 +660,9 @@ export type ReserveRuntimeObjectPayload = z.infer<
 
 export const RuntimeObjectUploadHeadersSchema = z
   .object({
-    commandId: z.string().uuid(),
+    commandId: z.string().guid(),
     commandIssuedAt: z.string().datetime({ offset: true }),
-    assignmentId: z.string().uuid(),
+    assignmentId: z.string().guid(),
     assignmentEpoch: z.coerce.number().int().min(1),
     generation: z.coerce.number().int().min(1),
     sizeBytes: z.coerce.number().int().min(0).max(26_214_400),
@@ -886,7 +886,7 @@ export type WorkspaceRecordResponse = {
 
 export const CommandReceiptSchema = z
   .object({
-    commandId: z.string().uuid(),
+    commandId: z.string().guid(),
     runId: z.string().min(1),
     kind: CommandKindSchema,
     assignmentEpoch: z.number().int().min(1),
@@ -895,7 +895,7 @@ export const CommandReceiptSchema = z
     body: z.record(z.string(), z.unknown()),
     receivedAt: z.string().datetime({ offset: true }),
     completedAt: z.string().datetime({ offset: true }).nullable().optional(),
-    eventId: z.string().uuid().nullable(),
+    eventId: z.string().guid().nullable(),
     // `accepted` + `inflight:false` = the host restarted mid-turn (turn_lost).
     inflight: z.boolean(),
   })
@@ -917,7 +917,7 @@ export const SessionCommandEventSchema = z
     type: z.literal("session.command"),
     sessionId: z.string().min(1),
     monotonicId: z.number().int().min(1),
-    commandId: z.string().uuid(),
+    commandId: z.string().guid(),
     kind: z.enum(SESSION_COMMAND_KINDS),
     phase: z.enum(["accepted", "completed"]),
     status: z.enum(["succeeded", "failed", "fenced"]).optional(),
@@ -955,7 +955,7 @@ const PromptContentBlockSchema = z.union([
   z
     .object({
       type: z.literal("runtime_object"),
-      objectId: z.string().uuid(),
+      objectId: z.string().guid(),
       name: z.string().min(1).max(255),
       mimeType: z.string().min(1).max(255).optional(),
       description: z.string().max(4_000).optional(),
@@ -991,7 +991,7 @@ export const SendPromptRequestSchema = z
 export const SteerBodySchema = z
   .object({
     contentBlocks: z.array(PromptContentBlockSchema).min(1).max(64),
-    parentCommandId: z.string().uuid(),
+    parentCommandId: z.string().guid(),
   })
   .strict();
 
@@ -1051,7 +1051,7 @@ export type SessionStatus = "live" | "exited" | "crashed";
 export const ExecutionHostIdentitySchema = z
   .object({
     hostKey: HOST_KEY_SCHEMA,
-    bootId: z.string().uuid(),
+    bootId: z.string().guid(),
     protocolVersion: z.literal(1),
   })
   .strict();

@@ -4,7 +4,9 @@ import { existsSync } from "node:fs";
 import { appendFile, open, writeFile } from "node:fs/promises";
 import { Readable, Writable } from "node:stream";
 
-import * as acp from "@agentclientprotocol/sdk";
+import * as acp from "@agentclientprotocol/sdk/unstable";
+
+import { serveAgent } from "./acp-agent-app.mjs";
 
 const args = process.argv.slice(2);
 let lines = 3;
@@ -574,7 +576,7 @@ const stream = acp.ndJsonStream(
   Readable.toWeb(process.stdin),
 );
 
-new acp.AgentSideConnection(
+serveAgent(
   (connToAgent) => new LifecycleAgent(connToAgent),
   stream,
 );

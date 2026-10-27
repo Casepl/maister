@@ -27,7 +27,7 @@ async function main(): Promise<void> {
       run: z.string().min(1).max(256),
       event: z.string().min(1).max(256),
       cursor: z.union([z.literal("null"), z.string().regex(/^\d{1,19}$/)]),
-      "error-generation": z.string().uuid(),
+      "error-generation": z.string().guid(),
     })
     .safeParse(values);
 

@@ -16,8 +16,12 @@ import {
   type Writable as NodeWritable,
 } from "node:stream";
 
-import * as acp from "@agentclientprotocol/sdk";
+import * as acp from "@agentclientprotocol/sdk/unstable";
 
+import {
+  connectAcpClient,
+  type AcpClientHandlers,
+} from "../../acp-connection";
 import { readSessionModels, type LegacyModelInfo } from "../../session-models";
 import {
   clientCapabilitiesForAdapter,
@@ -48,7 +52,7 @@ export type AcpProbeOptions = {
   teardownGraceMs?: number;
 };
 
-const noopClient: acp.Client = {
+const noopClient: AcpClientHandlers = {
   async sessionUpdate() {
     /* probe never prompts — ignore any updates */
   },
@@ -171,7 +175,7 @@ export function createAcpProbeSource(opts: AcpProbeOptions = {}): ModelSource {
           child.stdout as NodeReadable,
         ) as unknown as NodeReadableStream<Uint8Array>,
       );
-      const connection = new acp.ClientSideConnection(() => noopClient, stream);
+      const connection = connectAcpClient(stream, noopClient);
       const probe = (async () => {
         await connection.initialize({
           protocolVersion: acp.PROTOCOL_VERSION,
