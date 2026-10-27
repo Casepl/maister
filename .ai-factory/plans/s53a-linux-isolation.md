@@ -5,7 +5,7 @@ Current continuation branch: `codex/s53a-qualification`; retain this explicit pl
 Created: 2026-10-02.
 Refined through `aif-improve`: 2026-10-20 on working baseline `8237993223fa5a7c3aafe9db42d9438612990938`; implementation, verification and local phase commits authorized. Original planning/qualification sources remain separately attributed.
 Planning source: `f43ac1570380d2be19f7c59a70cd993f24ace440`.
-Status: **A1–A13, C3/G-LINUX and C4a are complete. Native Ubuntu Linux55 and Darwin50, separate preflights, bounded-output26, publish10, R20 and full applicable regressions pass on both exact Nodes. A13 retains the accepted macOS 19/31 hosting recipe; A14 is not applicable and Linux hosting remains unqualified. A15 local disposition follows. Parent stabilization stays 43/45; S5.3/S5.4/C11 remain open. No push.**
+Status: **S5.3a local qualification is complete: A1–A13/A15 and C3/G-LINUX/C4a/C5. A14 is not applicable under the explicit macOS-retention decision. Linux55/Darwin50, separate preflights, bounded-output26, publish10, R20 and complete applicable regressions pass on exact Node 24.15.0 and 24.19.0. Existing macOS 19/31 CI is unchanged; Linux hosting remains unqualified. Parent stabilization remains 43/45, with S5.3/S5.4/C11 open for their remaining deliverables. Local commits only; no push.**
 
 Implementation authorized 2026-10-03 through `aif-implement`: execute the whole plan, commit by qualified phases and mark tasks only after their acceptance evidence passes. Initial implementation HEAD is the planning source. The current owner instruction authorizes local phase commits and explicitly forbids push; the earlier completed handoff authorization is historical.
 
@@ -330,7 +330,7 @@ Implementation follows repository conventions: strict explicit types, immutable 
 - [x] **A13 — Decide hosting from qualified Linux and accepted macOS evidence.** Owner **Design**. Depends: A12. Files: this plan, `docs/system-analytics/test-infrastructure.md`, parent S5.3a and R9 contract; allocated ADR metadata only if the actual decision requires it. Default to retaining the accepted two-part macOS recipe. Compare complete Linux local evidence and its prerequisites with the accepted macOS reports; record capability/maintenance/budget trade-offs, not an assumed speedup. If retention is selected, record A14 as not applicable by this decision (not implemented) and keep Linux hosting unqualified. If adoption is selected, apply D5's prospective contract amendment before A14. **Acceptance:** one explicit evidence-backed decision; all active contracts agree; S5.2 stays accepted at its original SHA, parent43/45 and S5.3/S5.4 remain open; no Linux hosted claim from local proof. **Logging:** INFO decision/source/evidence; ERROR contradictory status. Commit C4a before any CI code.
 
 - [ ] **A14 — Conditionally migrate qualified isolation hosting to standard Linux.** Owner **CI**. Depends: A13 explicitly selecting adoption. If A13 retains macOS, this task is not applicable and no recipe/finalizer implementation is required; preserve that disposition without an implementation checkbox. Files: `.github/workflows/ci.yml`, Linux setup script, new `scripts/finalize-isolation-linux-runtime.mjs`, invocation-reference publication in `scripts/run-stage-ab-tests.mjs`, existing cleanup suite's O2-runner control and `scripts/isolation-ci-workflow.test.mjs`; preserve O1/O1-default semantics and the Darwin provisioning script; adapt cleanup-shell controls by the explicitly configured workflow platform so a rollback is testable. RED existing workflow/script controls for wrong runtime/manifest/budget or borrowed cleanup, actual cleanup-shell timing/upload/cleanup failure cuts, plus real forced-runner-death finalization through O2-runner; GREEN standard ubuntu-24.04 setup and GNU timeout using unchanged formula, D5 reference/runner-death validation and reused `releaseInvocation`, safe shared-Docker finalization and actual artifact upload ordering. Validate the actual setup/timeout/finalization recipe on local Ubuntu 24.04 amd64 without dispatching hosted runs. After the last edit, repeat complete Linux55 plus independent preflight at both exact Nodes, Darwin50/preflight and full applicable phase gates; publish-reference crash windows, live/reused/unreadable runner refusal, replaced ledger/reference refusal and idempotent re-finalization must pass. **Acceptance:** both Node versions/four web legs/two runtime-supervisor legs remain on push; serial55 inventory + independent preflight;60-minute job/B unchanged; no shared daemon stop/prune; original failure preserved and survivors fail even after containment; full applicable suites/static/spec gates GREEN. **Logging:** bounded provisioning DEBUG, INFO capability/version/phase/timing/upload/cleanup, ERROR missing report/capability. No `set -x` over environment credentials.
-- [ ] **A15 — Commit final driver/hosting disposition and verify published changes.** Owner **Qualification**; hosting adoption remains owner-pushed. This continuation authorizes local commits only; the earlier handoff publication permission is historical. Depends: A12/A13 and, only for adoption, A14 with C4 validation. Files: this plan and existing parent/R9/canonical status fields. Reconcile every LNX requirement with the final source and reports; commit locally by the qualified checkpoints. For retention, record complete local driver qualification and the accepted macOS hosting decision separately; Linux hosting remains unqualified, and no Linux workflow is published. For adoption, present the final candidate to the owner and stop for owner push, then independently verify exact-SHA Linux55/preflight, all four web/two supervisor reports, remaining mandatory jobs, capabilities, timing/headroom and zero leaks under D5. Any subsequent pushed code requires its own applicable regression evidence; the old CI-R9d receipts do not qualify it. **Acceptance:** explicit driver qualification and hosting disposition with no borrowed source/platform evidence; S5.2's accepted historical checkpoint is preserved, S5.3/S5.4/C11 stay open for their other deliverables. Missing/failed Linux hosted evidence never becomes acceptance. **Logging:** INFO source/run/artifact/validator/headroom/decision; ERROR mismatch/incomplete/failure. No unsolicited publication, shared-branch merge, manual dispatch or rerun; the earlier Mac handoff push is historical and grants no current publication authority.
+- [x] **A15 — Record final local driver and hosting disposition.** Owner **Qualification**; hosting adoption remains owner-pushed. This continuation authorizes local commits only; the earlier handoff publication permission is historical. Depends: A12/A13 and, only for adoption, A14 with C4 validation. Files: this plan and existing parent/R9/canonical status fields. Reconcile every LNX requirement with the final source and reports; commit locally by the qualified checkpoints. For retention, record complete local driver qualification and the accepted macOS hosting decision separately; Linux hosting remains unqualified, and no Linux workflow is published. For adoption, present the final candidate to the owner and stop for owner push, then independently verify exact-SHA Linux55/preflight, all four web/two supervisor reports, remaining mandatory jobs, capabilities, timing/headroom and zero leaks under D5. Any subsequent pushed code requires its own applicable regression evidence; the old CI-R9d receipts do not qualify it. **Acceptance:** explicit driver qualification and hosting disposition with no borrowed source/platform evidence; S5.2's accepted historical checkpoint is preserved, S5.3/S5.4/C11 stay open for their other deliverables. Missing/failed Linux hosted evidence never becomes acceptance. **Logging:** INFO source/run/artifact/validator/headroom/decision; ERROR mismatch/incomplete/failure. No unsolicited publication, shared-branch merge, manual dispatch or rerun; the earlier Mac handoff push is historical and grants no current publication authority.
 
 **Phase-3 exit:** complete G-LINUX and A12 audit, followed by either recorded
 retention of accepted macOS hosting (Linux hosting still unqualified), or
@@ -350,7 +350,7 @@ The qualification keeps Linux55 and Darwin50, separate preflight, serial
 isolation, fresh production builds, complete titles and zero leaks. R20 keeps
 its original 360 rows/s threshold, default budgets, duration and durability.
 Host load and power are diagnostic context under the owner's explicit
-amendments. A12/A13 are complete; A15 records the local disposition. Hosting continues
+amendments. A12/A13 and A15 are complete. Hosting continues
 on the accepted macOS 19/31 recipe, with Linux hosting unqualified.
 
 ## Final native qualification
@@ -552,6 +552,24 @@ commits only: no push, PR, shared-branch merge or hosted dispatch.
 Qualified C3 implementation commit: `34a9ebd9bf061301ad149eb86e9b471e81bf7df4`. Its non-Markdown tree matches
 the final qualified source hash above; later disposition commits change
 documentation only.
+
+## Final local disposition
+
+The qualified implementation is committed locally as `34a9ebd9bf061301ad149eb86e9b471e81bf7df4` (C3).
+The qualified driver audit and macOS-retention decision are committed as
+`7bd087e98f81cfc6d88932fdada7cd98cbc77603` (C4a). C5 records this disposition without changing executable source.
+The final non-Markdown source SHA256 is
+`fec95696e8212eb616c332fdf4f8ce1f9145fc517375ba346892ed70ae6172d1`.
+The original runtime/proxy/owning-test source identities and reports remain
+explicit in the final native qualification section; documentation-only
+commits are not relabelled as new test executions.
+
+A11–A13 and G-LINUX are accepted. A14 is not applicable, not implemented.
+A15 is complete on its retention branch: local driver qualification and
+historical accepted macOS hosting are recorded separately. No Linux hosted
+run, recipe migration or publication is claimed. No push, PR, shared-branch
+merge or hosted dispatch was performed. Parent S5.3/S5.4/C11 remain open;
+this closeout does not change the parent's 43/45 completion count.
 
 ## Execution evidence
 
