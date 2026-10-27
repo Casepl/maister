@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   openHostState,
@@ -80,6 +80,39 @@ function admitNewWork(state: HostState): void {
 }
 
 describe("AT-02 physical runtime storage", () => {
+  it("measures file-backed admission without reading diagnostic page statistics", () => {
+    const directory = mkdtempSync(join(tmpdir(), "maister-physical-reads-"));
+    const file = join(directory, "state.sqlite");
+    const db = new DatabaseSync(file);
+
+    try {
+      db.exec(
+        "PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; CREATE TABLE samples (value INTEGER)",
+      );
+      const storage = createSqliteStorage({
+        db,
+        file,
+        limits: DEFAULT_RUNTIME_LIMITS,
+      });
+      const prepare = vi.spyOn(db, "prepare");
+
+      expect(storage.canAdmit(0)).toBe(true);
+      storage.write(() => db.exec("INSERT INTO samples VALUES (1)"));
+      const queries = prepare.mock.calls.map(([sql]) => sql);
+
+      prepare.mockRestore();
+      expect(storage.snapshot().pageCount).toBeGreaterThan(0);
+      expect(db.prepare("SELECT value FROM samples").get()).toEqual({
+        value: 1,
+      });
+      expect(queries).toEqual([]);
+    } finally {
+      vi.restoreAllMocks();
+      db.close();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
   it("preserves default-scale retained capacity and terminal capacity across restart", () => {
     const stateDir = mkdtempSync(join(tmpdir(), "maister-default-capacity-"));
     let state = openHostState({ stateDir });
@@ -247,8 +280,27 @@ describe("AT-02 physical runtime storage", () => {
     });
     const state = openHostState({ stateDir, limits });
     const observer = new DatabaseSync(join(stateDir, "state.sqlite"));
+    const walletId = randomUUID();
 
     try {
+      state.reserveProducerReceipt(
+        {
+          commandId: walletId,
+          runId: "physical-frame",
+          kind: "session.create",
+          assignmentId: randomUUID(),
+          epoch: 1,
+          hostSessionId: null,
+          requestDigest: "physical-frame",
+          eventId: null,
+          phase: "accepted",
+          httpStatus: 202,
+          body: {},
+          receivedAt: new Date().toISOString(),
+          completedAt: null,
+        },
+        0,
+      );
       observer.exec("PRAGMA wal_checkpoint(TRUNCATE)");
       observer.exec("BEGIN");
       observer.prepare("SELECT COUNT(*) FROM runtime_event_outbox").get();
@@ -287,9 +339,14 @@ describe("AT-02 physical runtime storage", () => {
         limits.eventSoftBytes,
       );
       expect(() => admitNewWork(state)).toThrow(/physical/);
+      expect(state.tryReserveRuntimeFrame(walletId, 128)).toBeNull();
       observer.exec("ROLLBACK");
       observer.exec("PRAGMA wal_checkpoint(TRUNCATE)");
       expect(() => admitNewWork(state)).not.toThrow();
+      const frame = state.tryReserveRuntimeFrame(walletId, 128);
+
+      expect(frame).not.toBeNull();
+      state.releaseRuntimeFrame(frame!);
     } finally {
       if (observer.isTransaction) observer.exec("ROLLBACK");
       observer.close();

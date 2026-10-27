@@ -1441,6 +1441,11 @@ export type PermissionOptionDescriptor = {
   name?: string;
 };
 
+export type SessionTextFrameEvents = readonly [
+  Extract<SessionEvent, { type: "session.line" }>,
+  Extract<SessionEvent, { type: "session.update" }>,
+];
+
 export type SessionEvent =
   | {
       type: "session.content";

@@ -31,12 +31,15 @@ const lookupWindowStartedAt = performance.now();
 let lookupTiming = { checks: 0, lookupMs: 0, maxLookupMs: 0 };
 
 async function terminateOwnedGroup(reason) {
-  const members = (await readProcessSnapshot(invocation)).filter((entry) => entry.pgid === self.pgid && !entry.zombie);
+  try {
+    const members = (await readProcessSnapshot(invocation)).filter((entry) => entry.pgid === self.pgid && !entry.zombie);
 
-  writeSync(2, `${JSON.stringify({ invocationId: invocation.id, event: "fixture-parent-death", role: "fixture", caseName: process.env.MAISTER_TEST_CASE_NAME ?? "fixture", pid: self.pid, pgid: self.pgid, runtime: process.version, rootRole: "inherited", bootId: String(self.started), outcome: "killed", reason })}\n`);
-  if (self.pgid > 1 && members.every((entry) => entry.owned && entry.inspected)) process.kill(-self.pgid, "SIGKILL");
-  // A mixed group cannot become authority to kill an unrelated sibling.
-  process.kill(self.pid, "SIGKILL");
+    writeSync(2, `${JSON.stringify({ invocationId: invocation.id, event: "fixture-parent-death", role: "fixture", caseName: process.env.MAISTER_TEST_CASE_NAME ?? "fixture", pid: self.pid, pgid: self.pgid, runtime: process.version, rootRole: "inherited", bootId: String(self.started), outcome: "killed", reason })}\n`);
+    if (self.pgid > 1 && members.every((entry) => entry.owned && entry.inspected)) process.kill(-self.pgid, "SIGKILL");
+  } finally {
+    // Unknown or mixed membership never authorizes a group signal; self still stops.
+    process.kill(self.pid, "SIGKILL");
+  }
 }
 
 async function checkOwners() {
@@ -68,8 +71,8 @@ async function checkOwners() {
       cause = cause.cause;
     }
     writeSync(2, `${JSON.stringify({ invocationId: invocation.id, event: "fixture-watchdog-error", pid: process.pid, outcome: "failed", owner, parent: expectedParent, message: (error instanceof Error ? error.message : String(error)).slice(-4096), causes })}\n`);
-    // Refuse to keep spending after the ownership mechanism itself failed.
-    process.kill(process.pid, "SIGKILL");
+    // A failed owner read does not imply that the owned group is uninspectable.
+    await terminateOwnedGroup("owner inspection failed");
   } finally {
     checking = false;
   }

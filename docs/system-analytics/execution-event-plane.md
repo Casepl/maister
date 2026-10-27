@@ -10,13 +10,57 @@ on a supervisor runtime filesystem. The manager owns canonical redacted event
 metadata; the host owns ACP processes, private SQLite outbox state, and private
 files.
 
-SQLite statement reuse is being qualified for the host connection. The bounded
+SQLite statement reuse is implemented for the host connection. The bounded
 cache owns prepared SQL only, never query results; bindings and reads remain
 fresh, active iterators remain independent, and closing the connection releases
 its cache. WAL with `synchronous=FULL`, existing transaction boundaries and
 publication only after commit remain mandatory. The owning durable outbox
 control must observe preparation reuse and preserve replay across reopening;
 R20 remains the unchanged end-to-end throughput and lag gate.
+
+Parser-frame reservations use connection-local SQLite TEMP tables. These reservations already expire at boot;
+they are not command receipts or recovery promises. Their row/byte and file
+credits still count in every admission decision, and spending them rolls back
+with a failed event/file transaction. Persistent file reservations, producer
+wallets, outbox rows and ACKs retain WAL/FULL commits before observation. Opening
+an older state first audits and retires its stale durable frame credits. Live
+TEMP credits disappear on process death; committed files/events remain charged
+by their durable rows. No asynchronous transaction or deferred event commit is
+introduced. Real SQLite controls must prove unchanged persistent data during
+frame-only reserve/release, live quota accounting, rollback and durable replay.
+
+Live producer log/spool byte counts use a connection-local progress
+table: all reads and free-space admission include its exact current values.
+Only these recoverable counters are transient; log capacity is committed in
+64 KiB blocks before capture, and the fixed spool reservation remains durable.
+At most one unused log block per producer is charged. Sealing commits exact
+bytes and releases the unused block; boot inventories the actual retained files
+before admission if capture was interrupted. Object upload accounting stays
+durable. Controls must reach unchanged main-data versions during already-funded
+capture, exact live budgets, restart inventory and final sealed accounting.
+Updating captured byte counts frees no charged capacity and must not wake
+capacity waiters. The single TEMP update remains atomic and retains the
+storage-failure latch. Growth and durable writes retain physical headroom
+checks against the database, WAL, SHM and filesystem free space. Admission
+reuses a measurement only within the same synchronous operation; later
+operations measure again. Page and freelist counts remain available in
+diagnostic snapshots. Quota release, ACK and prune still wake waiters.
+The hot outbox admission snapshot reads all three budget partitions, active
+frame credits, producer/teardown credits and the pressure bit in one SQLite
+statement. It returns fresh values from one read boundary, with no result
+cache; a real persisted-budget control bounds each snapshot to one native read.
+Publisher diagnostics read queue depth only when DEBUG logging is enabled.
+Frame-funded events do not re-read pressure to select a funding branch that
+cannot use control credits; terminal and completion funding rules are unchanged.
+
+A validated ordinary text-update frame may commit its raw line and semantic
+update as one bounded, synchronous WAL/FULL transaction. The two rows retain
+raw-before-update order and become observable only after their shared commit.
+A second-row failure rolls back both rows, sequence allocation and frame-credit
+spends. The pair uses the existing decoder/frame reservation and physical write
+headroom. Usage-bearing, permission, tool and invalid-frame paths keep individual
+publication. Required content objects remain durably sealed before the pair;
+no transaction spans an asynchronous callback.
 
 ## Domain entities
 
@@ -312,7 +356,9 @@ permit through asynchronous guard evaluation; only the bounded RPC identity
 remains pending across HITL. IDs are at most 128 UTF-8 bytes, with at most 32
 pending permission replies per producer.
 
-`boundedAcpStream` requires the object-mode output of `captureAcpFrames`, with
+`captureAcpFrames` owns bounded byte capture and UTF-8 validation; protocol
+dispatch assigns monotonic IDs and publishes raw/semantic events after durable
+commit. `boundedAcpStream` requires its object-mode output, with
 exactly one complete newline-terminated ACP frame per iterator value; a byte-mode
 source is refused at construction with `ACP_PROTOCOL`, reason
 `required_output_incomplete` and `outputFailure=producer_frame_invalid`.
@@ -486,7 +532,7 @@ prompt. A producer-permission failure retains its structured details instead
 of becoming a generic transport rejection; fence, pressure and intentional
 shutdown decisions keep their existing precedence (see [ADR-177](../decisions/adr-177.md)).
 
-SQLite admission measures DB/WAL/SHM size, page/free-page counters and disk free space. Pending object copies, logs, spools and producer/frame promises are durably charged before host-managed writes; startup inventories retained files before admission. Native storage failures latch unavailable readiness and preserve evidence. Host, pressure/restart, pinned-reader, maximum-output and 20-producer memory tests exercise these paths. Exact defaults and physical headroom arithmetic live in [configuration](../configuration.md#ab-stabilization-resource-budget-implemented). These are application admission bounds; arbitrary same-UID agent writes are not an operating-system disk quota. Immutable sealing and retirement of agent output writers remain S3 work.
+SQLite admission measures DB/WAL/SHM size and disk free space; health snapshots also expose page/free-page counters. A synchronous frame reservation uses one fresh physical measurement for both admission and its bounded write, including all promised bytes and unchanged write headroom; the file-credit allocator uses the same free-space observation. A separate post-reservation observation refreshes pressure. No measurement survives the operation or crosses an asynchronous boundary. Pending object copies, logs, spools and producer wallets are durably charged before host-managed writes. Boot-scoped frame promises count transactionally in the live quota; spending one on a retained file commits that file's reservation before writing its bytes. Startup inventories retained files before admission. Native storage failures latch unavailable readiness and preserve evidence. Host, pressure/restart, pinned-reader, maximum-output and 20-producer memory tests exercise these paths. Exact defaults and physical headroom arithmetic live in [configuration](../configuration.md#ab-stabilization-resource-budget-implemented). These are application admission bounds; arbitrary same-UID agent writes are not an operating-system disk quota. Immutable sealing and retirement of agent output writers remain S3 work.
 
 ## Durable bounded projection and reconciliation workers
 
@@ -560,7 +606,7 @@ identifiers; it does not skip the event or advance the cursor.
 1. Ingest commits canonical rows and contiguous promotion in Postgres. In the same transaction, seed/wake consumer rows for **every distinct run promoted**, including runs released by filling another run's stream gap. ACK follows this commit, regardless of projector success. Duplicate ingest may hint; hints carry no authority.
 2. Boot/restart performs bounded keyset backfill of missing registered consumer/run rows from canonical events. Persist the scan cursor. Cursor initialization commits separately from first application; no unbounded all-runs boot transaction.
 3. Candidate predicate: registered consumer, nonpoison state, due `next_retry_at`, no live claim, and canonical accepted events beyond cursor. Order by `last_served_at NULLS FIRST`, due/creation time and stable run/consumer key. Claim with `FOR UPDATE SKIP LOCKED`; unique token and DB-clock expiry. Claim **at processing time**, up to two simultaneous workers; do not preclaim eight items then spend their leases waiting in a local queue.
-4. One quantum is ≤100 events, ≤1 MiB aggregate payload (including hydrated reference content) and ~1 s soft work time; allow one legal maximum-envelope event so byte limit cannot starve it. Each DB apply transaction has a 5 s hard budget enforced by a monotonic client deadline, remaining-budget per-query statement/lock timeouts and explicit in-flight query cancellation. PostgreSQL 16 statement_timeout alone is not a transaction deadline. On deadline/shutdown await rollback before reusing the connection; if cancellation/rollback cannot be confirmed, discard that connection, retain the durable claim and surface service failure. Set a bounded idle-in-transaction timeout as a server backstop. Never commit after the deadline; token/cursor fencing remains mandatory. Test multiple slow statements and a blocked statement, not only one fast apply. Apply pure/domain DB writes and cursor under the same transaction and matching claim token/cursor. No HTTP, file hashing, prompt wait or Git inside that transaction.
+4. One quantum is ≤100 events, ≤1 MiB aggregate payload (including hydrated reference content) and ~1 s soft work time; allow one legal maximum-envelope event so byte limit cannot starve it. Each DB apply transaction has a 5 s hard budget enforced by a monotonic client deadline, remaining-budget per-query statement/lock timeouts and explicit in-flight query cancellation. Immutable Drizzle table/relation metadata is compiled once per module; each transaction still creates its own session over its own guarded connection, with fresh query results and independent deadline/cancellation state. SQL-only transactions allocate no relational query registry. The first relational read lazily constructs a transaction-local registry over that same guarded session; nested savepoints receive independent registries and retain read-your-writes and rollback semantics. PostgreSQL 16 statement_timeout alone is not a transaction deadline. On deadline/shutdown await rollback before reusing the connection; if cancellation/rollback cannot be confirmed, discard that connection, retain the durable claim and surface service failure. Set a bounded idle-in-transaction timeout as a server backstop. Never commit after the deadline; token/cursor fencing remains mandatory. Test multiple slow statements and a blocked statement, not only one fast apply. Apply pure/domain DB writes and cursor under the same transaction and matching claim token/cursor. No HTTP, file hashing, prompt wait or Git inside that transaction.
 5. Commit claim first. Inside apply use an event/batch savepoint; rollback failing effects without losing the outer consumer record. Commit original sanitized error, event, attempts and retry/poison fields. If failure recording is separate, CAS exact claim generation and starting cursor, and require failure sequence > current cursor; stale recorder is a no-op.
 6. One quantum per pair then release claim/update `last_served_at`, yielding to other due pairs. Backlog remains due immediately. A 30 s lease exceeds the 5 s transaction budget; no external work runs under it. If an owner sub-operation needs longer, renew its separate 30 s lease at 10 s and fence every persistence boundary.
 7. Use postcommit wake hints plus an abortable due timer (at most 1 s idle latency, or next retry deadline) and durable candidate selection. This schedules already committed DB work; it does not poll the runtime filesystem or infer state from a timer. A completed SSE stream or a new event is never required.
@@ -734,7 +780,12 @@ and the call fails `ACP_PROTOCOL`, as before. Inside one transaction, in order:
    per envelope for a non-active match.
 6. Insert every storable new envelope as `pending_gap` in one multi-row
    `INSERT … ON CONFLICT DO NOTHING RETURNING id`; the returned ids must equal
-   the classified-new set, and a difference is a `CONFLICT` invariant.
+   the classified-new set, and a difference is a `CONFLICT` invariant. One JSON
+   recordset parameter keeps SQL parameter and statement construction independent
+   of batch size. JSON serialization remains linear: each event creates one
+   record through direct column assignment without temporary key/value arrays.
+   PostgreSQL applies the existing table's row types and constraints; exact
+   decimal strings preserve bigint positions, and omitted columns retain defaults.
 7. Walk the contiguous prefix: each read covers the sequence window
    `[expected, expected + 500)`. `host_sequence` is unique per stream, so a
    window holds at most 500 rows whatever plan PostgreSQL chooses — a `LIMIT`
@@ -849,8 +900,9 @@ token.
 | `outbox-retained-pressure-prune-stalled` — `retainedCount`, `unacknowledgedCount`, `acknowledgedThrough` | WARN, once per retained-pressure episode | host |
 | `producer-output-paused` — `sessionId`, `runId`, `outboxRefusesFrames`; `producer-output-resumed` — `sessionId`, `runId`, `pausedMs` | INFO, once per pause edge (ADR-184 D6, Implemented) | host |
 
-**Load control (R20, opt-in, not in any lane).** Run it alone on a quiet,
-mains-powered host (check `pmset -g log` for sleep and `uptime` for load first):
+**Load control (R20, opt-in, not in any lane).** Run it alone, keeping the host
+awake throughout. Record power state and host load as diagnostic context;
+neither imposes an admission threshold. Sleep interrupts qualification:
 
 ```bash
 MAISTER_EVENT_PLANE_LOAD=1 pnpm --filter maister-web exec vitest run --project integration lib/execution-host/__tests__/event-plane-load.integration.test.ts

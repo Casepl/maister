@@ -391,10 +391,11 @@ describe("shared Testcontainers Postgres helper", () => {
       name: string;
       setting: string;
     }>(
-      "SELECT name, setting FROM pg_settings WHERE name IN ('fsync', 'full_page_writes', 'max_wal_size', 'min_wal_size', 'synchronous_commit') ORDER BY name",
+      "SELECT name, setting FROM pg_settings WHERE name IN ('autovacuum_naptime', 'fsync', 'full_page_writes', 'max_wal_size', 'min_wal_size', 'synchronous_commit') ORDER BY name",
     );
 
     expect(durability.rows).toEqual([
+      { name: "autovacuum_naptime", setting: "1" },
       { name: "fsync", setting: "on" },
       { name: "full_page_writes", setting: "on" },
       { name: "max_wal_size", setting: "64" },

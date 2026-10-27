@@ -157,6 +157,22 @@ ALTER TABLE runtime_event_pressure ADD COLUMN episodes INTEGER NOT NULL DEFAULT 
   CHECK (episodes >= 0);
 `;
 
+// Parser credits belong to this connection only; boot never resumes a frame.
+export const ACTIVE_FRAME_SCHEMA = `
+CREATE TEMP TABLE active_runtime_event_frames (
+  reservation_id TEXT PRIMARY KEY,
+  boot_id TEXT NOT NULL,
+  wallet_id TEXT NOT NULL,
+  remaining_rows INTEGER NOT NULL CHECK (remaining_rows >= 0),
+  remaining_bytes INTEGER NOT NULL CHECK (remaining_bytes >= 0)
+);
+CREATE TEMP TABLE active_runtime_frame_file_credits (
+  reservation_id TEXT PRIMARY KEY REFERENCES active_runtime_event_frames (reservation_id) ON DELETE CASCADE,
+  wallet_id TEXT NOT NULL,
+  remaining_bytes INTEGER NOT NULL CHECK (remaining_bytes >= 0)
+);
+`;
+
 export type OutboxPressureEpisode = Readonly<{
   pressured: boolean;
   sinceMs: number | null;
@@ -209,32 +225,64 @@ function usage(db: DatabaseSync, partition: EventPartition): PartitionUsage {
   };
 }
 
+type BudgetSnapshotDbRow = Record<
+  `${EventPartition}_${keyof UsageDbRow}`,
+  number
+> & {
+  frame_rows: number;
+  frame_bytes: number;
+  control_rows: number;
+  pressured: number;
+};
+
+function snapshotPartition(
+  row: BudgetSnapshotDbRow,
+  partition: EventPartition,
+): PartitionUsage {
+  return {
+    retainedCount: row[`${partition}_retained_count`],
+    retainedBytes: row[`${partition}_retained_bytes`],
+    unacknowledgedCount: row[`${partition}_unacknowledged_count`],
+    unacknowledgedBytes: row[`${partition}_unacknowledged_bytes`],
+  };
+}
+
 export function outboxBudgetSnapshot(db: DatabaseSync): OutboxBudgetSnapshot {
-  const frames = db
-    .prepare(
-      "SELECT COALESCE(SUM(remaining_rows), 0) AS rows, COALESCE(SUM(remaining_bytes), 0) AS bytes FROM runtime_event_frames",
-    )
-    .get() as { rows: number; bytes: number };
-  const reserved = db
+  const row = db
     .prepare(
       `SELECT
+    r.retained_count AS regular_retained_count, r.retained_bytes AS regular_retained_bytes,
+    r.unacknowledged_count AS regular_unacknowledged_count, r.unacknowledged_bytes AS regular_unacknowledged_bytes,
+    c.retained_count AS control_retained_count, c.retained_bytes AS control_retained_bytes,
+    c.unacknowledged_count AS control_unacknowledged_count, c.unacknowledged_bytes AS control_unacknowledged_bytes,
+    e.retained_count AS emergency_retained_count, e.retained_bytes AS emergency_retained_bytes,
+    e.unacknowledged_count AS emergency_unacknowledged_count, e.unacknowledged_bytes AS emergency_unacknowledged_bytes,
+    (SELECT COALESCE(SUM(remaining_rows), 0) FROM active_runtime_event_frames) AS frame_rows,
+    (SELECT COALESCE(SUM(remaining_bytes), 0) FROM active_runtime_event_frames) AS frame_bytes,
     (SELECT COALESCE(SUM(remaining_rows), 0) FROM runtime_event_wallets WHERE closed = 0) +
-    (SELECT COALESCE(SUM(remaining_rows), 0) FROM runtime_event_teardowns WHERE completed = 0) AS rows`,
+      (SELECT COALESCE(SUM(remaining_rows), 0) FROM runtime_event_teardowns WHERE completed = 0) AS control_rows,
+    p.pressured
+    FROM runtime_event_budget r, runtime_event_budget c, runtime_event_budget e, runtime_event_pressure p
+    WHERE r.partition = 'regular' AND c.partition = 'control' AND e.partition = 'emergency' AND p.id = 1
+  `,
     )
-    .get() as { rows: number };
-  const pressure = db
-    .prepare("SELECT pressured FROM runtime_event_pressure WHERE id = 1")
-    .get() as { pressured: number };
+    .get() as BudgetSnapshotDbRow | undefined;
+
+  if (!row)
+    throw new HostRuntimeEventError(
+      "stream_corrupt",
+      "runtime event admission budget is incomplete",
+    );
 
   return {
-    regular: usage(db, "regular"),
-    control: usage(db, "control"),
-    emergency: usage(db, "emergency"),
-    reservedControlRows: reserved.rows,
-    reservedControlBytes: reserved.rows * CONTROL_EVENT_MAX_BYTES,
-    reservedRegularRows: frames.rows,
-    reservedRegularBytes: frames.bytes,
-    pressured: pressure.pressured === 1,
+    regular: snapshotPartition(row, "regular"),
+    control: snapshotPartition(row, "control"),
+    emergency: snapshotPartition(row, "emergency"),
+    reservedControlRows: row.control_rows,
+    reservedControlBytes: row.control_rows * CONTROL_EVENT_MAX_BYTES,
+    reservedRegularRows: row.frame_rows,
+    reservedRegularBytes: row.frame_bytes,
+    pressured: row.pressured === 1,
   };
 }
 
@@ -256,11 +304,11 @@ export function retainedAtThreshold(
   return used.retainedBytes >= bytes || used.retainedCount >= rows;
 }
 
-export function refreshOutboxPressure(
+export function refreshOutboxBudget(
   db: DatabaseSync,
   limits: RuntimeLimits,
   nowMs: number,
-): boolean {
+): OutboxBudgetSnapshot {
   const snapshot = outboxBudgetSnapshot(db);
   const regular = reservedRegularUsage(snapshot);
   const pressured = snapshot.pressured
@@ -292,7 +340,7 @@ export function refreshOutboxPressure(
     }
   }
 
-  return pressured;
+  return { ...snapshot, pressured };
 }
 
 export function reservedRegularUsage(
@@ -326,11 +374,9 @@ export function reserveFrameCapacity(
     nowMs: number;
   },
 ): boolean {
-  if (
-    refreshOutboxPressure(db, limits, input.nowMs) ||
-    !frameFitsUnderHard(db, limits)
-  )
-    return false;
+  const snapshot = refreshOutboxBudget(db, limits, input.nowMs);
+
+  if (snapshot.pressured || !frameFitsUnderHard(snapshot, limits)) return false;
   if (
     !db
       .prepare(
@@ -343,7 +389,9 @@ export function reserveFrameCapacity(
       "an output frame requires its accepted producer wallet",
     );
   }
-  db.prepare("INSERT INTO runtime_event_frames VALUES (?, ?, ?, ?, ?)").run(
+  db.prepare(
+    "INSERT INTO active_runtime_event_frames VALUES (?, ?, ?, ?, ?)",
+  ).run(
     input.reservationId,
     input.bootId,
     input.walletId,
@@ -354,8 +402,11 @@ export function reserveFrameCapacity(
   return true;
 }
 
-function frameFitsUnderHard(db: DatabaseSync, limits: RuntimeLimits): boolean {
-  const used = reservedRegularUsage(outboxBudgetSnapshot(db));
+function frameFitsUnderHard(
+  snapshot: OutboxBudgetSnapshot,
+  limits: RuntimeLimits,
+): boolean {
+  const used = reservedRegularUsage(snapshot);
 
   return (
     used.retainedBytes + FRAME_EVENT_BYTES <= limits.eventHardBytes &&
@@ -368,7 +419,9 @@ export function outboxRefusesFrames(
   db: DatabaseSync,
   limits: RuntimeLimits,
 ): boolean {
-  return outboxBudgetSnapshot(db).pressured || !frameFitsUnderHard(db, limits);
+  const snapshot = outboxBudgetSnapshot(db);
+
+  return snapshot.pressured || !frameFitsUnderHard(snapshot, limits);
 }
 
 export function assertOutboxAdmission(
@@ -376,7 +429,7 @@ export function assertOutboxAdmission(
   limits: RuntimeLimits,
   nowMs: number,
 ): void {
-  if (refreshOutboxPressure(db, limits, nowMs)) {
+  if (refreshOutboxBudget(db, limits, nowMs).pressured) {
     throw new HostRuntimeEventError(
       "event_outbox_soft_limit",
       "runtime event outbox unacknowledged rows are above the command admission soft limit or awaiting its low watermark",
@@ -643,7 +696,7 @@ function admitTeardown(
   // New IDs cannot manufacture an unlimited cancellation loop during pressure.
   // Normal turns may start another chain after capacity has recovered.
   if (
-    refreshOutboxPressure(db, limits, nowMs) &&
+    refreshOutboxBudget(db, limits, nowMs).pressured &&
     db
       .prepare(
         "SELECT 1 FROM runtime_event_teardowns WHERE wallet_id = ? AND kind = ?",
@@ -790,9 +843,9 @@ export function spendEventCapacity(
     if (funding.reservationId) {
       const spent = db
         .prepare(
-          `UPDATE runtime_event_frames SET remaining_rows = remaining_rows - 1, remaining_bytes = remaining_bytes - ?
+          `UPDATE active_runtime_event_frames SET remaining_rows = remaining_rows - 1, remaining_bytes = remaining_bytes - ?
         WHERE reservation_id = ? AND remaining_rows > 0 AND remaining_bytes >= ?
-          AND EXISTS (SELECT 1 FROM runtime_event_wallets w WHERE w.wallet_id = runtime_event_frames.wallet_id
+          AND EXISTS (SELECT 1 FROM runtime_event_wallets w WHERE w.wallet_id = active_runtime_event_frames.wallet_id
             AND w.run_id = ? AND w.assignment_id = ? AND w.assignment_epoch = ?)`,
         )
         .run(

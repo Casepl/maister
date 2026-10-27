@@ -240,11 +240,13 @@ async function readCapturedFrame(
 
 function publishCapturedFrame(
   frame: Uint8Array,
-  onLine: (line: string) => void,
+  onLine: ((line: string) => void) | undefined,
 ): void {
-  onLine(
-    new TextDecoder("utf-8", { fatal: true }).decode(frame.subarray(0, -1)),
+  const line = new TextDecoder("utf-8", { fatal: true }).decode(
+    frame.subarray(0, -1),
   );
+
+  onLine?.(line);
 }
 
 export type CapturedStdoutSegment = {
@@ -260,7 +262,7 @@ export function captureAcpFrames(input: {
   source: NodeReadable;
   directory: string;
   log: WriteStream;
-  onLine: (line: string) => void;
+  onLine?: (line: string) => void;
   onFailure: (error: SupervisorError) => void;
   onDrained: () => void;
   onStorageFailure?: (error: unknown) => void;
@@ -491,6 +493,11 @@ export function boundedAcpStream(input: {
   source: NodeReadable;
   stdin: NodeWritable;
   client: BoundedAcpClient;
+  onLine?: (line: string) => void;
+  onUpdateFrame?: (
+    params: Parameters<Client["sessionUpdate"]>[0],
+    line: string,
+  ) => Promise<void>;
   onFailure: (error: SupervisorError) => void;
 }): BoundedAcpStream {
   if (input.source.readableObjectMode !== true)
@@ -549,12 +556,19 @@ export function boundedAcpStream(input: {
     return admission;
   }
 
-  async function update(params: unknown): Promise<void> {
+  async function update(params: unknown, line: string): Promise<void> {
     const parsed = zSessionNotification.safeParse(params);
 
-    if (!parsed.success) throw incomplete("producer_update_invalid");
-
-    await input.client.sessionUpdate(parsed.data);
+    if (!parsed.success) {
+      input.onLine?.(line);
+      throw incomplete("producer_update_invalid");
+    }
+    if (input.onUpdateFrame) {
+      await input.onUpdateFrame(parsed.data, line);
+    } else {
+      input.onLine?.(line);
+      await input.client.sessionUpdate(parsed.data);
+    }
   }
 
   const readable = new ReadableStream<AnyMessage>(
@@ -571,19 +585,32 @@ export function boundedAcpStream(input: {
 
               return;
             }
-            let message: AnyMessage | null = parseFrame(
-              next.value as Uint8Array,
-            );
+            let frame: Uint8Array | null = next.value as Uint8Array;
+            let line: string | null = new TextDecoder("utf-8", {
+              fatal: true,
+            }).decode(frame.subarray(0, -1));
+            let message: AnyMessage | null;
 
+            try {
+              message = parseFrame(frame);
+            } catch (error) {
+              input.onLine?.(line);
+              throw error;
+            }
             next = null;
+            const textUpdate =
+              "method" in message &&
+              message.method === "session/update" &&
+              !("id" in message);
 
+            if (!textUpdate) input.onLine?.(line);
             if (!("method" in message)) {
               controller.enqueue(message);
 
               return;
             }
             if (message.method === "session/update" && !("id" in message)) {
-              await update(message.params);
+              await update(message.params, line);
             } else if (
               message.method === "session/request_permission" &&
               "id" in message
@@ -601,6 +628,10 @@ export function boundedAcpStream(input: {
               throw incomplete("producer_method_unsupported");
             }
             message = null;
+            // Release decoded output before the next iterator call gives the
+            // shared decoder permit to another producer.
+            frame = null;
+            line = null;
           }
         } catch (error) {
           const failure =

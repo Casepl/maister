@@ -2,7 +2,7 @@ import type { Db } from "@/lib/execution-host/db";
 import type { StartedPostgresTestDb } from "@/test-support/pg-container";
 
 import { eq, sql } from "drizzle-orm";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { executionAssignments, runs, tasks } from "@/lib/db/schema";
 import {
@@ -53,6 +53,121 @@ async function seedClaim() {
 }
 
 describe("Flow traversal database fences", () => {
+  it("allocates relational query registries only on demand inside the guarded transaction and savepoint", async () => {
+    const seeded = await seedClaim();
+    const entries = Object.entries;
+    let registries = 0;
+    const observer = vi.spyOn(Object, "entries").mockImplementation((value) => {
+      if (
+        Object.hasOwn(value, "runs") &&
+        Object.hasOwn(value, "executionEvents") &&
+        Reflect.get(value, "runs")?.tsName === "runs"
+      )
+        registries += 1;
+
+      return entries(value);
+    });
+
+    try {
+      await boundedPostgresTransaction(db, async (tx) => {
+        await tx
+          .update(runs)
+          .set({ currentStepId: "outer" })
+          .where(eq(runs.id, seeded.runId));
+        await tx.transaction(async (nested) => {
+          await nested
+            .select({ id: runs.id })
+            .from(runs)
+            .where(eq(runs.id, seeded.runId));
+        });
+        expect(registries).toBe(0);
+        expect(
+          (await tx.query.runs.findFirst({ where: eq(runs.id, seeded.runId) }))
+            ?.currentStepId,
+        ).toBe("outer");
+        expect(registries).toBe(1);
+        await expect(
+          tx.transaction(async (nested) => {
+            await nested
+              .update(runs)
+              .set({ currentStepId: "nested" })
+              .where(eq(runs.id, seeded.runId));
+            expect(
+              (
+                await nested.query.runs.findFirst({
+                  where: eq(runs.id, seeded.runId),
+                })
+              )?.currentStepId,
+            ).toBe("nested");
+            throw new Error("rollback relational savepoint");
+          }),
+        ).rejects.toThrow("rollback relational savepoint");
+        expect(
+          (await tx.query.runs.findFirst({ where: eq(runs.id, seeded.runId) }))
+            ?.currentStepId,
+        ).toBe("outer");
+        expect(registries).toBe(2);
+      });
+      expect(
+        (await db.query.runs.findFirst({ where: eq(runs.id, seeded.runId) }))
+          ?.currentStepId,
+      ).toBe("outer");
+    } finally {
+      observer.mockRestore();
+    }
+  });
+
+  it("reuses immutable schema metadata while each bounded transaction reads fresh rows", async () => {
+    const seeded = await seedClaim();
+    const key = Object.getOwnPropertySymbols(runs).find(
+      (symbol) => symbol.description === "drizzle:ExtraConfigBuilder",
+    );
+
+    if (!key) throw new Error("installed Drizzle schema builder is missing");
+    const descriptor = Object.getOwnPropertyDescriptor(runs, key);
+    const builder: unknown = Reflect.get(runs, key);
+
+    if (!descriptor || typeof builder !== "function")
+      throw new Error("installed Drizzle schema builder cannot be observed");
+    let compilations = 0;
+
+    Object.defineProperty(runs, key, {
+      ...descriptor,
+      value: function (this: unknown, ...args: unknown[]): unknown {
+        compilations += 1;
+
+        return Reflect.apply(builder, this, args);
+      },
+    });
+    try {
+      await boundedPostgresTransaction(db, async (tx) => {
+        await tx
+          .update(runs)
+          .set({ currentStepId: "first" })
+          .where(eq(runs.id, seeded.runId));
+        const row = await tx.query.runs.findFirst({
+          where: eq(runs.id, seeded.runId),
+        });
+
+        expect(row?.currentStepId).toBe("first");
+      });
+      await boundedPostgresTransaction(db, async (tx) => {
+        await tx
+          .update(runs)
+          .set({ currentStepId: "second" })
+          .where(eq(runs.id, seeded.runId));
+        const row = await tx.query.runs.findFirst({
+          where: eq(runs.id, seeded.runId),
+        });
+
+        expect(row?.currentStepId).toBe("second");
+      });
+      expect(compilations).toBe(0);
+    } finally {
+      Object.defineProperty(runs, key, descriptor);
+    }
+  });
+
   it("admits one concurrent driver and preserves Drizzle join row modes and date parsers", async () => {
     const input = await seedClaim();
     const claims = await Promise.all([

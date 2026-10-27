@@ -263,6 +263,149 @@ async function stopIdleChild(child: ChildProcess): Promise<void> {
   await exited;
 }
 
+async function assertWatchdogInspectionFailureGroups(
+  directory: string,
+): Promise<void> {
+  const executable = path.join(directory, "selected-info-denied");
+
+  await execFileAsync("cc", [
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+    "-O2",
+    fileURLToPath(
+      new URL("../fixtures/process-selected-info-denied.c", import.meta.url),
+    ),
+    "-o",
+    executable,
+  ]);
+  for (const membership of ["owned", "foreign"] as const) {
+    const invocation = await createInvocation(directory);
+    const childInvocation =
+      membership === "owned" ? invocation : await createInvocation(directory);
+    const environment = await fixtureProcessEnvironment(invocation);
+    const source = `const { spawn } = require("node:child_process"); const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { env: { ...process.env, MAISTER_TEST_WORKTREE_INVOCATION_ID: ${JSON.stringify(childInvocation.id)} }, stdio: "ignore" }); child.once("spawn", () => process.stderr.write(JSON.stringify({ event: "unwatched-child-ready", pid: child.pid }) + "\\n")); setInterval(() => {}, 1000);`;
+    const watchdog = spawn(
+      process.execPath,
+      ["--import", "tsx", "--import", FIXTURE_WATCHDOG, "-e", source],
+      {
+        env: { ...process.env, ...environment },
+        detached: true,
+        stdio: ["ignore", "ignore", "pipe"],
+      },
+    );
+    let output = "";
+    let reader: string | undefined;
+    let original: string | undefined;
+    let childIdentity: Awaited<ReturnType<typeof processIdentity>> | undefined;
+
+    watchdog.stderr!.on("data", (chunk: Buffer) => {
+      output = `${output}${chunk.toString()}`.slice(-32 * 1024);
+    });
+    try {
+      await expect
+        .poll(() => output.includes('"event":"unwatched-child-ready"'), {
+          timeout: 5_000,
+          interval: 50,
+        })
+        .toBe(true);
+      const ready = output
+        .split("\n")
+        .find((line) => line.includes('"event":"unwatched-child-ready"'));
+
+      if (!ready) throw new Error("unwatched child readiness is missing");
+      childIdentity = await processIdentity(
+        childInvocation,
+        (JSON.parse(ready) as { pid: number }).pid,
+      );
+      const parentIdentity = await processIdentity(invocation, watchdog.pid!);
+
+      expect(childIdentity.pgid).toBe(parentIdentity.pgid);
+      const name = (await readdir(invocation.directory)).find((entry) =>
+        /^process-environment-[a-f0-9]{16}$/u.test(entry),
+      );
+
+      if (!name) throw new Error("selected-denial reader is missing");
+      reader = path.join(invocation.directory, name);
+      original = `${reader}.original`;
+      await copyFile(reader, original);
+      const replacement = `${reader}.selected-denied`;
+
+      await copyFile(executable, replacement);
+      await rename(replacement, reader);
+      await expect
+        .poll(() => watchdog.signalCode, { timeout: 5_000, interval: 50 })
+        .toBe("SIGKILL");
+      expect(output).toContain('"event":"fixture-watchdog-error"');
+      // Restore selected inspection before checking the real child's identity.
+      await rename(original, reader);
+      original = undefined;
+      const expected = membership === "owned" ? [] : [childIdentity.pid];
+
+      await expect
+        .poll(
+          async () =>
+            (await readProcessSnapshot(childInvocation))
+              .filter(
+                (entry) =>
+                  entry.owned &&
+                  !entry.zombie &&
+                  entry.pid === childIdentity!.pid,
+              )
+              .map((entry) => entry.pid),
+          { timeout: 5_000, interval: 50 },
+        )
+        .toEqual(expected);
+    } finally {
+      if (original && reader) await rename(original, reader);
+      await stopIdleChild(watchdog);
+      if (childIdentity) {
+        const current = (await readProcessSnapshot(childInvocation)).find(
+          (entry) => entry.pid === childIdentity!.pid && !entry.zombie,
+        );
+
+        if (current)
+          await signalInvocationProcess(
+            childInvocation,
+            childIdentity,
+            "SIGKILL",
+          );
+        await expect
+          .poll(
+            async () =>
+              (await readProcessSnapshot(childInvocation)).some(
+                (entry) => entry.pid === childIdentity!.pid && !entry.zombie,
+              ),
+            { timeout: 5_000, interval: 50 },
+          )
+          .toBe(false);
+      }
+      const failures = await releaseInvocation(
+        invocation,
+        "selected inspection refusal control",
+      );
+
+      if (failures.length)
+        throw new AggregateError(
+          failures,
+          "selected inspection refusal cleanup failed",
+        );
+      if (childInvocation !== invocation) {
+        const siblingFailures = await releaseInvocation(
+          childInvocation,
+          "foreign child refusal control",
+        );
+
+        if (siblingFailures.length)
+          throw new AggregateError(
+            siblingFailures,
+            "foreign child refusal cleanup failed",
+          );
+      }
+    }
+  }
+}
+
 async function installEnvironmentReadDenial(
   invocation: Invocation,
   pid: number,
@@ -1736,6 +1879,8 @@ describe("S5.2 invocation process ownership", () => {
           inspector.pid!,
         ]),
       ).toEqual([inspectorIdentity, record.identity, inspectorIdentity]);
+
+      await assertWatchdogInspectionFailureGroups(directory);
 
       const watchdogInvocation = await createInvocation(directory);
       let watchdog: ChildProcess | undefined;

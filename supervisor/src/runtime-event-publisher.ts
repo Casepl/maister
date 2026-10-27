@@ -11,7 +11,11 @@ import type {
   RuntimeObjectPublicMetadata,
   RuntimeObjectRegistry,
 } from "./runtime-objects";
-import type { SessionEvent, SessionRecord } from "./types";
+import type {
+  SessionEvent,
+  SessionRecord,
+  SessionTextFrameEvents,
+} from "./types";
 
 import { commandReceiptPayloadV2 } from "./command-event";
 import { sessionSteeringSupported } from "./types";
@@ -247,7 +251,6 @@ export class RuntimeEventPublisher {
   ): EventFunding {
     const terminal =
       event.type === "session.exited" || event.type === "session.crashed";
-    const pressured = this.state.runtimeEventOutboxStats().budget.pressured;
     const completion = isTerminalSessionEvent(event);
     const teardown =
       event.type === "session.command" &&
@@ -269,8 +272,8 @@ export class RuntimeEventPublisher {
 
     if (
       terminal ||
-      (pressured &&
-        (completion || teardown || event.type === "session.chat_turn"))
+      ((completion || teardown || event.type === "session.chat_turn") &&
+        this.state.runtimeEventOutboxStats().budget.pressured)
     ) {
       return {
         partition: "control",
@@ -412,6 +415,36 @@ export class RuntimeEventPublisher {
     };
   }
 
+  /** Both frame rows are durable before either canonical listener is called. */
+  publishTextFrame(
+    record: SessionRecord,
+    events: SessionTextFrameEvents,
+  ): void {
+    if (record.terminalPublished)
+      throw new SupervisorError(
+        "ACP_PROTOCOL",
+        "session output arrived after terminal evidence",
+        { details: { reason: "required_output_incomplete" } },
+      );
+    const inputs = [
+      this.sessionEventInput(record, events[0]),
+      this.sessionEventInput(record, events[1]),
+    ] as const;
+    const persisted = this.state.appendRuntimeFrameEvents(inputs);
+
+    if (this.logger.isLevelEnabled("debug"))
+      this.logger.debug(
+        {
+          runId: record.runId,
+          hostSessionId: record.sessionId,
+          firstSequence: persisted[0]!.sequence,
+          lastSequence: persisted[1]!.sequence,
+          rows: persisted.length,
+        },
+        "runtime-text-frame-appended",
+      );
+  }
+
   publishSessionEvent(
     record: SessionRecord,
     event: SessionEvent,
@@ -419,18 +452,19 @@ export class RuntimeEventPublisher {
     const input = this.sessionEventInput(record, event);
     const persisted = this.state.appendRuntimeEvent(input);
 
-    this.logger.debug(
-      {
-        runId: record.runId,
-        hostSessionId: record.sessionId,
-        eventId: persisted.eventId,
-        sequence: persisted.sequence,
-        eventType: event.type,
-        bytes: persisted.encodedBytes,
-        queueDepth: this.state.runtimeEventOutboxStats().unacknowledgedCount,
-      },
-      "runtime-event-appended",
-    );
+    if (this.logger.isLevelEnabled("debug"))
+      this.logger.debug(
+        {
+          runId: record.runId,
+          hostSessionId: record.sessionId,
+          eventId: persisted.eventId,
+          sequence: persisted.sequence,
+          eventType: event.type,
+          bytes: persisted.encodedBytes,
+          queueDepth: this.state.runtimeEventOutboxStats().unacknowledgedCount,
+        },
+        "runtime-event-appended",
+      );
     const reference = input.draft.payload.contentRef;
 
     return reference === undefined

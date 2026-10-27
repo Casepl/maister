@@ -36,6 +36,7 @@ import {
   type AcpPermissionOutcome,
   type PendingPermissionRegistry,
 } from "./pending-permissions";
+import { extractCost } from "./cost";
 import { SESSION_EVENT_CHANNEL } from "./registry";
 import {
   isSupervisorError,
@@ -49,6 +50,7 @@ import {
   type SessionCapabilities,
   type SessionEvent,
   type SessionRecord,
+  type SessionTextFrameEvents,
   type SteerAdapterOutcome,
 } from "./types";
 
@@ -60,6 +62,7 @@ export type CreateAcpConnectionArgs = {
   worktreePath: string;
   record: SessionRecord;
   emitter: EventEmitter;
+  publishTextFrame?: (events: SessionTextFrameEvents) => void;
   logger: Logger;
   adapter: ExecutorAgent;
   pendingPermissions?: PendingPermissionRegistry;
@@ -380,15 +383,45 @@ export async function createAcpConnection(
     emitter.emit(SESSION_EVENT_CHANNEL, event);
   };
 
-  const clientImpl: BoundedAcpClient = {
-    async sessionUpdate(params) {
-      record.monotonicId += 1;
-      const event: SessionEvent = {
-        type: "session.update",
+  const lineEvent = (
+    line: string,
+  ): Extract<SessionEvent, { type: "session.line" }> => {
+    record.monotonicId += 1;
+    logger.debug(
+      {
         sessionId,
         monotonicId: record.monotonicId,
-        update: params.update,
-      };
+        bytes: Buffer.byteLength(line),
+      },
+      "stdout-frame-captured",
+    );
+
+    return {
+      type: "session.line",
+      sessionId,
+      monotonicId: record.monotonicId,
+      line,
+    };
+  };
+  const emitLine = (line: string): void => {
+    emitter.emit(SESSION_EVENT_CHANNEL, lineEvent(line));
+  };
+  const updateEvent = (
+    params: acp.SessionNotification,
+  ): Extract<SessionEvent, { type: "session.update" }> => {
+    record.monotonicId += 1;
+
+    return {
+      type: "session.update",
+      sessionId,
+      monotonicId: record.monotonicId,
+      update: params.update,
+    };
+  };
+
+  const clientImpl: BoundedAcpClient = {
+    async sessionUpdate(params) {
+      const event = updateEvent(params);
 
       emitter.emit(SESSION_EVENT_CHANNEL, event);
       logger.debug(
@@ -920,6 +953,22 @@ export async function createAcpConnection(
     source: stdoutSource,
     stdin,
     client: clientImpl,
+    onLine: emitLine,
+    async onUpdateFrame(params, line) {
+      if (
+        args.publishTextFrame &&
+        (params.update.sessionUpdate === "agent_message_chunk" ||
+          params.update.sessionUpdate === "agent_thought_chunk" ||
+          params.update.sessionUpdate === "user_message_chunk") &&
+        params.update.content.type === "text" &&
+        extractCost(line, sessionId) === null
+      ) {
+        args.publishTextFrame([lineEvent(line), updateEvent(params)]);
+      } else {
+        emitLine(line);
+        await clientImpl.sessionUpdate(params);
+      }
+    },
     onFailure(error) {
       record.abortOutput?.(error);
       record.outputFailure = {

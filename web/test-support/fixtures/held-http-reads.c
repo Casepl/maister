@@ -70,7 +70,9 @@ int main(int argc, char **argv) {
     address.sin_len = sizeof(address);
 #endif
     address.sin_port = htons((unsigned short)port);
-    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    if (inet_pton(AF_INET, "127.0.0.1", &address.sin_addr) != 1) {
+      fprintf(stderr, "invalid IPv4 loopback address\n"); return 1;
+    }
     if (connect(fd, (struct sockaddr *)&address, sizeof(address)) != 0 && errno != EINPROGRESS)
       fail("connect");
     ready(fd, POLLOUT, deadline);

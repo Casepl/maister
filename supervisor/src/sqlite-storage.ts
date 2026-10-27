@@ -21,11 +21,25 @@ export type SqliteStorageSnapshot = Readonly<{
   filesystemFreeBytes: number | null;
 }>;
 
+type PhysicalStorageSnapshot = Pick<
+  SqliteStorageSnapshot,
+  | "databaseBytes"
+  | "walBytes"
+  | "sharedMemoryBytes"
+  | "totalBytes"
+  | "filesystemFreeBytes"
+>;
+
 export type SqliteStorage = {
   snapshot: () => SqliteStorageSnapshot;
   available: () => boolean;
   canAdmit: (reservedBytes: number) => boolean;
+  admit: <T>(
+    reservedBytes: number,
+    operation: (snapshot: PhysicalStorageSnapshot) => T,
+  ) => T | null;
   write: <T>(operation: () => T) => T;
+  writeTemporary: <T>(operation: () => T) => T;
   reportFailure: (error: unknown) => void;
   subscribeFailure: (listener: () => void) => () => void;
 };
@@ -138,11 +152,10 @@ export function createSqliteStorage(input: {
     );
     db.exec(`PRAGMA journal_size_limit = ${SQLITE_CHECKPOINT_TARGET_BYTES}`);
   }
-  const snapshot = (): SqliteStorageSnapshot => {
-    const pageCount = pragmaNumber(db, "page_count");
+  const physicalSnapshot = (): PhysicalStorageSnapshot => {
     const databaseBytes = file
       ? databaseFileBytes(file)
-      : pageCount * pageBytes;
+      : pragmaNumber(db, "page_count") * pageBytes;
     const walBytes = file ? fileBytes(`${file}-wal`) : 0;
     const sharedMemoryBytes = file ? fileBytes(`${file}-shm`) : 0;
     const fs = file ? statfsSync(dirname(file), { bigint: true }) : null;
@@ -153,9 +166,6 @@ export function createSqliteStorage(input: {
       walBytes,
       sharedMemoryBytes,
       totalBytes: databaseBytes + walBytes + sharedMemoryBytes,
-      pageBytes,
-      pageCount,
-      freePages: pragmaNumber(db, "freelist_count"),
       filesystemFreeBytes:
         freeBytes === null
           ? null
@@ -166,6 +176,12 @@ export function createSqliteStorage(input: {
             ),
     };
   };
+  const snapshot = (): SqliteStorageSnapshot => ({
+    ...physicalSnapshot(),
+    pageBytes,
+    pageCount: pragmaNumber(db, "page_count"),
+    freePages: pragmaNumber(db, "freelist_count"),
+  });
   const markFailed = (error: unknown): void => {
     const failure = storageFailureSignature(error);
 
@@ -174,8 +190,8 @@ export function createSqliteStorage(input: {
     logger?.error(failure, "runtime-storage-unavailable");
     for (const listener of failureListeners) listener();
   };
-  const measure = (headroom: number): SqliteStorageSnapshot => {
-    let measured = snapshot();
+  const measure = (headroom: number): PhysicalStorageSnapshot => {
+    let measured = physicalSnapshot();
 
     if (
       file &&
@@ -191,7 +207,7 @@ export function createSqliteStorage(input: {
 
       if (result.busy === 0 && result.log === result.checkpointed)
         db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
-      measured = snapshot();
+      measured = physicalSnapshot();
       logger?.debug(
         {
           ...measured,
@@ -205,13 +221,62 @@ export function createSqliteStorage(input: {
 
     return measured;
   };
-  const fits = (measured: SqliteStorageSnapshot, headroom: number): boolean =>
+  const fits = (measured: PhysicalStorageSnapshot, headroom: number): boolean =>
     measured.totalBytes + headroom < limits.stateMaxBytes &&
     (measured.filesystemFreeBytes === null ||
       measured.filesystemFreeBytes >= limits.runtimeMinFreeBytes + headroom);
 
+  const writeTemporary = <T>(operation: () => T): T => {
+    if (!available)
+      throw new HostRuntimeEventError(
+        "runtime_storage_unavailable",
+        "runtime storage requires repair before writes can resume",
+      );
+    try {
+      return operation();
+    } catch (error) {
+      markFailed(error);
+      throw error;
+    }
+  };
+
+  const admissionSnapshot = (
+    reservedBytes: number,
+  ): PhysicalStorageSnapshot | null => {
+    if (!available) return null;
+    if (!Number.isSafeInteger(reservedBytes) || reservedBytes < 0)
+      throw new HostRuntimeEventError(
+        "stream_corrupt",
+        "invalid physical runtime storage reservation",
+      );
+    try {
+      const headroom =
+        SQLITE_WRITE_HEADROOM_BYTES +
+        reservedBytes +
+        (pressured ? SQLITE_WRITE_HEADROOM_BYTES : 0);
+      const measured = measure(headroom);
+      const nextPressure =
+        !fits(measured, headroom) ||
+        measured.walBytes + (pressured ? SQLITE_WRITE_HEADROOM_BYTES : 0) >=
+          SQLITE_CHECKPOINT_TARGET_BYTES;
+
+      if (pressured !== nextPressure)
+        logger?.info(
+          { ...measured, reservedBytes, pressured: nextPressure },
+          "runtime-state-pressure-changed",
+        );
+      pressured = nextPressure;
+
+      return pressured ? null : measured;
+    } catch (error) {
+      markFailed(error);
+      throw error;
+    }
+  };
+
   return {
     snapshot,
+    writeTemporary,
     available: () => available,
     reportFailure: markFailed,
     subscribeFailure(listener) {
@@ -219,44 +284,18 @@ export function createSqliteStorage(input: {
 
       return () => failureListeners.delete(listener);
     },
-    canAdmit(reservedBytes) {
-      if (!available) return false;
-      if (!Number.isSafeInteger(reservedBytes) || reservedBytes < 0)
-        throw new HostRuntimeEventError(
-          "stream_corrupt",
-          "invalid physical runtime storage reservation",
-        );
-      try {
-        const headroom =
-          SQLITE_WRITE_HEADROOM_BYTES +
-          reservedBytes +
-          (pressured ? SQLITE_WRITE_HEADROOM_BYTES : 0);
-        const measured = measure(headroom);
-        const nextPressure =
-          !fits(measured, headroom) ||
-          measured.walBytes + (pressured ? SQLITE_WRITE_HEADROOM_BYTES : 0) >=
-            SQLITE_CHECKPOINT_TARGET_BYTES;
+    canAdmit: (reservedBytes) => admissionSnapshot(reservedBytes) !== null,
+    admit(reservedBytes, operation) {
+      const measured = admissionSnapshot(reservedBytes);
 
-        if (pressured !== nextPressure)
-          logger?.info(
-            { ...measured, reservedBytes, pressured: nextPressure },
-            "runtime-state-pressure-changed",
-          );
-        pressured = nextPressure;
+      if (!measured) return null;
 
-        return !pressured;
-      } catch (error) {
-        markFailed(error);
-        throw error;
-      }
+      // Admission already includes the bounded-write headroom; the callback
+      // executes synchronously before any other reservation can spend it.
+      return writeTemporary(() => operation(measured));
     },
     write<T>(operation: () => T): T {
-      if (!available)
-        throw new HostRuntimeEventError(
-          "runtime_storage_unavailable",
-          "runtime storage requires repair before writes can resume",
-        );
-      try {
+      return writeTemporary(() => {
         if (
           !fits(
             measure(SQLITE_WRITE_HEADROOM_BYTES),
@@ -270,10 +309,7 @@ export function createSqliteStorage(input: {
         }
 
         return operation();
-      } catch (error) {
-        markFailed(error);
-        throw error;
-      }
+      });
     },
   };
 }

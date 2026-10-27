@@ -3,10 +3,17 @@ import "server-only";
 import type { Db } from "@/lib/execution-host/db";
 import type { PoolClient, QueryConfig } from "pg";
 import type { PgTransactionConfig } from "drizzle-orm/pg-core";
+import type { ExtractTablesWithRelations } from "drizzle-orm/relations";
+import type { NodePgTransaction } from "drizzle-orm/node-postgres";
 
 import { performance } from "node:perf_hooks";
 
-import { drizzle } from "drizzle-orm/node-postgres";
+import { NodePgDatabase, NodePgSession } from "drizzle-orm/node-postgres";
+import { PgDialect } from "drizzle-orm/pg-core";
+import {
+  createTableRelationsHelpers,
+  extractTablesRelationalConfig,
+} from "drizzle-orm/relations";
 import { Client, Pool } from "pg";
 
 import * as schema from "@/lib/db/schema";
@@ -14,6 +21,56 @@ import { MaisterError } from "@/lib/errors";
 
 const TRANSACTION_BUDGET_MS = 5_000;
 const CLEANUP_BUDGET_MS = 500;
+// Only immutable table metadata is shared; sessions and query results are not.
+const tables = extractTablesRelationalConfig<
+  ExtractTablesWithRelations<typeof schema>
+>(schema, createTableRelationsHelpers);
+const relationalSchema = {
+  fullSchema: schema,
+  schema: tables.tables,
+  tableNamesMap: tables.tableNamesMap,
+};
+
+type Transaction = NodePgTransaction<
+  typeof schema,
+  ExtractTablesWithRelations<typeof schema>
+>;
+type TransactionSession = NodePgSession<
+  typeof schema,
+  ExtractTablesWithRelations<typeof schema>
+>;
+
+/** SQL-only projection work does not allocate a query builder for every table.
+ * Relational reads and nested savepoints retain the same guarded connection.
+ */
+function withLazyRelationalQueries(
+  transaction: Transaction,
+  session: TransactionSession,
+  dialect: PgDialect,
+): Transaction {
+  let queries: Db["query"] | undefined;
+
+  return new Proxy(transaction, {
+    get(target, property, receiver): unknown {
+      if (property === "query") {
+        queries ??= new NodePgDatabase<typeof schema>(
+          dialect,
+          session,
+          relationalSchema,
+        ).query;
+
+        return queries;
+      }
+      if (property === "transaction")
+        return <T>(work: (nested: Transaction) => Promise<T>): Promise<T> =>
+          target.transaction((nested) =>
+            work(withLazyRelationalQueries(nested, session, dialect)),
+          );
+
+      return Reflect.get(target, property, receiver);
+    },
+  });
+}
 
 function deadlineError(): MaisterError {
   return new MaisterError(
@@ -218,12 +275,18 @@ export async function boundedPostgresTransaction<T>(
       }, remaining());
     });
 
-    operation = drizzle(guarded, { schema }).transaction(async (tx) => {
+    const dialect = new PgDialect();
+    const session = new NodePgSession<
+      typeof schema,
+      ExtractTablesWithRelations<typeof schema>
+    >(guarded, dialect, undefined);
+
+    operation = session.transaction(async (tx) => {
       let callbackActive = true;
 
       try {
         const result = await work(
-          tx,
+          withLazyRelationalQueries(tx, session, dialect),
           async (...args: unknown[]): Promise<unknown> => {
             if (!callbackActive) throw deadlineError();
 

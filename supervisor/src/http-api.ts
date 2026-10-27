@@ -2741,6 +2741,16 @@ export function registerRoutes(opts: RegisterRoutesOptions): void {
           const result = await createAcpConnection({
             stdin: child.stdin,
             stdoutSource: acpStdoutTap,
+            publishTextFrame(events) {
+              runtimeEvents.publishTextFrame(record, events);
+              for (const event of events) {
+                if (!registry.emitCanonicallyPersisted(sessionId, event))
+                  throw new SupervisorError(
+                    "ACP_PROTOCOL",
+                    "committed text frame lost its registered session",
+                  );
+              }
+            },
             sessionId,
             worktreePath: workspace.cwd,
             record,

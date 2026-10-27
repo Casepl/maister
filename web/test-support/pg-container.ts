@@ -42,6 +42,7 @@ const postgresStorage = {
   storageLimitBytes: 512 * 1024 * 1024,
   maxWalSizeMb: 64,
   minWalSizeMb: 32,
+  autovacuumNaptimeSeconds: 1,
 } as const;
 
 // Daemon reachability has a short absent-Docker guard. SDK construction also
@@ -269,6 +270,8 @@ async function startPostgresContainer(
         `max_wal_size=${postgresStorage.maxWalSizeMb}MB`,
         "-c",
         `min_wal_size=${postgresStorage.minWalSizeMb}MB`,
+        "-c",
+        `autovacuum_naptime=${postgresStorage.autovacuumNaptimeSeconds}s`,
       ])
       .withLabels({
         [DATABASE_ALLOCATION_LABEL]: allocationId,

@@ -37,6 +37,9 @@ container data is a production durability or host-reboot acceptance witness.
 WAL recycling uses a 64 MiB `max_wal_size` checkpoint target and 32 MiB
 `min_wal_size`, rather than PostgreSQL's default target larger than this filesystem.
 These are soft recycling targets; the 512 MiB filesystem remains the hard cap.
+Autovacuum checks each database every second so obsolete TOAST versions from
+streamed transcript updates can be reused within this small filesystem. Its
+worker count, cost limits and all durability settings retain their defaults.
 The real bare-lineage owner verifies the filesystem, capacity and server settings,
 and the full scheduler admission owner retains its two 24,000-row controls and
 updates of accumulated history to qualify actual capacity. Container startup or
@@ -905,7 +908,7 @@ release; it never grants finalizer authority. Missing report remains failure.
 Logs use structured role/identity/capability fields with bounded buffers; they
 never contain secrets, environment dumps, sentinel/SQLite/object bytes.
 
-### Platform case inventory and RED ownership (Implemented; full qualification pending)
+### Platform case inventory and RED ownership (Implemented; locally qualified)
 
 The frozen baseline is the exact owning runner title set below: seven full
 suites/50 cases plus one separately invoked preflight. Linux adds only the
@@ -915,16 +918,23 @@ All five Linux controls are implemented and pass their native owning suite,
 including nested mounts, invalid restart, acquisition cancellation and process
 lifecycle cuts. The full selector requires Linux55 plus separate preflight1;
 Darwin retains50 plus separate preflight1 and its19/31 CI parts. Linux parts
-and unknown platforms refuse selection. The final combined code `3d97c9dcf`
-passes native Ubuntu Linux55 and independent preflight on both exact Nodes with
-fresh builds and zero leaks; the existing S5.3a plan owns exact receipts and the
-Apple Silicon/Docker Desktop handoff. Native Darwin50/preflight and publish10
-pass at `f16ec6124`; the bounded-output fixture's Darwin compiler failure and
-R20 PostgreSQL storage exhaustion keep full-phase qualification open. The
-[Mac handoff results](../../.ai-factory/plans/s53a-linux-isolation.md#native-darwin-handoff-results-2026-10-26)
-retain the diagnostic-load limitation and exact receipts. C3 is not fully
-qualified. Hosting remains macOS; local Linux evidence does not qualify hosted
-execution.
+and unknown platforms refuse selection. The
+[final native qualification](../../.ai-factory/plans/s53a-linux-isolation.md#final-native-qualification)
+binds the corrective code to its whole-code SHA256 and exact reports. Native
+Ubuntu 24.04 amd64 and Darwin Apple Silicon with Docker Desktop pass their
+respective 55/50 inventories and independent preflight on Node 24.15.0 and 24.19.0,
+with one fresh production build per isolation invocation and zero leaks.
+Bounded-output26, publish10 and complete applicable regressions pass with
+explicit source attribution. R20 retains its original source-labelled receipts:
+later changes affect the fault proxy and three owning integration tests. R20
+uses unchanged direct transport and identical runtime/harness files. Fresh
+supervisor, proxy and scratch idle-resume groups cover those owning-test
+changes on both Nodes and platforms; the complete audit maps every report
+to its original source. The plan retains earlier compiler,
+PostgreSQL storage, throughput and invalidated test attempts as corrective
+evidence.
+Hosting remains the accepted two-part macOS recipe; local Linux qualification
+does not qualify hosted execution.
 
 | Owning file | Exact case title | Disposition |
 |---|---|---|
@@ -1082,7 +1092,12 @@ checks remain mandatory. Inspector exclusion applies to resource-discovery
 snapshots, not explicit parent-identity reads; returning an unowned parent
 identity never authorizes signaling it. A watchdog inspection failure writes
 its invocation, expected identities and bounded native/cause diagnostics
-synchronously before terminating itself. Unknown identity still fails closed.
+synchronously before terminating itself. The corrective error path retires
+its group only when a fresh full snapshot proves every live member's exact invocation tag and inspected identity. A selected-owner
+read failure must not leave an otherwise provably owned worker running.
+If the group cannot be inspected or contains a foreign member, only the
+watchdog itself may be killed. Unknown identity still fails closed; no stored
+group identity or failed read grants signal authority.
 
 Each watchdog tick batches its distinct owner/parent PIDs into one fresh
 Darwin reader execution, retaining the before/environment/after proof for
