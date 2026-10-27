@@ -109,9 +109,8 @@ beforeAll(async () => {
   await fakeExecutionHosts(db, { fake });
 
   ({ issueOrchestratorRunToken } = await import("@/lib/agents/tokens"));
-  ({ POST: delegatePost } = await import(
-    "@/app/api/v1/ext/runs/delegate/route"
-  ));
+  ({ POST: delegatePost } =
+    await import("@/app/api/v1/ext/runs/delegate/route"));
   ({ POST: reworkPost } = await import("@/app/api/v1/ext/runs/rework/route"));
   ({ POST: cancelPost } = await import("@/app/api/v1/ext/runs/cancel/route"));
   ({ POST: collectPost } = await import("@/app/api/v1/ext/runs/collect/route"));
@@ -369,9 +368,8 @@ describe("run_delegate flow arm — failure and crash windows (ADR-163 REQ-21)",
   // committed child. Its own cascade already ran, so nothing else would ever
   // reach this child.
   it("W6: a parent that terminalizes during the launch leaves the child Abandoned, tears down its live session, and returns PRECONDITION", async () => {
-    const { POST: realDelegatePost } = await import(
-      "@/app/api/v1/ext/runs/delegate/route"
-    );
+    const { POST: realDelegatePost } =
+      await import("@/app/api/v1/ext/runs/delegate/route");
     const runsModule = await import("@/lib/services/runs");
     const realLaunch = runsModule.launchRun;
     // ADR-163 review S6: the cascade flips rows only. The newborn child may
@@ -479,9 +477,8 @@ describe("run_delegate flow arm — failure and crash windows (ADR-163 REQ-21)",
     // nobody clicked. Drive it with a settled sibling event — the shape that
     // makes it look for unblocked dependents.
     const { emitDomainEvent } = await import("@/lib/domain-events/outbox");
-    const { buildAutoLaunchRunPlanConsumer } = await import(
-      "@/lib/domain-events/auto-launch"
-    );
+    const { buildAutoLaunchRunPlanConsumer } =
+      await import("@/lib/domain-events/auto-launch");
     const siblingRunId = await seedChildRun(ctx, {
       parentRunId,
       runKind: "agent",
@@ -577,9 +574,8 @@ describe("run_delegate flow arm — failure and crash windows (ADR-163 REQ-21)",
       parentRunId,
     );
 
-    const { buildOrchestratorResumeConsumer } = await import(
-      "@/lib/domain-events/orchestrator-resume"
-    );
+    const { buildOrchestratorResumeConsumer } =
+      await import("@/lib/domain-events/orchestrator-resume");
     // Read through DRIZZLE: a raw pg row is snake_case, so a consumer reading
     // `event.runId` / `event.taskId` would silently see `undefined`.
     const { schema } = await import("@/test-support/graph-run-seed");
@@ -665,9 +661,8 @@ describe("run_delegate flow arm — failure and crash windows (ADR-163 REQ-21)",
       childRunId: string;
     };
 
-    const { cascadeAbandonRunTree } = await import(
-      "@/lib/orchestrator/cascade"
-    );
+    const { cascadeAbandonRunTree } =
+      await import("@/lib/orchestrator/cascade");
 
     await cascadeAbandonRunTree(
       parentRunId,
@@ -700,9 +695,8 @@ describe("run_delegate flow arm — failure and crash windows (ADR-163 REQ-21)",
 
     expect(claimable).not.toContain(childTaskId);
 
-    const { classifyManualTaskLaunchability } = await import(
-      "@/lib/runs/launchability"
-    );
+    const { classifyManualTaskLaunchability } =
+      await import("@/lib/runs/launchability");
 
     expect(
       classifyManualTaskLaunchability(
@@ -737,9 +731,8 @@ describe("run_delegate flow arm — failure and crash windows (ADR-163 REQ-21)",
 
     expect(child.status).toBe("Review");
 
-    const { isDisposableWorkspaceRunStatus } = await import(
-      "@/lib/runs/run-status-sets"
-    );
+    const { isDisposableWorkspaceRunStatus } =
+      await import("@/lib/runs/run-status-sets");
 
     // GC only collects Done/Abandoned, so the worktree is retained...
     expect(isDisposableWorkspaceRunStatus("Review")).toBe(false);
@@ -796,9 +789,8 @@ describe("run_delegate flow arm — failure and crash windows (ADR-163 REQ-21)",
       agentChildId,
     ]);
 
-    const { cascadeAbandonRunTree } = await import(
-      "@/lib/orchestrator/cascade"
-    );
+    const { cascadeAbandonRunTree } =
+      await import("@/lib/orchestrator/cascade");
     const result = await cascadeAbandonRunTree(
       parentRunId,
       orchestratorTaskId,
@@ -1006,9 +998,8 @@ describe("tool support by child kind (ADR-163 D2 / REQ-14)", () => {
       childRunId,
     ]);
 
-    const { admitDelegatedChild } = await import(
-      "@/lib/orchestrator/admission"
-    );
+    const { admitDelegatedChild } =
+      await import("@/lib/orchestrator/admission");
 
     await expect(
       admitDelegatedChild(db, { parentRunId }),

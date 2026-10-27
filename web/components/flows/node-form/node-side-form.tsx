@@ -939,8 +939,7 @@ export function NodeSideForm({
                   value={str(
                     (
                       settings.enforcement as
-                        | Record<string, unknown>
-                        | undefined
+                        Record<string, unknown> | undefined
                     )?.[cls],
                   )}
                   onChange={(v) => setEnforcement(cls, v)}
@@ -1574,8 +1573,7 @@ export function NodeSideForm({
             setRework({
               allowedTargets: next,
               workspacePolicies: (rework.workspacePolicies as
-                | string[]
-                | undefined) ?? ["keep"],
+                string[] | undefined) ?? ["keep"],
               maxLoops: (rework.maxLoops as number | undefined) ?? 1,
             })
           }

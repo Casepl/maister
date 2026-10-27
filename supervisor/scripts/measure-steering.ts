@@ -30,9 +30,13 @@ import {
   type Writable as NodeWritable,
 } from "node:stream";
 
-import * as acp from "@agentclientprotocol/sdk";
+import * as acp from "@agentclientprotocol/sdk/unstable";
 import pino from "pino";
 
+import {
+  connectAcpClient,
+  type AcpClientHandlers,
+} from "../src/acp-connection";
 import { readSessionCapabilities, steerOnConnection } from "../src/acp-client";
 import {
   clientCapabilitiesForAdapter,
@@ -113,8 +117,7 @@ async function executablePath(binary: string): Promise<string | null> {
 
 function textOf(update: Record<string, unknown>): string {
   const content = update.content as
-    | { type?: string; text?: string }
-    | undefined;
+    { type?: string; text?: string } | undefined;
 
   return content?.type === "text" ? (content.text ?? "") : "";
 }
@@ -162,7 +165,7 @@ async function measureAdapter(adapter: ExecutorAgent): Promise<Measurement> {
   let onPermission: (() => Promise<void>) | null = null;
   const toolStatus = new Map<string, string>();
   let permissionRequests = 0;
-  const client: acp.Client = {
+  const client: AcpClientHandlers = {
     async sessionUpdate(params) {
       const update = params.update as unknown as Record<string, unknown>;
       const kind = String(update.sessionUpdate);
@@ -209,7 +212,7 @@ async function measureAdapter(adapter: ExecutorAgent): Promise<Measurement> {
         child.stdout as NodeReadable,
       ) as unknown as NodeReadableStream<Uint8Array>,
     );
-    const connection = new acp.ClientSideConnection(() => client, stream);
+    const connection = connectAcpClient(stream, client);
     const init = await withTimeout(
       connection.initialize({
         protocolVersion: acp.PROTOCOL_VERSION,

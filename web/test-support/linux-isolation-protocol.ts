@@ -329,10 +329,7 @@ export function decodeLinuxLauncherFrame(line: string): LinuxLauncherFrame {
     return {
       type: "error",
       category: value.category as
-        | "capability"
-        | "policy"
-        | "ownership"
-        | "protocol",
+        "capability" | "policy" | "ownership" | "protocol",
       message: value.message,
     };
   if (value.type === "outcome" && record(value.outcome)) {
@@ -358,9 +355,7 @@ export function decodeLinuxLauncherFrame(line: string): LinuxLauncherFrame {
         outcome: {
           kind: "unobserved",
           reason: outcome.reason as
-            | "namespace-killed"
-            | "launcher-killed"
-            | "status-unavailable",
+            "namespace-killed" | "launcher-killed" | "status-unavailable",
         },
       };
   }

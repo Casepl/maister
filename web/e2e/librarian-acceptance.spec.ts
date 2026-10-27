@@ -214,6 +214,7 @@ test("E2E-L-02 E2E-LOP-04: duplicate search precedes two accepted, linked tasks"
     ],
     "Created two tasks after duplicate check",
   );
+
   expect(reply).toContain('"tool":"task_search"');
   expect(reply).toContain(existingTitle);
   await withE2EDb(async (pool) => {
@@ -1172,6 +1173,7 @@ test("E2E-L-11: existing Flow work uses guarded operator paths", async ({
     `,
       [run.id],
     );
+
     expect(rows.rows[0].status).toBe(run.status);
   });
 });

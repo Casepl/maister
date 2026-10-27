@@ -4,11 +4,7 @@ import type { ScratchDialogStatus } from "@/lib/db/schema";
 import type { SupervisorSessionRecord } from "@/lib/execution-host";
 
 export type ScratchRecoveryAction =
-  | "open"
-  | "recover"
-  | "discard_only"
-  | "none"
-  | "refuse";
+  "open" | "recover" | "discard_only" | "none" | "refuse";
 
 /** A Recover is a CAS on `runs.status = 'Crashed'` (ADR-175 2026-09-26). Any
  * other status names why it is refused: `Failed` is a deliberate budget stop,

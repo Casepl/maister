@@ -441,9 +441,8 @@ describe("P0-2 durable workers in the production web boot", () => {
       expect(kinds).toHaveLength(6);
       // Drop exactly one family: the composition must refuse rather than start
       // a worker that owns only a subset of the six kinds.
-      const { flowPromptOwners } = await import(
-        "@/lib/flows/graph/prompt-owner"
-      );
+      const { flowPromptOwners } =
+        await import("@/lib/flows/graph/prompt-owner");
 
       expect(() => composePromptOwnerRegistry([flowPromptOwners])).toThrow(
         expect.objectContaining({ code: "CONFIG" }),
@@ -489,9 +488,8 @@ describe("P0-2 durable workers in the production web boot", () => {
     });
 
     it("R5: a double start returns the same three handles", async () => {
-      const { startDurableWorkers, stopDurableWorkers } = await import(
-        "@/lib/workers/runtime"
-      );
+      const { startDurableWorkers, stopDurableWorkers } =
+        await import("@/lib/workers/runtime");
       const first = startDurableWorkers();
 
       try {

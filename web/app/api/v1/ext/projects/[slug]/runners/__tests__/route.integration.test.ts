@@ -36,9 +36,8 @@ beforeAll(async () => {
 
   db = testDatabase.db;
 
-  const routeModule = await import(
-    "@/app/api/v1/ext/projects/[slug]/runners/route"
-  );
+  const routeModule =
+    await import("@/app/api/v1/ext/projects/[slug]/runners/route");
 
   GET = routeModule.GET;
 }, 180_000);

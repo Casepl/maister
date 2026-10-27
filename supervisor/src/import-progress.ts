@@ -257,8 +257,7 @@ export function openImportProgressLedger(input: {
            FROM import_chunks WHERE item_id = ? AND chunk_index = ?`,
         )
         .get(chunk.itemId, chunk.chunkIndex) as
-        | { byteOffset: number; length: number; sha256: string }
-        | undefined;
+        { byteOffset: number; length: number; sha256: string } | undefined;
 
       if (existing) {
         if (

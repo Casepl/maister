@@ -103,9 +103,8 @@ beforeAll(async () => {
   process.env.MAISTER_RUNTIME_ROOT = runtimeRoot;
 
   ({ respondToHitl } = await import("@/lib/services/hitl"));
-  ({ sendScratchPromptAndProjectEvents } = await import(
-    "@/lib/scratch-runs/events"
-  ));
+  ({ sendScratchPromptAndProjectEvents } =
+    await import("@/lib/scratch-runs/events"));
 }, 180_000);
 
 afterAll(async () => {

@@ -103,6 +103,7 @@ test("stage receipts reject wrong source, platform, run, Node, seriality, outcom
     { platform: "linux" }, { arch: "arm64" }, { node: "24.15.0" }, { concurrency: 2 },
     { outcome: { code: 1, signal: null } }, { cleanup: { outcome: "leak-reaped", errors: 1 } },
     { budgetSeconds: 2341 }, { durationSeconds: 2341 }, { files: receipt.files.slice(1) },
+    { files: [...receipt.files, "test-support/__tests__/linux-isolation-driver.integration.test.ts"] },
     { runnerImage: { os: "macos15", version: null } },
   ];
 

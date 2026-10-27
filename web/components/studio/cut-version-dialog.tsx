@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { readApiError } from "@/lib/api-error";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 // ADR-132 §c (T16): the Studio cut dialog. Cutting is the primary action; the
 // multi-select additionally advances ALREADY-ATTACHED projects (only those
@@ -57,9 +58,8 @@ export function CutVersionDialog({
     adoptTargets.map((tgt) => [tgt.projectId, tgt.name]),
   );
 
-  const onCloseRef = useRef(onClose);
+  const onCloseRef = useLatestRef(onClose);
 
-  onCloseRef.current = onClose;
   useEffect(() => {
     dialogRef.current?.focus();
 

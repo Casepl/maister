@@ -436,7 +436,10 @@ describe("evaluation legacy backfill", () => {
 
     await insertExperimentRun(badId, "A", 1);
 
-    await expect(backfill()).rejects.toThrow(/unknown winner variant/);
+    await expect(backfill()).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringMatching(/unknown winner variant/),
+    );
 
     // The bad experiment's Study insert rolled back with the raise.
     const row = await one(

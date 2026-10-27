@@ -16,6 +16,7 @@ import { getContainerRuntimeClient } from "testcontainers";
 import { probeContainerRuntimeDaemon } from "./docker-runtime-probe";
 import {
   INVOCATION_CONTAINER_LABEL,
+  InvocationOwnershipError,
   invocationFromEnvironment,
   registerContainerAllocation,
   registerContainer,
@@ -41,15 +42,17 @@ const postgresStorage = {
   storageLimitBytes: 512 * 1024 * 1024,
   maxWalSizeMb: 64,
   minWalSizeMb: 32,
+  autovacuumNaptimeSeconds: 1,
 } as const;
 
 // Daemon reachability has a short absent-Docker guard. SDK construction also
-// discovers Compose and DNS, which must not consume that guard after a genuine
+// resolves the runtime host (DNS), which must not consume that guard after a genuine
 // Engine response. Its separate ceiling matches the existing known-Docker lanes.
 const dockerProbeTimeoutMs =
   Number(process.env.MAISTER_TEST_DOCKER_PROBE_TIMEOUT_MS) || 3_000;
 const dockerClientTimeoutMs = 30_000;
 const logger = pino({ name: "test-database" });
+const DATABASE_ALLOCATION_LABEL = "maister.test.database-allocation";
 
 export type TestDatabaseLane = "integration" | "e2e";
 
@@ -180,12 +183,68 @@ async function throwAfterCleanup(
   throw operationError;
 }
 
+async function removeFailedPostgresAllocation(
+  allocationId: string,
+): Promise<void> {
+  const docker = (await getContainerRuntimeClient()).container.dockerode;
+  const list = async (): Promise<string[]> => {
+    const containers = await docker.listContainers({
+      all: true,
+      filters: { label: [`${DATABASE_ALLOCATION_LABEL}=${allocationId}`] },
+      abortSignal: AbortSignal.timeout(30_000),
+    });
+
+    return containers.map((container) => container.Id);
+  };
+
+  for (const id of await list()) {
+    if (!/^[a-f0-9]{64}$/u.test(id))
+      throw new InvocationOwnershipError(
+        "Docker returned an invalid allocation identity",
+      );
+    try {
+      const container = docker.getContainer(id);
+      const inspected = await container.inspect({
+        abortSignal: AbortSignal.timeout(10_000),
+      });
+
+      if (inspected.Config.Labels[DATABASE_ALLOCATION_LABEL] !== allocationId)
+        throw new InvocationOwnershipError("database allocation label changed");
+      const removal = {
+        force: true,
+        v: true,
+        abortSignal: AbortSignal.timeout(30_000),
+      };
+
+      await container.remove(removal);
+      logger.info(
+        {
+          phase: "container-start-cleanup",
+          allocationId,
+          containerId: id,
+          outcome: "removed",
+        },
+        "removed failed PostgreSQL allocation",
+      );
+    } catch (error) {
+      if (error instanceof InvocationOwnershipError) throw error;
+      if ((await list()).includes(id)) throw error;
+      // SDK readiness cleanup or Ryuk may already have removed this exact object.
+    }
+  }
+  if ((await list()).length)
+    throw new InvocationOwnershipError(
+      "PostgreSQL allocation survived startup cleanup",
+    );
+}
+
 async function startPostgresContainer(
   options: TestDatabaseOptions,
   lane: TestDatabaseLane,
   startedAt: number,
 ): Promise<StartedPostgreSqlContainer> {
   const invocation = invocationFromEnvironment();
+  const allocationId = randomUUID();
 
   if (invocation) await registerContainerAllocation(invocation);
   logger.info(
@@ -211,10 +270,13 @@ async function startPostgresContainer(
         `max_wal_size=${postgresStorage.maxWalSizeMb}MB`,
         "-c",
         `min_wal_size=${postgresStorage.minWalSizeMb}MB`,
+        "-c",
+        `autovacuum_naptime=${postgresStorage.autovacuumNaptimeSeconds}s`,
       ])
-      .withLabels(
-        invocation ? { [INVOCATION_CONTAINER_LABEL]: invocation.id } : {},
-      )
+      .withLabels({
+        [DATABASE_ALLOCATION_LABEL]: allocationId,
+        ...(invocation ? { [INVOCATION_CONTAINER_LABEL]: invocation.id } : {}),
+      })
       .start();
     const containerStartDurationMs = Date.now() - containerStartedAt;
 
@@ -237,12 +299,31 @@ async function startPostgresContainer(
 
     return container;
   } catch (cause) {
-    throw createDockerUnavailableError(
+    const operationError = createDockerUnavailableError(
       lane,
       "container-start",
       startedAt,
       cause,
     );
+
+    try {
+      await removeFailedPostgresAllocation(allocationId);
+    } catch (cleanupError) {
+      logger.error(
+        {
+          lane,
+          phase: "container-start-cleanup",
+          allocationId,
+          safeCause: asSafeCause(cleanupError),
+        },
+        "failed PostgreSQL allocation cleanup failed",
+      );
+      throw new AggregateError(
+        [operationError, cleanupError],
+        "PostgreSQL startup and allocation cleanup failed",
+      );
+    }
+    throw operationError;
   }
 }
 

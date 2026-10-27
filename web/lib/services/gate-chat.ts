@@ -44,6 +44,7 @@ import {
   type ExecutionHosts,
   type HostAdminClient,
 } from "@/lib/execution-host";
+import { isUniqueViolation } from "@/lib/db/pg-error";
 
 // FIXME(any): dual drizzle-orm peer-dep variants.
 const { gateChatMessages, gateChatTurns, hitlRequests, runs, workspaces } =
@@ -102,7 +103,7 @@ export function gateChatStepId(hitlRequestId: string): string {
 // UNIQUE(hitl_request_id, seq) slot. Surface it as CONFLICT instead of leaking
 // the raw Postgres 23505 — the loser re-asks once the transcript settles.
 function rethrowSeqConflict(err: unknown): never {
-  if ((err as { code?: unknown } | null)?.code === "23505") {
+  if (isUniqueViolation(err)) {
     throw new MaisterError(
       "CONFLICT",
       "concurrent gate-chat turn in progress for this pause — retry once it settles",
@@ -929,8 +930,7 @@ export async function sendGateChatTurn(args: {
         stepId,
         executor: {
           agent: (run.runnerSnapshot?.capabilityAgent ?? "claude") as
-            | "claude"
-            | "codex",
+            "claude" | "codex",
           model: run.runnerSnapshot?.model ?? "unknown",
         },
         runner: run.runnerSnapshot

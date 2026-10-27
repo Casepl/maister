@@ -3,9 +3,9 @@
 import type { ReactElement } from "react";
 
 import { MoonIcon, SunIcon } from "@heroicons/react/24/outline";
-import { useEffect, useState } from "react";
 import clsx from "clsx";
 
+import { useIsClient } from "@/lib/use-is-client";
 import { useTheme } from "@/lib/theme";
 
 const navTool = clsx(
@@ -34,14 +34,10 @@ export function ThemeModeIcon({ theme }: { theme: ThemeMode }): ReactElement {
 }
 
 export function ThemeSwitch({ className }: ThemeSwitchProps): ReactElement {
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useIsClient();
   const { resolvedTheme, setTheme } = useTheme();
 
   const isLight = resolvedTheme === "light";
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   if (!isMounted) {
     // Reserves what the mounted button occupies at each breakpoint by laying

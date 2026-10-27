@@ -1,7 +1,7 @@
+import type { TestProjectInlineConfiguration } from "vitest/config";
+
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-
-import { defineWorkspace } from "vitest/config";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -9,7 +9,7 @@ const alias = {
   "@": resolve(__dirname, "src"),
 };
 
-export default defineWorkspace([
+export default [
   {
     resolve: { alias },
     test: {
@@ -29,4 +29,4 @@ export default defineWorkspace([
       hookTimeout: 60_000,
     },
   },
-]);
+] satisfies TestProjectInlineConfiguration[];

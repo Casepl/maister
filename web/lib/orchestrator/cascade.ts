@@ -37,9 +37,7 @@ const log = pino({
 });
 
 export type CascadeReason =
-  | "user_stopped"
-  | "orchestrator-stuck"
-  | "budget_exceeded";
+  "user_stopped" | "orchestrator-stuck" | "budget_exceeded";
 
 export interface CascadeAbandonOptions {
   db?: Db;

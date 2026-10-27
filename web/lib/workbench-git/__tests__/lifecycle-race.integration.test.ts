@@ -61,16 +61,14 @@ vi.mock("@/lib/authz", () => ({
 const worktreeModule = await import("@/lib/worktree");
 const actual =
   await vi.importActual<typeof import("@/lib/worktree")>("@/lib/worktree");
-const { exportWorkbenchBranch } = await import(
-  "@/lib/workbench-lifecycle/service"
-);
+const { exportWorkbenchBranch } =
+  await import("@/lib/workbench-lifecycle/service");
 const { discardWorkbenchChanges } = await import("@/lib/workbench-git/service");
 const { depsFromOptions } = await import("@/lib/workbench-lifecycle/service");
 const { syncRunTarget } = await import("@/lib/runs/sync-target");
 const { claimTakeover } = await import("@/lib/flows/graph/ledger");
-const { REVIEW_REWORK_CLAIM_DECISION } = await import(
-  "@/lib/flows/graph/attempt-decisions"
-);
+const { REVIEW_REWORK_CLAIM_DECISION } =
+  await import("@/lib/flows/graph/attempt-decisions");
 
 const schema = fullSchema as unknown as Record<string, any>;
 

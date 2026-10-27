@@ -33,9 +33,8 @@ beforeAll(async () => {
 
   db = testDatabase.db;
 
-  ({ getPortfolio, getRailWorkspaceGroups, getRailWorkspaces } = await import(
-    "@/lib/queries/portfolio"
-  ));
+  ({ getPortfolio, getRailWorkspaceGroups, getRailWorkspaces } =
+    await import("@/lib/queries/portfolio"));
 }, 180_000);
 
 afterAll(async () => {
@@ -474,9 +473,8 @@ describe("portfolio queries (integration)", () => {
       new Date(endedAt.getTime() + gcAgeDays() * 86_400_000),
     );
 
-    const { getProjectBySlug, getProjectPageData } = await import(
-      "@/lib/queries/project"
-    );
+    const { getProjectBySlug, getProjectPageData } =
+      await import("@/lib/queries/project");
     const projectRow = await getProjectBySlug(`proj-${project.slice(0, 8)}`);
 
     expect(projectRow).not.toBeNull();
@@ -486,9 +484,8 @@ describe("portfolio queries (integration)", () => {
 
     // Attention counters are unchanged: the run is not a crashed decision and
     // adds nothing to the decisions count.
-    const { listCrashedForProjects } = await import(
-      "@/lib/queries/decision-sources"
-    );
+    const { listCrashedForProjects } =
+      await import("@/lib/queries/decision-sources");
     const { getDecisionsCount } = await import("@/lib/queries/decisions");
 
     expect(
@@ -590,12 +587,7 @@ describe("portfolio queries (integration)", () => {
   async function seedRunWithExternalGate(opts: {
     runStatus: "Review" | "Done" | "Abandoned";
     gateStatus:
-      | "pending"
-      | "failed"
-      | "stale"
-      | "passed"
-      | "overridden"
-      | "skipped";
+      "pending" | "failed" | "stale" | "passed" | "overridden" | "skipped";
     gateMode?: "blocking" | "advisory";
   }): Promise<{ userId: string; projectId: string; runId: string }> {
     const user = await createUser(`ext-${randomUUID().slice(0, 8)}@test.com`);

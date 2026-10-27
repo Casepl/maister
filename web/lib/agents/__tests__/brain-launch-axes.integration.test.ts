@@ -71,9 +71,8 @@ beforeAll(async () => {
   await fakeExecutionHosts(db);
 
   ({ launchAgentRun } = await import("@/lib/agents/launch"));
-  ({ updateAgentLink, getProjectAgentsView } = await import(
-    "@/lib/agents/project-links"
-  ));
+  ({ updateAgentLink, getProjectAgentsView } =
+    await import("@/lib/agents/project-links"));
 }, 180_000);
 
 afterAll(async () => {

@@ -328,9 +328,8 @@ export async function installPackageRevision(opts: {
     // Best-effort: a broken agent file is reported in the summary, never fails
     // the surrounding install (a later resync re-projects the catalog anyway).
     try {
-      const { registerPackageAgents, resyncAgents } = await import(
-        "@/lib/agents/registry"
-      );
+      const { registerPackageAgents, resyncAgents } =
+        await import("@/lib/agents/registry");
       const agentSummary = await registerPackageAgents(id, db);
 
       if (agentSummary.invalid.length > 0) {
@@ -357,9 +356,8 @@ export async function installPackageRevision(opts: {
     // disabled). Best-effort: an invalid method is projected report-only, never
     // fails the surrounding install.
     try {
-      const { registerPackageMethods } = await import(
-        "@/lib/evaluations/methods-registry"
-      );
+      const { registerPackageMethods } =
+        await import("@/lib/evaluations/methods-registry");
       const methodSummary = await registerPackageMethods(id, db);
 
       if (methodSummary.invalid.length > 0) {
@@ -432,16 +430,19 @@ const ATTACHMENT_ORIGIN = "package-attachment";
 // host failure yields `Unknown` for every row and the attach still commits.
 async function packageReadinessByRef(install: any): Promise<ReadinessByRef> {
   const manifest = manifestOf(install);
+  // The stored spec was normalized at install (`normalizePackageManifest`), so
+  // `env` is the slot map even though the schema type still admits `string[]`.
   const templates = manifest.spec.mcps.map(
-    (mcp: {
-      id: string;
-      env?: Record<string, string>;
-      headers?: Record<string, string>;
-      bearerTokenEnv?: string | null;
-      transport?: "stdio" | "http";
-      command?: string;
-      url?: string;
-    }) => mcp,
+    (mcp) =>
+      mcp as {
+        id: string;
+        env?: Record<string, string>;
+        headers?: Record<string, string>;
+        bearerTokenEnv?: string | null;
+        transport?: "stdio" | "http";
+        command?: string;
+        url?: string;
+      },
   );
 
   if (templates.length === 0) return new Map();

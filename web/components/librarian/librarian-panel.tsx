@@ -35,6 +35,7 @@ import { LibrarianWork } from "@/components/librarian/librarian-work";
 import { librarianPanelMode } from "@/components/librarian/panel-mode";
 import { TranscriptView } from "@/components/run-transcript/transcript-view";
 import { useModalA11y } from "@/components/use-modal-a11y";
+import { useIsClient } from "@/lib/use-is-client";
 import { useRunStream } from "@/lib/use-run-stream";
 
 const STICK_THRESHOLD_PX = 32;
@@ -184,7 +185,6 @@ function LibrarianPanelBody(): ReactElement {
   const [messages, setMessages] = useState<LibrarianMessageDto[]>([]);
   const [loadFailed, setLoadFailed] = useState(false);
   const [draft, setDraft] = useState("");
-  const [draftLoaded, setDraftLoaded] = useState(false);
   const [subject, setSubject] = useState<LibrarianSubject | null>(null);
   const [sending, setSending] = useState(false);
   const [errorKey, setErrorKey] = useState<string | null>(null);
@@ -220,43 +220,48 @@ function LibrarianPanelBody(): ReactElement {
     return () => window.removeEventListener("resize", measure);
   }, []);
 
-  useEffect(() => {
+  // The stored draft is read once the client takes over, and again per owner.
+  const isClient = useIsClient();
+  const [draftOwner, setDraftOwner] = useState<string | null>(null);
+  const draftLoaded = draftOwner === ownerId;
+
+  if (isClient && !draftLoaded) {
+    setDraftOwner(ownerId);
     setDraft(readDraft(ownerId));
-    setDraftLoaded(true);
-  }, [ownerId]);
+  }
 
   useEffect(() => {
     if (draftLoaded) writeDraft(ownerId, draft);
   }, [ownerId, draft, draftLoaded]);
 
-  const refresh = useCallback(async (): Promise<void> => {
-    try {
-      const [conversationRes, messagesRes] = await Promise.all([
+  const refresh = useCallback(
+    (): Promise<void> =>
+      Promise.all([
         fetch("/api/librarian/conversation", { cache: "no-store" }),
         fetch(`/api/librarian/messages?limit=${PAGE_LIMIT}`, {
           cache: "no-store",
         }),
-      ]);
+      ])
+        .then(async ([conversationRes, messagesRes]) => {
+          if (!conversationRes.ok || !messagesRes.ok) {
+            setLoadFailed(true);
 
-      if (!conversationRes.ok || !messagesRes.ok) {
-        setLoadFailed(true);
+            return;
+          }
+          const nextView =
+            (await conversationRes.json()) as LibrarianConversationView;
+          const page = (await messagesRes.json()) as {
+            messages: LibrarianMessageDto[];
+          };
 
-        return;
-      }
-      const nextView =
-        (await conversationRes.json()) as LibrarianConversationView;
-      const page = (await messagesRes.json()) as {
-        messages: LibrarianMessageDto[];
-      };
-
-      setView(nextView);
-      setIndicator(nextView.indicator.state);
-      setMessages((current) => mergeMessages(current, page.messages));
-      setLoadFailed(false);
-    } catch {
-      setLoadFailed(true);
-    }
-  }, [setIndicator]);
+          setView(nextView);
+          setIndicator(nextView.indicator.state);
+          setMessages((current) => mergeMessages(current, page.messages));
+          setLoadFailed(false);
+        })
+        .catch(() => setLoadFailed(true)),
+    [setIndicator],
+  );
 
   useEffect(() => {
     if (open) void refresh();

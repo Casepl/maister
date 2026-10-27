@@ -150,4 +150,4 @@ export const highlighter = {
   getHighlighterEngine: (): undefined => undefined,
 };
 
-export const versions = "0.1.5";
+export const versions = "0.1.8";

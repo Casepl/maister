@@ -3,10 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   probeContainerRuntimeDaemon:
     vi.fn<() => Promise<{ serverVersion: string; strategy: string }>>(),
-  getContainerRuntimeClient:
-    vi.fn<
-      () => Promise<{ info: { containerRuntime: { serverVersion: string } } }>
-    >(),
+  getContainerRuntimeClient: vi.fn<
+    () => Promise<{
+      info: { containerRuntime: { serverVersion: string } };
+      container: { dockerode: { listContainers: () => Promise<never[]> } };
+    }>
+  >(),
   start: vi.fn<() => Promise<never>>(),
 }));
 
@@ -65,6 +67,7 @@ describe("shared Testcontainers database helper lifecycle", () => {
     });
     mocks.getContainerRuntimeClient.mockResolvedValue({
       info: { containerRuntime: { serverVersion: "lifecycle-control" } },
+      container: { dockerode: { listContainers: async () => [] } },
     });
     mocks.start.mockRejectedValue(
       new Error("Docker daemon stopped after probe"),

@@ -125,7 +125,7 @@ export function logInvocation(
   );
 }
 
-async function nativeExecutable(
+export async function nativeExecutable(
   invocation: Invocation,
   source: string,
   name: string,

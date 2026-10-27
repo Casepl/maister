@@ -876,9 +876,8 @@ describe("evidence-first classification vs a LIVE prompt-owner worker (ADR-177)"
   // not started until the command has left `pending`.
   it("RED 3 — worker-first: the owner settles the lost turn before the sweep, and the terminal row set is IDENTICAL", async () => {
     const { flowPromptOwners } = await import("@/lib/flows/graph/prompt-owner");
-    const { startPromptOwnerWorker } = await import(
-      "@/lib/execution-host/prompt-owner-recovery"
-    );
+    const { startPromptOwnerWorker } =
+      await import("@/lib/execution-host/prompt-owner-recovery");
     const runId = await seedFlowGraphRun("a177-worker-first");
     const assignment = await mint(runId);
     const client = await hosts.forAssignment(assignment);

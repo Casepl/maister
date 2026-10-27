@@ -80,9 +80,7 @@ export const ACTIVITY_WEBHOOK_KINDS = [
 export type ActivityWebhookKind = (typeof ACTIVITY_WEBHOOK_KINDS)[number];
 
 export type ActivityFeedKind =
-  | TaskActivityEventKind
-  | AttentionEventKind
-  | ActivityWebhookKind;
+  TaskActivityEventKind | AttentionEventKind | ActivityWebhookKind;
 
 export const ACTIVITY_FEED_KINDS = [
   ...TASK_ACTIVITY_EVENT_KINDS,

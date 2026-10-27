@@ -17,8 +17,13 @@ import {
 } from "node:stream";
 import { pathToFileURL } from "node:url";
 
-import * as acp from "@agentclientprotocol/sdk";
+import * as acp from "@agentclientprotocol/sdk/unstable";
 
+import {
+  connectAcpClient,
+  type AcpClientHandlers,
+  type AcpConnection,
+} from "../src/acp-connection";
 import {
   readSessionCapabilities,
   resolveReadOnlySessionDecision,
@@ -139,7 +144,7 @@ const CAPABILITY_ENFORCEMENT_PROBES = [
   },
 ] as const;
 
-const noopClient: acp.Client = {
+const noopClient: AcpClientHandlers = {
   async sessionUpdate() {
     // Smoke does not drive prompts; updates are ignored after transport parse.
   },
@@ -184,7 +189,7 @@ function toolCallKind(toolCall: unknown): string | null {
 
 function createReadOnlyProbeClient(
   observations: PermissionProbeObservation[],
-): acp.Client {
+): AcpClientHandlers {
   return {
     async sessionUpdate() {
       // Smoke probes inspect permission decisions only; updates prove prompt flow.
@@ -222,7 +227,7 @@ function createReadOnlyProbeClient(
 
 function createCapabilityEnforcementProbeClient(
   observations: CapabilityProbeObservation[],
-): acp.Client {
+): AcpClientHandlers {
   return {
     async sessionUpdate() {
       // Smoke probes inspect the permission request only.
@@ -289,7 +294,7 @@ export function summarizeCapabilityEnforcementProbe(
 
 async function smokeCapabilityEnforcement(args: {
   readonly adapter: ExecutorAgent;
-  readonly connection: acp.ClientSideConnection;
+  readonly connection: AcpConnection;
   readonly sessionId: string;
   readonly protocolVersion: number;
   readonly observations: readonly CapabilityProbeObservation[];
@@ -381,7 +386,7 @@ function summarizeReadOnlyProbe(
 
 async function smokeReadOnlySession(args: {
   readonly adapter: ExecutorAgent;
-  readonly connection: acp.ClientSideConnection;
+  readonly connection: AcpConnection;
   readonly sessionId: string;
   readonly protocolVersion: number;
   readonly observations: readonly PermissionProbeObservation[];
@@ -645,7 +650,7 @@ export async function smokeAdapter(
         child.stdout as NodeReadable,
       ) as unknown as NodeReadableStream<Uint8Array>,
     );
-    const connection = new acp.ClientSideConnection(() => client, stream);
+    const connection = connectAcpClient(stream, client);
     const init = await withSmokeTimeout(
       connection.initialize({
         protocolVersion: acp.PROTOCOL_VERSION,

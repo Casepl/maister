@@ -107,12 +107,10 @@ beforeAll(async () => {
     markScratchCrashed,
     sendScratchUserMessage,
   } = await import("@/lib/scratch-runs/service"));
-  ({ finalizeLifecycleOperation } = await import(
-    "@/lib/workbench-lifecycle/service"
-  ));
-  ({ POST: recoverRoute } = await import(
-    "@/app/api/scratch-runs/[runId]/recover/route"
-  ));
+  ({ finalizeLifecycleOperation } =
+    await import("@/lib/workbench-lifecycle/service"));
+  ({ POST: recoverRoute } =
+    await import("@/app/api/scratch-runs/[runId]/recover/route"));
 
   tmpRoot = await mkdtemp(join(tmpdir(), "scratch-placement-"));
   for (const key of [
@@ -805,9 +803,8 @@ describe("scratch run placement (ADR-166 Q1–Q3)", () => {
 // stayed NULL.
 describe("scratch retryable failure keeps the row in the queue (ADR-182 A4)", () => {
   async function yieldOnce(): Promise<void> {
-    const { PromptIncarnationPending } = await import(
-      "@/lib/execution-host/prompt-incarnation"
-    );
+    const { PromptIncarnationPending } =
+      await import("@/lib/execution-host/prompt-incarnation");
 
     admission.wait!.mockRejectedValueOnce(
       new PromptIncarnationPending({
@@ -849,9 +846,8 @@ describe("scratch retryable failure keeps the row in the queue (ADR-182 A4)", ()
   }
 
   async function withWorker<T>(fn: () => Promise<T>): Promise<T> {
-    const { startAgentContinuationWorker } = await import(
-      "@/lib/agents/continuation-worker"
-    );
+    const { startAgentContinuationWorker } =
+      await import("@/lib/agents/continuation-worker");
     const worker = startAgentContinuationWorker({
       db: db as never,
       executionHosts: hosts,

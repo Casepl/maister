@@ -11,8 +11,6 @@
 #include <unistd.h>
 
 int main(void) {
-  const int userns = unshare(CLONE_NEWUSER);
-  const int userns_errno = userns == 0 ? 0 : errno;
   const int remount = mount(NULL, "/", NULL, MS_REMOUNT, NULL);
   const int remount_errno = remount == 0 ? 0 : errno;
   const int namespace_fd = open("/proc/1/ns/mnt", O_RDONLY | O_CLOEXEC);
@@ -42,6 +40,9 @@ int main(void) {
     int child_status;
     if (waitpid(bridge_pid, &child_status, 0) == -1 || ptrace(PTRACE_DETACH, bridge_pid, NULL, NULL) == -1) { perror("release bridge inspection control"); return 1; }
   }
+  // A successful namespace entry must not prevent reporting the other probes.
+  const int userns = unshare(CLONE_NEWUSER);
+  const int userns_errno = userns == 0 ? 0 : errno;
   printf("{\"userns\":%d,\"remount\":%d,\"reentry\":%d,\"bridgeDescriptor\":%d,\"bridgePtrace\":%d}\n", userns_errno, remount_errno, reentry_errno, descriptor_errno, attach_errno);
   return 0;
 }

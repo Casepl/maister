@@ -838,8 +838,7 @@ describe("Owned Flow checkpointed permission resume", () => {
       const driver = startProcess("flow-prompt-owner-process.ts", seeded.runId);
       let claimProcess: ReturnType<typeof startProcess> | undefined;
       let continuation:
-        | ReturnType<typeof startFlowContinuationWorker>
-        | undefined;
+        ReturnType<typeof startFlowContinuationWorker> | undefined;
 
       try {
         await expect
@@ -1160,8 +1159,7 @@ describe("Owned Flow checkpointed permission resume", () => {
       const driver = startProcess("flow-prompt-owner-process.ts", seeded.runId);
       let responseBody: unknown;
       let continuation:
-        | ReturnType<typeof startFlowContinuationWorker>
-        | undefined;
+        ReturnType<typeof startFlowContinuationWorker> | undefined;
 
       try {
         await expect
@@ -1317,8 +1315,7 @@ describe("Owned Flow checkpointed permission resume", () => {
           .toBe("completed");
         const capLock = await database.pool.connect();
         let staleResume:
-          | Promise<Awaited<ReturnType<typeof resumeRun>> | unknown>
-          | undefined;
+          Promise<Awaited<ReturnType<typeof resumeRun>> | unknown> | undefined;
 
         try {
           await capLock.query("SELECT pg_advisory_lock($1)", [0x6d61_6973]);

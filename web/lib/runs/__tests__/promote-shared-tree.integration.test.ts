@@ -105,9 +105,8 @@ beforeAll(async () => {
   pool = testDatabase.pool;
   db = testDatabase.db;
 
-  ({ promoteChildRunForToken, promoteRun } = await import(
-    "@/lib/runs/promote"
-  ));
+  ({ promoteChildRunForToken, promoteRun } =
+    await import("@/lib/runs/promote"));
 }, 180_000);
 
 afterAll(async () => {

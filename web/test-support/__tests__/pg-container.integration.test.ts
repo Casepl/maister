@@ -1,27 +1,22 @@
-import { execFile, spawn } from "node:child_process";
-import {
-  chmod,
-  copyFile,
-  mkdir,
-  mkdtemp,
-  readFile,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
 
+import { PostgreSqlContainer } from "@testcontainers/postgresql";
+import { getContainerRuntimeClient } from "testcontainers";
 import { eq, sql } from "drizzle-orm";
 import { readMigrationFiles, type MigrationConfig } from "drizzle-orm/migrator";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import pino from "pino";
 import { Pool } from "pg";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 
 import {
+  TestDatabaseDockerUnavailableError,
   startBarePostgresTestDb,
   startMainAndBrainPostgresTestDb,
   startMainPostgresTestDb,
@@ -29,6 +24,8 @@ import {
 } from "../pg-container";
 import { migrateTestDatabase } from "../migrate-test-database";
 import {
+  INVOCATION_CONTAINER_LABEL,
+  invocationFromEnvironment,
   assertInvocationGroupEmpty,
   createInvocation,
   fixtureProcessEnvironment,
@@ -149,17 +146,7 @@ async function runRealDockerDiscovery(
 ): Promise<Readonly<{ outcome: unknown; records: readonly unknown[] }>> {
   const directory = await mkdtemp(join(tmpdir(), "maister-docker-discovery-"));
   const invocation = await createInvocation(directory);
-  const evidence = join(directory, "compose.jsonl");
-  const wrapper = join(directory, "docker");
-  const { stdout: dockerPath } = await promisify(execFile)("which", ["docker"]);
-
-  await copyFile(
-    fileURLToPath(
-      new URL("./fixtures/docker-compose-delay.mjs", import.meta.url),
-    ),
-    wrapper,
-  );
-  await chmod(wrapper, 0o700);
+  const evidence = join(directory, "discovery.jsonl");
   const child = spawn(
     process.execPath,
     [
@@ -169,6 +156,10 @@ async function runRealDockerDiscovery(
       "./scripts/_register-shim.mjs",
       "--import",
       FIXTURE_WATCHDOG,
+      "--import",
+      fileURLToPath(
+        new URL("./fixtures/docker-discovery-delay.mjs", import.meta.url),
+      ),
       fileURLToPath(
         new URL("./fixtures/docker-probe-child.ts", import.meta.url),
       ),
@@ -179,9 +170,7 @@ async function runRealDockerDiscovery(
       env: {
         ...process.env,
         ...(await fixtureProcessEnvironment(invocation)),
-        PATH: `${directory}:${process.env.PATH ?? ""}`,
         MAISTER_TEST_DOCKER_PROBE_TIMEOUT_MS: "3000",
-        MAISTER_DOCKER_CONTROL_BINARY: dockerPath.trim(),
         MAISTER_DOCKER_CONTROL_EVIDENCE: evidence,
         MAISTER_DOCKER_CONTROL_DELAY_MS: String(delayMs),
       },
@@ -215,7 +204,7 @@ async function runRealDockerDiscovery(
         invocation,
         {
           role: "fixture",
-          caseName: "docker-compose-discovery",
+          caseName: "docker-sdk-discovery",
           rootRole: "database",
           root: null,
           bootId: invocation.id,
@@ -232,7 +221,7 @@ async function runRealDockerDiscovery(
             () =>
               reject(
                 new Error(
-                  "real Compose/Postgres discovery control exceeded its deadline",
+                  "real SDK/Postgres discovery control exceeded its deadline",
                 ),
               ),
             40_000,
@@ -263,18 +252,18 @@ async function runRealDockerDiscovery(
       (await readFile(evidence, "utf8")).trim(),
     );
 
-    expect(discovery).toMatchObject({ event: "real-compose-discovery" });
+    expect(discovery).toMatchObject({ event: "real-host-discovery" });
     expect((discovery as { delayMs: number }).delayMs).toBeGreaterThanOrEqual(
       delayMs,
     );
     logInvocation(invocation, "docker-discovery-control", {
       role: "fixture",
-      caseName: "docker-compose-discovery",
+      caseName: "docker-sdk-discovery",
       pid: process.pid,
       rootRole: "database",
       outcome: "observed",
       daemonDeadlineMs: 3_000,
-      composeDelayMs: (discovery as { delayMs: number }).delayMs,
+      discoveryDelayMs: (discovery as { delayMs: number }).delayMs,
     });
   } catch (error) {
     failure = error;
@@ -310,7 +299,7 @@ async function runRealDockerDiscovery(
   if (failure) throw failure;
   logInvocation(invocation, "docker-discovery-cleanup", {
     role: "fixture",
-    caseName: "docker-compose-discovery",
+    caseName: "docker-sdk-discovery",
     pid: process.pid,
     rootRole: "database",
     outcome: "clean",
@@ -321,7 +310,7 @@ async function runRealDockerDiscovery(
 }
 
 describe("shared Testcontainers Postgres helper", () => {
-  it("separates fast daemon contact from slow real Compose discovery", async () => {
+  it("separates fast daemon contact from slow real SDK discovery", async () => {
     const result = await runRealDockerDiscovery(4_000);
 
     expect(result.outcome).toMatchObject({ name: "ready", value: 1 });
@@ -385,10 +374,11 @@ describe("shared Testcontainers Postgres helper", () => {
       name: string;
       setting: string;
     }>(
-      "SELECT name, setting FROM pg_settings WHERE name IN ('fsync', 'full_page_writes', 'max_wal_size', 'min_wal_size', 'synchronous_commit') ORDER BY name",
+      "SELECT name, setting FROM pg_settings WHERE name IN ('autovacuum_naptime', 'fsync', 'full_page_writes', 'max_wal_size', 'min_wal_size', 'synchronous_commit') ORDER BY name",
     );
 
     expect(durability.rows).toEqual([
+      { name: "autovacuum_naptime", setting: "1" },
       { name: "fsync", setting: "on" },
       { name: "full_page_writes", setting: "on" },
       { name: "max_wal_size", setting: "64" },
@@ -551,7 +541,7 @@ describe("shared Testcontainers Postgres helper", () => {
           migrationsFolder: invalid,
           migrationsSchema: "rollback_checks",
         }),
-      ).rejects.toMatchObject({ code: "22012" });
+      ).rejects.toMatchObject({ cause: { code: "22012" } });
       expect(
         (
           await batched.pool.query<{ relation: string | null }>(
@@ -640,6 +630,173 @@ describe("shared Testcontainers Postgres helper", () => {
       await rm(invalid, { recursive: true, force: true });
     }
   }, 180_000);
+
+  it("reclaims a failed-start allocation while preserving a live sibling database", async () => {
+    const sibling = await startBarePostgresTestDb({
+      databaseName: "test_support_start_failure_sibling",
+    });
+    const controlId = randomUUID();
+    const controlLabel = "maister.test.start-failure-control";
+    const list = async (): Promise<string[]> => {
+      const docker = (await getContainerRuntimeClient()).container.dockerode;
+      const containers = await docker.listContainers({
+        all: true,
+        filters: { label: [`${controlLabel}=${controlId}`] },
+        abortSignal: AbortSignal.timeout(30_000),
+      });
+
+      return containers.map((container) => container.Id);
+    };
+
+    const errors: unknown[] = [];
+    const restoreSpies: (() => void)[] = [];
+    let unexpected: StartedPostgresTestDb | undefined;
+    const created: string[] = [];
+    const createdInvocations: (string | undefined)[] = [];
+
+    try {
+      const siblingInvocation =
+        sibling.container.getLabels()[INVOCATION_CONTAINER_LABEL];
+
+      expect(siblingInvocation).toBe(invocationFromEnvironment()?.id);
+      const client = await getContainerRuntimeClient();
+      const originalStart = PostgreSqlContainer.prototype.start;
+      const originalCreate = client.container.create.bind(client.container);
+      let engineError: unknown;
+      const originalEngineStart = client.container.start.bind(client.container);
+      const engineStart = vi
+        .spyOn(client.container, "start")
+        .mockImplementation(async (container) => {
+          try {
+            await originalEngineStart(container);
+          } catch (error) {
+            if (created.includes(container.id)) engineError = error;
+            throw error;
+          }
+        });
+
+      restoreSpies.push(() => engineStart.mockRestore());
+      const create = vi
+        .spyOn(client.container, "create")
+        .mockImplementation(async (options) => {
+          const container = await originalCreate(options);
+
+          if (options.Labels?.[controlLabel] === controlId) {
+            created.push(container.id);
+            createdInvocations.push(options.Labels[INVOCATION_CONTAINER_LABEL]);
+          }
+
+          return container;
+        });
+
+      restoreSpies.push(() => create.mockRestore());
+      const start = vi
+        .spyOn(PostgreSqlContainer.prototype, "start")
+        .mockImplementationOnce(function (this: PostgreSqlContainer) {
+          return originalStart.call(
+            this.withLabels({ [controlLabel]: controlId }).withExposedPorts({
+              container: 5432,
+              host: sibling.container.getMappedPort(5432),
+            }),
+          );
+        });
+
+      restoreSpies.push(() => start.mockRestore());
+
+      const error: unknown = await startBarePostgresTestDb({
+        databaseName: "test_support_start_failure",
+      })
+        .then((database) => {
+          unexpected = database;
+
+          return database;
+        })
+        .catch((cause: unknown) => cause);
+
+      expect(
+        created,
+        "the real Docker create must complete before the refusal",
+      ).toHaveLength(1);
+      expect(createdInvocations).toEqual([siblingInvocation]);
+      expect(error).toBeInstanceOf(TestDatabaseDockerUnavailableError);
+      expect(engineError).toBeDefined();
+      expect(error).toMatchObject({ cause: { statusCode: 500 } });
+      expect((error as TestDatabaseDockerUnavailableError).cause).toBe(
+        engineError,
+      );
+      expect((error as TestDatabaseDockerUnavailableError).safeCause).toMatch(
+        /port is already allocated|address already in use/u,
+      );
+      expect(
+        (await sibling.pool.query<{ value: number }>("SELECT 1 AS value")).rows,
+      ).toEqual([{ value: 1 }]);
+      expect(
+        await list(),
+        "failed-start allocation must be absent before containment",
+      ).toEqual([]);
+      migrationLogger.info(
+        {
+          phase: "failed-start-control",
+          invocationId: siblingInvocation,
+          outcome: "reclaimed",
+          siblingSql: "passed",
+          originalCause: "preserved",
+        },
+        "qualified failed PostgreSQL allocation cleanup",
+      );
+    } catch (error) {
+      errors.push(error);
+    } finally {
+      for (const restore of restoreSpies.reverse()) restore();
+      if (unexpected) {
+        try {
+          await unexpected.stop();
+        } catch (error) {
+          errors.push(error);
+        }
+      }
+      try {
+        for (const id of await list()) {
+          try {
+            expect(id).toMatch(/^[a-f0-9]{64}$/u);
+            expect(created).toContain(id);
+            const docker = (await getContainerRuntimeClient()).container
+              .dockerode;
+            const container = docker.getContainer(id);
+            const inspected = await container.inspect({
+              abortSignal: AbortSignal.timeout(10_000),
+            });
+
+            expect(inspected.Config.Labels).toMatchObject({
+              [controlLabel]: controlId,
+            });
+            const removal = {
+              force: true,
+              v: true,
+              abortSignal: AbortSignal.timeout(30_000),
+            };
+
+            await container.remove(removal);
+          } catch (error) {
+            errors.push(error);
+          }
+        }
+      } catch (error) {
+        errors.push(error);
+      }
+      try {
+        await sibling.stop();
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+    if (errors.length === 1) throw errors[0];
+    if (errors.length)
+      throw new AggregateError(
+        errors,
+        "failed-start control and cleanup failed",
+      );
+  });
 
   it("stops the container when its already-closed pool rejects teardown", async () => {
     const database = await startBarePostgresTestDb({

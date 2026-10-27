@@ -122,6 +122,18 @@ const KNOWN_CODES = new Set([
   "CRASH",
 ]);
 
+// Latest-wins reads: each call starts a read and returns whether that read is
+// still the newest one, so a response superseded by a newer read is dropped.
+function latestWins(): () => () => boolean {
+  let latest = 0;
+
+  return () => {
+    const id = (latest += 1);
+
+    return () => id === latest;
+  };
+}
+
 function newMutationId(): string {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
@@ -149,38 +161,38 @@ export function WorkbenchGitPanel({
   const [membersOnly, setMembersOnly] = useState(false);
   const [busy, setBusy] = useState<WorkbenchGitActionId | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const reqIdRef = useRef(0);
+  const [beginLoad] = useState(latestWins);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTickRef = useRef(refreshTick);
 
-  const load = useCallback(async (): Promise<void> => {
-    const reqId = (reqIdRef.current += 1);
+  const load = useCallback((): Promise<void> => {
+    const isCurrent = beginLoad();
 
-    try {
-      const res = await fetch(`/api/runs/${runId}/git-state`);
+    return fetch(`/api/runs/${runId}/git-state`)
+      .then(async (res) => {
+        if (!isCurrent()) return;
+        if (res.status === 403) {
+          setMembersOnly(true);
 
-      if (reqId !== reqIdRef.current) return;
-      if (res.status === 403) {
-        setMembersOnly(true);
+          return;
+        }
+        if (!res.ok) {
+          setLoadFailed(true);
 
-        return;
-      }
-      if (!res.ok) {
-        setLoadFailed(true);
+          return;
+        }
 
-        return;
-      }
+        const body = await readJson<GitState>(res);
 
-      const body = await readJson<GitState>(res);
-
-      // Latest-wins: a response superseded by a newer read is dropped.
-      if (!body || reqId !== reqIdRef.current) return;
-      setLoadFailed(false);
-      setState(body);
-    } catch {
-      if (reqId === reqIdRef.current) setLoadFailed(true);
-    }
-  }, [runId]);
+        // Latest-wins: a response superseded by a newer read is dropped.
+        if (!body || !isCurrent()) return;
+        setLoadFailed(false);
+        setState(body);
+      })
+      .catch(() => {
+        if (isCurrent()) setLoadFailed(true);
+      });
+  }, [runId, beginLoad]);
 
   useEffect(() => {
     void load();

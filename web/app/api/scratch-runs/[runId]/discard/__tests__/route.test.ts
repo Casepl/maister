@@ -142,9 +142,8 @@ const { deleteSession } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/execution-host", async () => {
-  const { executionHostModuleMock } = await import(
-    "@/test-support/execution-host-module-mock"
-  );
+  const { executionHostModuleMock } =
+    await import("@/test-support/execution-host-module-mock");
 
   return executionHostModuleMock({ deleteSession });
 });

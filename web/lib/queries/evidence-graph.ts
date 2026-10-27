@@ -10,19 +10,10 @@ import * as schema from "@/lib/db/schema";
 const { nodeAttempts, gateResults, artifactInstances, hitlRequests } = schema;
 
 export type EvidenceNodeKind =
-  | "task-input"
-  | "node-attempt"
-  | "artifact"
-  | "gate"
-  | "decision";
+  "task-input" | "node-attempt" | "artifact" | "gate" | "decision";
 
 export type EvidenceEdgeKind =
-  | "input"
-  | "output"
-  | "supersession"
-  | "stale"
-  | "flow"
-  | "gate";
+  "input" | "output" | "supersession" | "stale" | "flow" | "gate";
 
 export interface EvidenceNode {
   id: string;

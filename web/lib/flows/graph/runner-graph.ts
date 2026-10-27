@@ -4038,8 +4038,7 @@ export async function runGraph(
             );
 
             const targetDef = graph.nodes.get(reworkTarget)?.source.node as
-              | { session_policy?: SessionPolicy }
-              | undefined;
+              { session_policy?: SessionPolicy } | undefined;
             const resolved = resolveSessionPolicy({
               reworkPolicy: mismatchRework.session_policy,
               nodePolicy: targetDef?.session_policy,
@@ -5056,8 +5055,7 @@ export async function runGraph(
           // engine default `resume`.
           if (target) {
             const targetDef = graph.nodes.get(target)?.source.node as
-              | { session_policy?: SessionPolicy }
-              | undefined;
+              { session_policy?: SessionPolicy } | undefined;
             const resolved = resolveSessionPolicy({
               reworkPolicy: node.rework?.session_policy,
               nodePolicy: targetDef?.session_policy,

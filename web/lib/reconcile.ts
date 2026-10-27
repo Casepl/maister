@@ -1707,9 +1707,8 @@ export async function runReconcileSweep(
   const graceSeconds = reconcileGraceSeconds();
 
   try {
-    const { reconcilePlanReviewDecisionHandoffs } = await import(
-      "@/lib/services/hitl"
-    );
+    const { reconcilePlanReviewDecisionHandoffs } =
+      await import("@/lib/services/hitl");
     const resumed = await reconcilePlanReviewDecisionHandoffs({ db });
 
     if (resumed > 0) {
@@ -1757,9 +1756,8 @@ export async function runReconcileSweep(
   try {
     const records = await hosts.local().listSessions();
 
-    const { recoverPendingAgentQuestions } = await import(
-      "@/lib/services/agent-question"
-    );
+    const { recoverPendingAgentQuestions } =
+      await import("@/lib/services/agent-question");
 
     await recoverPendingAgentQuestions({
       db,
@@ -1768,9 +1766,8 @@ export async function runReconcileSweep(
     });
 
     try {
-      const { recoverExpiredGateChatTurns } = await import(
-        "@/lib/services/gate-chat"
-      );
+      const { recoverExpiredGateChatTurns } =
+        await import("@/lib/services/gate-chat");
       const recovered = await recoverExpiredGateChatTurns({
         db,
         sessions: records,
@@ -1888,9 +1885,8 @@ export async function runReconcileSweep(
     classified: { nodeAttemptId: string | null; commandId: string | null },
   ): Promise<{ ok: boolean; reason?: string }> => {
     if (!cand.currentStepId) return { ok: false, reason: "no-current-step" };
-    const { applyTurnLostBoundary } = await import(
-      "@/lib/runs/turn-lost-boundary"
-    );
+    const { applyTurnLostBoundary } =
+      await import("@/lib/runs/turn-lost-boundary");
     const outcome = await applyTurnLostBoundary({
       db,
       runId: cand.runId,
@@ -2085,12 +2081,10 @@ export async function runReconcileSweep(
           // via the WaitingOnChildren-guarded transition. The cascade owns its
           // own per-pool promote; crashWaitingOnChildren is status-guarded so a
           // concurrent wake that already moved it to Running loses.
-          const { cascadeAbandonRunTreeAndStopSessions } = await import(
-            "@/lib/orchestrator/cascade"
-          );
-          const { crashWaitingOnChildren } = await import(
-            "@/lib/runs/state-transitions"
-          );
+          const { cascadeAbandonRunTreeAndStopSessions } =
+            await import("@/lib/orchestrator/cascade");
+          const { crashWaitingOnChildren } =
+            await import("@/lib/runs/state-transitions");
 
           // Stop the coordinator's OWN live session(s) FIRST (E5 discipline,
           // as the budget tree arm does). `orphaned-orchestrator` is the one
@@ -2265,9 +2259,8 @@ export async function runReconcileSweep(
           // Lazy import: the scratch service pulls in the authz/next-auth
           // chain, which must NOT load when the pure classifier is imported
           // standalone (the T2.1 unit test imports `@/lib/reconcile`).
-          const { markScratchCrashed } = await import(
-            "@/lib/scratch-runs/service"
-          );
+          const { markScratchCrashed } =
+            await import("@/lib/scratch-runs/service");
 
           const { applied } = await markScratchCrashed({
             db,
@@ -2607,9 +2600,8 @@ export async function runReconcileSweep(
         // session to tear down); absent ⇒ W2/W3 (idempotent re-verify → finalize
         // or abort). A concurrent in-process finalize that already terminalized
         // the attempt returns `noop`.
-        const { recoverSyncAttemptOnReconcile } = await import(
-          "@/lib/runs/sync-recovery"
-        );
+        const { recoverSyncAttemptOnReconcile } =
+          await import("@/lib/runs/sync-recovery");
         const result = await recoverSyncAttemptOnReconcile({
           db,
           runId: cand.runId,
@@ -2638,9 +2630,8 @@ export async function runReconcileSweep(
       case "librarian-park": {
         // Lazy import: the librarian runtime pulls in the execution host and
         // token modules, which the pure classifier must not load.
-        const { failLibrarianTurnForHostLoss } = await import(
-          "@/lib/librarian/turn-recovery"
-        );
+        const { failLibrarianTurnForHostLoss } =
+          await import("@/lib/librarian/turn-recovery");
         const outcome = await failLibrarianTurnForHostLoss(db, cand.runId);
 
         log.warn(

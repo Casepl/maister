@@ -8,6 +8,7 @@ import {
   reconnectDelayMs,
   type RunStreamLifecycleKind,
 } from "@/lib/run-stream-controller";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 // The study stream emits NAMED SSE events (`event: <type>` per frame), which
 // never reach `EventSource.onmessage` — each type needs an explicit listener.
@@ -58,9 +59,7 @@ export function useStudyStream(args: {
   const lastEventIdRef = useRef<number | null>(null);
   const lifecycleRef = useRef(initialRunStreamLifecycle);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onEventRef = useRef(onEvent);
-
-  onEventRef.current = onEvent;
+  const onEventRef = useLatestRef(onEvent);
 
   const reconnect = useCallback(() => {
     if (reconnectTimerRef.current) {

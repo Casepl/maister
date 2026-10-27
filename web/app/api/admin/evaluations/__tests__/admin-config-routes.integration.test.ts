@@ -122,12 +122,10 @@ beforeAll(async () => {
   profilesRoute = await import("../profiles/route");
   profileRoute = await import("../profiles/[profileId]/route");
   methodologiesRoute = await import("../methodologies/route");
-  activationRoute = await import(
-    "../methodologies/[methodRevisionId]/activation/route"
-  );
-  overrideRoute = await import(
-    "@/app/api/projects/[slug]/evaluation-profiles/[profileId]/override/route"
-  );
+  activationRoute =
+    await import("../methodologies/[methodRevisionId]/activation/route");
+  overrideRoute =
+    await import("@/app/api/projects/[slug]/evaluation-profiles/[profileId]/override/route");
 
   adminId = randomUUID();
   memberId = randomUUID();

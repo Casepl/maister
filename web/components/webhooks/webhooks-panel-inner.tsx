@@ -82,42 +82,50 @@ export function WebhooksPanelInner({
 
   const [globalEnabled, setGlobalEnabled] = useState<boolean | null>(null);
 
-  const refresh = useCallback(async (): Promise<void> => {
-    try {
-      const res = await fetch(apiBase, { cache: "no-store" });
+  const refresh = useCallback(
+    (): Promise<void> =>
+      Promise.resolve()
+        .then(async () => {
+          const res = await fetch(apiBase, { cache: "no-store" });
 
-      if (!res.ok) {
-        setError(t("loadError"));
+          if (!res.ok) {
+            setError(t("loadError"));
 
-        return;
-      }
+            return;
+          }
 
-      const body = (await res.json()) as {
-        subscriptions: WebhookSubscriptionDto[];
-      };
+          const body = (await res.json()) as {
+            subscriptions: WebhookSubscriptionDto[];
+          };
 
-      setSubscriptions(body.subscriptions);
-      setError(null);
-    } catch {
-      setError(t("loadError"));
-    }
-  }, [apiBase, t]);
+          setSubscriptions(body.subscriptions);
+          setError(null);
+        })
+        .catch(() => {
+          setError(t("loadError"));
+        }),
+    [apiBase, t],
+  );
 
-  const loadSettings = useCallback(async (): Promise<void> => {
-    if (!settingsApiBase) return;
+  const loadSettings = useCallback(
+    (): Promise<void> =>
+      Promise.resolve()
+        .then(async () => {
+          if (!settingsApiBase) return;
 
-    try {
-      const res = await fetch(settingsApiBase, { cache: "no-store" });
+          const res = await fetch(settingsApiBase, { cache: "no-store" });
 
-      if (!res.ok) return;
+          if (!res.ok) return;
 
-      const body = (await res.json()) as { enabled: boolean };
+          const body = (await res.json()) as { enabled: boolean };
 
-      setGlobalEnabled(body.enabled);
-    } catch {
-      // Kill-switch read is best-effort; the table still renders without it.
-    }
-  }, [settingsApiBase]);
+          setGlobalEnabled(body.enabled);
+        })
+        .catch(() => {
+          // Kill-switch read is best-effort; the table still renders without it.
+        }),
+    [settingsApiBase],
+  );
 
   useEffect(() => {
     void refresh();

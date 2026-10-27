@@ -8,10 +8,7 @@ import { gitPanelHref } from "@/lib/workbench-git/panel-link";
 import { deriveWorkbenchLifecycleActions } from "@/lib/workbench-lifecycle/policy";
 
 export type InspectorActionGroup =
-  | "session"
-  | "branch"
-  | "delivery"
-  | "cleanup";
+  "session" | "branch" | "delivery" | "cleanup";
 
 export type InspectorActionId =
   | "stop"

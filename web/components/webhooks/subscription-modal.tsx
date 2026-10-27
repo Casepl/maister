@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import clsx from "clsx";
 
 import { WEBHOOK_EVENT_TYPES } from "@/lib/webhooks/taxonomy";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 export type WebhookMethod = "POST" | "PUT";
 
@@ -127,9 +128,7 @@ export function SubscriptionModal({
 
   const dialogRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
-  const onCloseRef = useRef(onClose);
-
-  onCloseRef.current = onClose;
+  const onCloseRef = useLatestRef(onClose);
 
   useEffect(() => {
     if (!open) return;

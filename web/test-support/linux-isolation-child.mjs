@@ -72,9 +72,13 @@ try {
     frame({ type: "error", message: error.message.slice(0, 8192) });
     process.exitCode = 125;
   });
-  child.once("close", (code, signal) => {
+  child.once("exit", (code, signal) => {
     if (code === null && signal === null) return;
     frame({ type: "exit", code, signal });
+    // Descendants can retain these pipes after the application exits. They
+    // must not keep the bridge/PID namespace alive or conceal its outcome.
+    child.stdout.unref();
+    child.stderr.unref();
   });
 } catch (error) {
   frame({

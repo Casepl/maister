@@ -47,8 +47,7 @@ export const EXECUTION_AB_STAGES: Readonly<
 };
 
 export type ExecutionAbStageRefusal =
-  | "stage_out_of_order"
-  | "ledger_high_water_drift";
+  "stage_out_of_order" | "ledger_high_water_drift";
 
 export type ExecutionAbStagePlan =
   | {
@@ -155,10 +154,7 @@ export function planExecutionAbStage(input: {
 // the evidence: 0134 drops the scratch mirror column, 0135 drops the artifact
 // projection cursors.
 export type DataPlaneStage =
-  | "pre-additive"
-  | "additive"
-  | "associations"
-  | "canonical";
+  "pre-additive" | "additive" | "associations" | "canonical";
 
 export function classifyDataPlaneStage(evidence: {
   importLanes: boolean;

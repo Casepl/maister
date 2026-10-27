@@ -7,11 +7,12 @@ import type {
 } from "@/components/workbench/diff-view";
 import type { ReactElement } from "react";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { DiffView } from "@/components/workbench/diff-view";
 import { readApiError } from "@/lib/api-error";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 export type ChangeReviewDialogLabels = {
   title: string;
@@ -73,9 +74,7 @@ export function ChangeReviewDialog({
   onCommitted?: () => void;
 }): ReactElement {
   const tApiErrors = useTranslations("apiErrors");
-  const onCloseRef = useRef(onClose);
-
-  onCloseRef.current = onClose;
+  const onCloseRef = useLatestRef(onClose);
 
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [message, setMessage] = useState("");
@@ -93,27 +92,32 @@ export function ChangeReviewDialog({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const load = useCallback(async (): Promise<void> => {
-    try {
-      const res = await fetch(`/api/studio/local-packages/${packageId}/diff`);
+  const load = useCallback(
+    (): Promise<void> =>
+      fetch(`/api/studio/local-packages/${packageId}/diff`)
+        .then(async (res) => {
+          if (!res.ok) {
+            setState({
+              kind: "error",
+              message: await readApiError(res, tApiErrors),
+            });
 
-      if (!res.ok) {
-        setState({
-          kind: "error",
-          message: await readApiError(res, tApiErrors),
-        });
+            return;
+          }
 
-        return;
-      }
-
-      setState({ kind: "ready", diff: (await res.json()) as WorkingDirDiff });
-    } catch {
-      setState({
-        kind: "error",
-        message: tApiErrors("requestFailed"),
-      });
-    }
-  }, [packageId, tApiErrors]);
+          setState({
+            kind: "ready",
+            diff: (await res.json()) as WorkingDirDiff,
+          });
+        })
+        .catch(() => {
+          setState({
+            kind: "error",
+            message: tApiErrors("requestFailed"),
+          });
+        }),
+    [packageId, tApiErrors],
+  );
 
   useEffect(() => {
     void load();

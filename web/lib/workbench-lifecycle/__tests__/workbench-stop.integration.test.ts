@@ -60,9 +60,8 @@ beforeAll(async () => {
   // (no sessions) backs the DB-real stop path.
   await fakeExecutionHosts(db);
 
-  ({ stopWorkbenchRun, stopThenArchive } = await import(
-    "@/lib/workbench-lifecycle/service"
-  ));
+  ({ stopWorkbenchRun, stopThenArchive } =
+    await import("@/lib/workbench-lifecycle/service"));
   ({ stopScratchWorkbench } = await import("@/lib/scratch-runs/service"));
 }, 180_000);
 
@@ -611,9 +610,8 @@ describe("workbench stop — a delegated flow child wakes its parked parent (ADR
       status: "Review",
     });
 
-    const { buildOrchestratorResumeConsumer } = await import(
-      "@/lib/domain-events/orchestrator-resume"
-    );
+    const { buildOrchestratorResumeConsumer } =
+      await import("@/lib/domain-events/orchestrator-resume");
     const resumed: string[] = [];
     const consumer = buildOrchestratorResumeConsumer({
       db,
@@ -663,9 +661,8 @@ describe("workbench stop — a delegated flow child wakes its parked parent (ADR
       cause: "operator_stop",
     });
 
-    const { buildAutoLaunchRunPlanConsumer } = await import(
-      "@/lib/domain-events/auto-launch"
-    );
+    const { buildAutoLaunchRunPlanConsumer } =
+      await import("@/lib/domain-events/auto-launch");
     const promoted: string[] = [];
 
     await buildAutoLaunchRunPlanConsumer({
@@ -686,9 +683,8 @@ describe("workbench stop — a delegated flow child wakes its parked parent (ADR
 
     expect(childRow.rows[0].status).toBe("Review");
 
-    const { buildOrchestratorResumeConsumer } = await import(
-      "@/lib/domain-events/orchestrator-resume"
-    );
+    const { buildOrchestratorResumeConsumer } =
+      await import("@/lib/domain-events/orchestrator-resume");
     const resumed: string[] = [];
 
     await buildOrchestratorResumeConsumer({

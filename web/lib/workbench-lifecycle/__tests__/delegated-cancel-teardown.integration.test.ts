@@ -100,12 +100,10 @@ beforeAll(async () => {
   });
   await fakeExecutionHosts(db, { fake });
 
-  ({ stopWorkbenchRun, stopWorkbenchRunForToken } = await import(
-    "@/lib/workbench-lifecycle/service"
-  ));
-  ({ POST: abandonPOST } = await import(
-    "@/app/api/runs/[runId]/abandon/route"
-  ));
+  ({ stopWorkbenchRun, stopWorkbenchRunForToken } =
+    await import("@/lib/workbench-lifecycle/service"));
+  ({ POST: abandonPOST } =
+    await import("@/app/api/runs/[runId]/abandon/route"));
 }, 180_000);
 
 afterAll(async () => {

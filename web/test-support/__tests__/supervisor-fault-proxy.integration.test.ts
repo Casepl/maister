@@ -56,6 +56,67 @@ async function closeFixtures(
     throw new AggregateError(failures, "fault proxy control cleanup failed");
 }
 
+it("HTTP forwarding: each hop owns its connection headers for ordinary, held and SSE responses", async () => {
+  const requests: IncomingMessage["headers"][] = [];
+  const frame = 'id: 1\ndata: {"payload":{}}\n\n';
+  const upstream = await startLoopbackServer((incoming, response) => {
+    requests.push(incoming.headers);
+    response.writeHead(200, {
+      Connection: "keep-alive, X-Upstream-Hop",
+      "Keep-Alive": "timeout=72",
+      "X-Upstream-Hop": "private",
+      "X-End-To-End": "preserved",
+      "Content-Type":
+        incoming.url === "/runtime-events" ? "text/event-stream" : "text/plain",
+    });
+    response.end(incoming.url === "/runtime-events" ? frame : "healthy");
+  });
+  const proxy = await startSupervisorFaultProxy(upstream.url);
+
+  try {
+    for (const path of ["/ordinary", "/held", "/runtime-events"]) {
+      const barrier =
+        path === "/held"
+          ? proxy.arm(
+              { caseId: "held-headers", method: "GET", path: /^\/held$/ },
+              "hold-response",
+            )
+          : undefined;
+      const client = get(`${proxy.url}${path}`, {
+        headers: {
+          Connection: "keep-alive, X-Downstream-Hop",
+          "Keep-Alive": "timeout=99",
+          "X-Downstream-Hop": "private",
+          "X-End-To-End": "preserved",
+        },
+      });
+      const pending = once(client, "response") as Promise<[IncomingMessage]>;
+
+      if (barrier) {
+        await barrier.awaitReached();
+        barrier.release();
+      }
+      const [response] = await pending;
+
+      response.setEncoding("utf8");
+      let body = "";
+
+      for await (const chunk of response) body += String(chunk);
+
+      expect(body).toBe(path === "/runtime-events" ? frame : "healthy");
+      expect(response.headers["keep-alive"]).toBe("timeout=5");
+      expect(response.headers["x-upstream-hop"]).toBeUndefined();
+      expect(response.headers["x-end-to-end"]).toBe("preserved");
+      expect(requests.at(-1)?.["keep-alive"]).toBeUndefined();
+      expect(requests.at(-1)?.["x-downstream-hop"]).toBeUndefined();
+      expect(requests.at(-1)?.["x-end-to-end"]).toBe("preserved");
+    }
+    expect(() => proxy.assertDrained()).not.toThrow();
+  } finally {
+    await closeFixtures([proxy, upstream]);
+  }
+});
+
 it("HTTP cancellation: an aborted upload drains and the proxy continues forwarding", async () => {
   const upstream = await startLoopbackServer((_incoming, response) => {
     response.end("healthy");

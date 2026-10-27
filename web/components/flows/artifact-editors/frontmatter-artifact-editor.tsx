@@ -26,10 +26,7 @@ import {
 // `CodeEditorKind`'s frontmatter members; the Coordinator dispatches here by
 // kind. `subagent` (M39 A4) = a capability Claude subagent (lenient schema).
 export type FrontmatterArtifactKind =
-  | "skill"
-  | "agent_definition"
-  | "rule"
-  | "subagent";
+  "skill" | "agent_definition" | "rule" | "subagent";
 
 export interface FrontmatterArtifactEditorLabels {
   frontmatterHeading: string;

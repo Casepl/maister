@@ -46,9 +46,8 @@ let PATCH_handler: typeof import("@/app/api/projects/[slug]/tokens/[tokenId]/rou
 
 beforeAll(async () => {
   const routeModule = await import("@/app/api/projects/[slug]/tokens/route");
-  const tokenIdRouteModule = await import(
-    "@/app/api/projects/[slug]/tokens/[tokenId]/route"
-  );
+  const tokenIdRouteModule =
+    await import("@/app/api/projects/[slug]/tokens/[tokenId]/route");
 
   POST = routeModule.POST;
   GET = routeModule.GET;

@@ -7,7 +7,7 @@ import { z } from "zod";
 import { requireActiveSession, requireProjectAction } from "@/lib/authz";
 import { isMaisterError, MaisterError } from "@/lib/errors";
 import { executionPolicySchema } from "@/lib/runs/execution-policy";
-import { updateTask } from "@/lib/services/tasks";
+import { updateTask, type UpdateTaskInput } from "@/lib/services/tasks";
 import { resolveProjectTaskByNumber } from "@/lib/social/task-lookup";
 
 const log = pino({
@@ -39,9 +39,12 @@ const patchBodySchema = z
     expectedRevision: z.number().int().nonnegative().optional(),
   })
   .strict()
-  .refine((body) => Object.keys(body).some((key) => key !== "expectedRevision"), {
-    message: "at least one field is required",
-  });
+  .refine(
+    (body) => Object.keys(body).some((key) => key !== "expectedRevision"),
+    {
+      message: "at least one field is required",
+    },
+  );
 
 // The full card editor is PUT-shaped: it writes the first-level editable task
 // fields as one issue-style save. Lifecycle fields stay owned by the run state.
@@ -108,7 +111,7 @@ function parseTaskNumber(raw: string): number | null {
 
 type RouteParams = { params: Promise<{ slug: string; number: string }> };
 
-async function handleTaskUpdate<T extends z.ZodTypeAny>(
+async function handleTaskUpdate<T extends z.ZodType<UpdateTaskInput>>(
   req: NextRequest,
   { params }: RouteParams,
   bodySchema: T,
@@ -144,7 +147,11 @@ async function handleTaskUpdate<T extends z.ZodTypeAny>(
       );
     }
 
-    const updated = await updateTask(resolved.task.id, resolved.project.id, body);
+    const updated = await updateTask(
+      resolved.task.id,
+      resolved.project.id,
+      body,
+    );
 
     log.info({ slug, taskNumber, fields: Object.keys(body) }, label);
 

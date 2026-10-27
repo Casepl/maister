@@ -43,7 +43,7 @@ export const PromptPayloadSchema = z
           z
             .object({
               type: z.literal("runtime_object"),
-              objectId: z.string().uuid(),
+              objectId: z.string().guid(),
               ...contentMetadata,
             })
             .strict(),
@@ -60,7 +60,7 @@ const ImmutablePromptRequestSchema = z
     requestVersion: z.literal(2),
     command: z
       .object({
-        id: z.string().uuid(),
+        id: z.string().guid(),
         kind: z.literal("session.prompt"),
         issuedAt: z.string().datetime({ offset: true }),
       })

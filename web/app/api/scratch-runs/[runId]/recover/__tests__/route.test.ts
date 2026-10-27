@@ -80,11 +80,9 @@ const selectChain = () => ({
       limit: async () => rows(),
       then: <TResult1 = Row[], TResult2 = never>(
         onfulfilled?:
-          | ((value: Row[]) => TResult1 | PromiseLike<TResult1>)
-          | null,
+          ((value: Row[]) => TResult1 | PromiseLike<TResult1>) | null,
         onrejected?:
-          | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
-          | null,
+          ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
       ) => rows().then(onfulfilled, onrejected),
     };
 
@@ -124,9 +122,8 @@ const fakeDb: FakeDb = {
 vi.mock("@/lib/scratch-runs/prompt-intent", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("@/lib/scratch-runs/prompt-intent")>();
-  const { scratchPromptIntentFixture } = await import(
-    "@/test-support/scratch-prompt-intent-fixture"
-  );
+  const { scratchPromptIntentFixture } =
+    await import("@/test-support/scratch-prompt-intent-fixture");
 
   return {
     ...actual,
@@ -159,8 +156,7 @@ vi.mock("@/lib/runs/active-run-session", async (importOriginal) => ({
           capabilityAgent: (run.capabilityAgent ?? null) as string | null,
           runnerId: (run.runnerId ?? null) as string | null,
           runnerResolutionTier: (run.runnerResolutionTier ?? null) as
-            | string
-            | null,
+            string | null,
         }
       : null;
   }),
@@ -230,9 +226,8 @@ vi.mock("@/lib/supervisor-client", () => ({
 // wire-level assertions stay as they are.
 vi.mock("@/lib/execution-host", async () => {
   const sup = await import("@/lib/supervisor-client");
-  const { executionHostModuleMock } = await import(
-    "@/test-support/execution-host-module-mock"
-  );
+  const { executionHostModuleMock } =
+    await import("@/test-support/execution-host-module-mock");
   const mock = executionHostModuleMock(sup as never);
   // The driver binding (`executionFor`) composes the mock's bound client with
   // its admin surface until the module mock exports it itself.
@@ -724,9 +719,8 @@ describe("POST /api/scratch-runs/[runId]/recover", () => {
   // application: the recovery is under way, so the answer is 202 — never a 409
   // that reads as a refused recovery — and the run is not crashed.
   it("answers 202 in progress when the recovery prompt awaits its owner's application", async () => {
-    const { ScratchPromptContinuationPending } = await import(
-      "@/lib/scratch-runs/prompt-owner"
-    );
+    const { ScratchPromptContinuationPending } =
+      await import("@/lib/scratch-runs/prompt-owner");
     const runId = seedScratchRun();
 
     vi.mocked(sendScratchPromptAndProjectEvents).mockRejectedValueOnce(

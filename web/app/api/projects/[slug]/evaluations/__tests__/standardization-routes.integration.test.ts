@@ -183,9 +183,8 @@ beforeAll(async () => {
 
   currentRoute = await import("../standardization/route");
   rollbackRoute = await import("../standardization/rollback/route");
-  eligibilityRoute = await import(
-    "../studies/[studyId]/standardization-eligibility/route"
-  );
+  eligibilityRoute =
+    await import("../studies/[studyId]/standardization-eligibility/route");
   standardizeRoute = await import("../studies/[studyId]/standardize/route");
   recipeHelpers = await import("@/lib/evaluations/recipes");
   studyHelpers = await import("@/lib/evaluations/studies");

@@ -679,12 +679,10 @@ describe("cut version (integration)", () => {
   // package), NEVER the package name: a project attached to the UPSTREAM
   // install of the same name is not offered and stays untouched.
   it("cut + adopt advances every cut-pinned project; an upstream-pinned project is not offered and untouched", async () => {
-    const { cutLocalPackageVersion, listAdoptTargetProjects } = await import(
-      "@/lib/local-packages/versions"
-    );
-    const { attachPackage, upgradeAttachment } = await import(
-      "@/lib/packages/attach"
-    );
+    const { cutLocalPackageVersion, listAdoptTargetProjects } =
+      await import("@/lib/local-packages/versions");
+    const { attachPackage, upgradeAttachment } =
+      await import("@/lib/packages/attach");
 
     const { localPackageId } = await forkPackageToLocal({
       sourceInstallId,
@@ -785,9 +783,8 @@ describe("cut version (integration)", () => {
   // ADR-132 (T17): divergence = fork bytes (INCLUDING uncommitted edits) vs
   // the lineage source install — package-relative paths, no absolute leaks.
   it("divergence shows the fork's uncommitted delta against the source install", async () => {
-    const { computeUpstreamDivergence } = await import(
-      "@/lib/local-packages/divergence"
-    );
+    const { computeUpstreamDivergence } =
+      await import("@/lib/local-packages/divergence");
 
     const { localPackageId } = await forkPackageToLocal({
       sourceInstallId,

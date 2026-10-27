@@ -179,9 +179,8 @@ beforeAll(async () => {
     schemaVersion: 1,
   });
 
-  ({ PATCH } = await import(
-    "@/app/api/projects/[slug]/flows/[flowId]/version-binding/route"
-  ));
+  ({ PATCH } =
+    await import("@/app/api/projects/[slug]/flows/[flowId]/version-binding/route"));
 }, 180_000);
 
 afterAll(async () => {

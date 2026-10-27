@@ -67,9 +67,8 @@ beforeAll(async () => {
   db = testDatabase.db;
 
   ({ issueOrchestratorRunToken } = await import("@/lib/agents/tokens"));
-  ({ resolveResultContractForDelegation } = await import(
-    "@/lib/run-results/resolve-profile"
-  ));
+  ({ resolveResultContractForDelegation } =
+    await import("@/lib/run-results/resolve-profile"));
 }, 180_000);
 
 afterAll(async () => {

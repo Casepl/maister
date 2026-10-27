@@ -185,9 +185,8 @@ export function defaultCaptureGitSource(db?: Db): CaptureGitSource {
 
       if (!ws || ws.removedAt || !ws.parentRepoPath || !ws.branch) return null;
 
-      const { localBranchHead, resolveBaseCommit } = await import(
-        "@/lib/worktree"
-      );
+      const { localBranchHead, resolveBaseCommit } =
+        await import("@/lib/worktree");
       const tipSha = await localBranchHead({
         projectRepoPath: ws.parentRepoPath,
         branch: ws.branch,
@@ -223,9 +222,8 @@ export function defaultCaptureGitSource(db?: Db): CaptureGitSource {
     },
 
     async readDiff({ repoPath, baseCommit, tipSha }) {
-      const { diffRunWorkspace, diffRunWorkspaceFileMetadata } = await import(
-        "@/lib/worktree"
-      );
+      const { diffRunWorkspace, diffRunWorkspaceFileMetadata } =
+        await import("@/lib/worktree");
       // 2-dot base..tipSha reads the pinned commit tree, not the live worktree.
       const [diff, meta] = await Promise.all([
         diffRunWorkspace({

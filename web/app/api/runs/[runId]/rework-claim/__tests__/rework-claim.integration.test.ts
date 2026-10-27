@@ -1035,9 +1035,8 @@ describe("ADR-160 rework return + release (integration)", () => {
     expect(run.status).toBe("Running");
     expect(run.currentStepId).toBe(REENTRY_NODE);
 
-    const { hasPendingTakeoverResume } = await import(
-      "@/lib/flows/graph/ledger"
-    );
+    const { hasPendingTakeoverResume } =
+      await import("@/lib/flows/graph/ledger");
 
     // The sweep's own predicate — agnostic to the takeover row's node, which is
     // what lets it reach this provenance unchanged.
@@ -1386,9 +1385,8 @@ describe("AC-A19 (server half) — Review -> claim -> return composition", () =>
 
     // The owner carve-out is what makes the export/snapshot/handoff loop
     // reachable during a claim.
-    const { deriveWorkbenchLifecycleActions } = await import(
-      "@/lib/workbench-lifecycle/policy"
-    );
+    const { deriveWorkbenchLifecycleActions } =
+      await import("@/lib/workbench-lifecycle/policy");
     const ownerActions = deriveWorkbenchLifecycleActions({
       runKind: "flow",
       runStatus: "HumanWorking",

@@ -3,10 +3,21 @@
 import type { ReactElement, ReactNode } from "react";
 
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import clsx from "clsx";
 
+import { useIsClient } from "@/lib/use-is-client";
+
 const STORAGE_KEY = "maister:rail-collapsed";
+
+function readStoredCollapsed(): boolean {
+  try {
+    return window.localStorage.getItem(STORAGE_KEY) === "true";
+  } catch {
+    /* localStorage unavailable (private mode) — stay expanded */
+    return false;
+  }
+}
 
 export function RailCollapseView({
   collapsed,
@@ -95,22 +106,16 @@ export function RailCollapse({
   expandLabel: string;
   children: ReactNode;
 }): ReactElement {
-  const [collapsed, setCollapsed] = useState(false);
-
-  useEffect(() => {
-    try {
-      if (window.localStorage.getItem(STORAGE_KEY) === "true") {
-        setCollapsed(true);
-      }
-    } catch {
-      /* localStorage unavailable (private mode) — stay expanded */
-    }
-  }, []);
+  const isClient = useIsClient();
+  // The stored preference is read once the client takes over; a toggle in this
+  // session overrides it.
+  const [toggled, setToggled] = useState<boolean | null>(null);
+  const collapsed = toggled ?? (isClient && readStoredCollapsed());
 
   const toggle = (): void => {
     const next = !collapsed;
 
-    setCollapsed(next);
+    setToggled(next);
     try {
       window.localStorage.setItem(STORAGE_KEY, next ? "true" : "false");
     } catch {

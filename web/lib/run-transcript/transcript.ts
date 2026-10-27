@@ -19,10 +19,7 @@ import {
 //   role "system"    -> JSON ScratchSystemPayload (thought | usage | permission | ...)
 
 export type ScratchToolStatus =
-  | "pending"
-  | "in_progress"
-  | "completed"
-  | "failed";
+  "pending" | "in_progress" | "completed" | "failed";
 
 export type ScratchToolPayload = {
   v: 1;
@@ -52,10 +49,7 @@ export type ScratchPermissionPayload = {
 // scratch run never escalates to NeedsInput (D2) — the trip is a chat notice
 // only. `deny` = path_guard deny-and-continue; `halt` = a liveness breaker.
 export type ScratchHookTripRule =
-  | "path_guard"
-  | "repetition"
-  | "no_progress"
-  | "capability_guard";
+  "path_guard" | "repetition" | "no_progress" | "capability_guard";
 export type ScratchHookTripPayload = {
   v: 1;
   kind: "hook_trip";

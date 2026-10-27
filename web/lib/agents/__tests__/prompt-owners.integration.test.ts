@@ -384,8 +384,7 @@ async function interruptAgentStatusWrite(
   runId: string,
   statuses: readonly string[],
   start: () =>
-    | ReturnType<typeof startFixture>
-    | Promise<ReturnType<typeof startFixture>>,
+    ReturnType<typeof startFixture> | Promise<ReturnType<typeof startFixture>>,
 ): Promise<void> {
   const trigger = `agent_pause_${randomUUID().replaceAll("-", "")}`;
   const lockKey = Math.floor(Math.random() * 2_000_000_000) + 1;

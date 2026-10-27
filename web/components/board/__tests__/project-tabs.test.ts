@@ -1,9 +1,8 @@
 import type { ReactElement } from "react";
+import type { TabsProps } from "@/components/navigation/tabs";
 
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-
-import type { TabsProps } from "@/components/navigation/tabs";
 
 vi.mock("next-intl/server", () => ({
   getTranslations: async (ns: string) => (key: string) => `${ns}.${key}`,

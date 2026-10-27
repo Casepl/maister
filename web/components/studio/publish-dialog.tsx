@@ -2,10 +2,11 @@
 
 import type { ReactElement } from "react";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { readApiError } from "@/lib/api-error";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 type PublishOptions = {
   sources: { id: string; url: string }[];
@@ -38,9 +39,7 @@ export function PublishDialog({
 }): ReactElement {
   const t = useTranslations("publishDialog");
   const tApiErrors = useTranslations("apiErrors");
-  const onCloseRef = useRef(onClose);
-
-  onCloseRef.current = onClose;
+  const onCloseRef = useLatestRef(onClose);
 
   const [options, setOptions] = useState<PublishOptions | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -65,27 +64,31 @@ export function PublishDialog({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const load = useCallback(async (): Promise<void> => {
-    try {
-      const res = await fetch(
-        `/api/studio/local-packages/${packageId}/publish`,
-      );
+  const load = useCallback(
+    (): Promise<void> =>
+      Promise.resolve()
+        .then(async () => {
+          const res = await fetch(
+            `/api/studio/local-packages/${packageId}/publish`,
+          );
 
-      if (!res.ok) {
-        setLoadError(await readApiError(res, tApiErrors));
+          if (!res.ok) {
+            setLoadError(await readApiError(res, tApiErrors));
 
-        return;
-      }
+            return;
+          }
 
-      const data = (await res.json()) as PublishOptions;
+          const data = (await res.json()) as PublishOptions;
 
-      setOptions(data);
-      setSourceId(data.preselectedSourceId ?? data.sources[0]?.id ?? "");
-      setBranch(data.defaultBranch);
-    } catch {
-      setLoadError(tApiErrors("requestFailed"));
-    }
-  }, [packageId, tApiErrors]);
+          setOptions(data);
+          setSourceId(data.preselectedSourceId ?? data.sources[0]?.id ?? "");
+          setBranch(data.defaultBranch);
+        })
+        .catch(() => {
+          setLoadError(tApiErrors("requestFailed"));
+        }),
+    [packageId, tApiErrors],
+  );
 
   useEffect(() => {
     void load();
@@ -93,8 +96,8 @@ export function PublishDialog({
 
   const crossRepo = Boolean(
     options?.preselectedSourceId &&
-      sourceId &&
-      sourceId !== options.preselectedSourceId,
+    sourceId &&
+    sourceId !== options.preselectedSourceId,
   );
 
   async function publish(): Promise<void> {

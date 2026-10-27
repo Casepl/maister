@@ -10,6 +10,7 @@ import {
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
+import { reuseSqliteStatements } from "./sqlite-statements";
 import { commandReceiptPayloadV2 } from "./command-event";
 import {
   DEFAULT_RUNTIME_LIMITS,
@@ -28,7 +29,8 @@ import {
   outboxRefusesFrames,
   outboxRefusesNewWork,
   OUTBOX_BUDGET_SCHEMA,
-  refreshOutboxPressure,
+  ACTIVE_FRAME_SCHEMA,
+  refreshOutboxBudget,
   retainedAtThreshold,
   RUNTIME_EVENT_PRESSURE_EPISODE_COLUMNS,
   markProducerEnded,
@@ -56,6 +58,7 @@ import {
 } from "./outbox-ack";
 import {
   RUNTIME_FILE_BUDGET_SCHEMA,
+  ACTIVE_FILE_PROGRESS_SCHEMA,
   reserveRuntimeFrameFiles,
   producerIsStarting,
   auditRuntimeFileBudget,
@@ -63,11 +66,12 @@ import {
   releaseRuntimeFileWriter,
   reserveProducerFileWallet,
   runtimeFileBudgetSnapshot,
-  refreshRuntimeFilePressure,
+  refreshRuntimeFileBudget,
   getRuntimeFile,
   reserveRuntimeFile,
   growRuntimeFile,
   recordRuntimeFileBytes,
+  recordProducerFileBytes,
   sealRuntimeFile,
   releaseRuntimeFile,
   type RuntimeFileBudgetSnapshot,
@@ -262,9 +266,7 @@ export type HostRuntimeEventRow = {
 
 /** Why a retained span cannot be served; never a command outcome. */
 export type RuntimeEventSpanUnavailableReason =
-  | "replay_floor_lost"
-  | "stream_identity_changed"
-  | "beyond_emitted";
+  "replay_floor_lost" | "stream_identity_changed" | "beyond_emitted";
 
 /** One bounded page of the retained range `(after, through]`. */
 export type RuntimeEventSpanPage =
@@ -384,6 +386,7 @@ export type HostState = {
     funding: RuntimeFileFunding,
   ): void;
   recordRuntimeFileBytes(fileId: string, writtenBytes: number): void;
+  recordProducerFileBytes(fileId: string, writtenBytes: number): void;
   sealRuntimeFile(fileId: string, writtenBytes: number): void;
   releaseRuntimeFile(fileId: string): void;
   releaseRuntimeSpool(fileId: string): void;
@@ -465,6 +468,9 @@ export type HostState = {
     state: "missing" | "corrupt",
   ): HostRuntimeObjectRow;
   appendRuntimeEvent(input: AppendRuntimeEventInput): HostRuntimeEventRow;
+  appendRuntimeFrameEvents(
+    inputs: readonly [AppendRuntimeEventInput, AppendRuntimeEventInput],
+  ): readonly HostRuntimeEventRow[];
   putReceiptWithRuntimeEvent(
     receipt: CommandReceiptRow,
     event: AppendRuntimeEventInput,
@@ -934,6 +940,9 @@ export function openHostState(opts: OpenHostStateOptions = {}): HostState {
       db.exec("PRAGMA synchronous = FULL");
     }
     applySchema(db);
+    db.exec(ACTIVE_FRAME_SCHEMA);
+    db.exec(ACTIVE_FILE_PROGRESS_SCHEMA);
+    db = reuseSqliteStatements(db, log);
   } catch (err) {
     throw new HostStateUnwritableError(stateDir ?? ":memory:", err);
   }
@@ -987,16 +996,21 @@ export function openHostState(opts: OpenHostStateOptions = {}): HostState {
     logger: log,
   });
   const physicalControlReserve = sqliteControlHeadroomBytes(limits);
-  const canAdmitPhysical = (additionalBytes = 0): boolean => {
-    const budget = outboxBudgetSnapshot(db);
-
-    return storage.canAdmit(
-      physicalControlReserve +
-        budget.reservedRegularBytes * 2 +
-        budget.reservedRegularRows * 16 * 1024 +
-        additionalBytes,
-    );
-  };
+  const physicalReservationBytes = (
+    budget: OutboxBudgetSnapshot,
+    additionalBytes: number,
+  ): number =>
+    physicalControlReserve +
+    budget.reservedRegularBytes * 2 +
+    budget.reservedRegularRows * 16 * 1024 +
+    additionalBytes;
+  const physicalCapacityAvailable = (
+    budget: OutboxBudgetSnapshot,
+    additionalBytes: number,
+  ): boolean =>
+    storage.canAdmit(physicalReservationBytes(budget, additionalBytes));
+  const canAdmitPhysical = (additionalBytes = 0): boolean =>
+    physicalCapacityAvailable(outboxBudgetSnapshot(db), additionalBytes);
   const assertPhysicalAdmission = (): void => {
     if (!storage.available())
       throw new HostRuntimeEventError(
@@ -1025,7 +1039,7 @@ export function openHostState(opts: OpenHostStateOptions = {}): HostState {
       limits.eventSoftRows,
     ) ||
     filePressure ||
-    !canAdmitPhysical();
+    !physicalCapacityAvailable(budget, 0);
 
   // An old process cannot still own a parser reservation on this single host.
   // Its accepted commands retain their independent durable terminal wallets.
@@ -1036,18 +1050,18 @@ export function openHostState(opts: OpenHostStateOptions = {}): HostState {
   // refused one), so the change is logged from the durable row after each
   // commit rather than at the write.
   let observedPressure = outboxPressureEpisode(db);
+  let observedFilePressure = runtimeFileBudgetSnapshot(db).pressured;
   // Refreshes and logs the pressure state after a commit; wakes nobody.
   const observeCapacity = (): OutboxBudgetSnapshot => {
-    refreshOutboxPressure(db, limits, now().getTime());
-    const logical = outboxBudgetSnapshot(db);
-    const previousFilePressure = runtimeFileBudgetSnapshot(db).pressured;
-    const filePressure = refreshRuntimeFilePressure(db, limits);
+    const logical = refreshOutboxBudget(db, limits, now().getTime());
+    const fileBudget = refreshRuntimeFileBudget(db, limits);
 
-    if (previousFilePressure !== filePressure)
-      log?.info(runtimeFileBudgetSnapshot(db), "runtime-file-pressure-changed");
+    if (observedFilePressure !== fileBudget.pressured)
+      log?.info(fileBudget, "runtime-file-pressure-changed");
+    observedFilePressure = fileBudget.pressured;
     const snapshot = {
       ...logical,
-      pressured: constrained(logical, filePressure),
+      pressured: constrained(logical, fileBudget.pressured),
     };
     const episode = outboxPressureEpisode(db);
 
@@ -1112,6 +1126,47 @@ export function openHostState(opts: OpenHostStateOptions = {}): HostState {
     }
   };
 
+  const appendRuntimeEvents = (
+    inputs: readonly AppendRuntimeEventInput[],
+  ): HostRuntimeEventRow[] =>
+    storage.write(() => {
+      if (inputs.length < 1 || inputs.length > 2)
+        throw new HostRuntimeEventError(
+          "stream_corrupt",
+          "runtime event transaction must contain one event or one frame pair",
+        );
+      if (
+        inputs.some(
+          (input) =>
+            !input.funding ||
+            (input.funding.partition === "regular" &&
+              !input.funding.reservationId),
+        )
+      )
+        assertPhysicalAdmission();
+      db.exec("BEGIN IMMEDIATE");
+      try {
+        const events = inputs.map((input) =>
+          appendRuntimeEventInTransaction(db, {
+            limits,
+            hostKey,
+            bootId,
+            now,
+            input,
+          }),
+        );
+
+        db.exec("COMMIT");
+        notifyCapacity();
+        for (const event of events) notifyRuntimeEventListeners(event);
+
+        return events;
+      } catch (error) {
+        if (db.isTransaction) db.exec("ROLLBACK");
+        throw error;
+      }
+    });
+
   const withRuntimeFileWrite = <T>(operation: () => T): T =>
     storage.write(() => {
       db.exec("BEGIN IMMEDIATE");
@@ -1141,7 +1196,7 @@ export function openHostState(opts: OpenHostStateOptions = {}): HostState {
     if (
       row.kind.startsWith("session.") &&
       admission.kind !== "teardown" &&
-      refreshRuntimeFilePressure(db, limits)
+      refreshRuntimeFileBudget(db, limits).pressured
     )
       throw new HostRuntimeEventError(
         "runtime_storage_pressure",
@@ -1228,6 +1283,13 @@ export function openHostState(opts: OpenHostStateOptions = {}): HostState {
     recordRuntimeFileBytes(fileId, writtenBytes) {
       return withRuntimeFileWrite(() =>
         recordRuntimeFileBytes(db, fileId, writtenBytes),
+      );
+    },
+    recordProducerFileBytes(fileId, writtenBytes) {
+      // Progress changes no reservation; waking waiters would make every
+      // already-funded capture retry every blocked producer's admission.
+      return storage.writeTemporary(() =>
+        recordProducerFileBytes(db, fileId, writtenBytes),
       );
     },
     sealRuntimeFile(fileId, writtenBytes) {
@@ -1369,10 +1431,14 @@ export function openHostState(opts: OpenHostStateOptions = {}): HostState {
       return outboxRefusesFrames(db, limits);
     },
     tryReserveRuntimeFrame(walletId, frameBytes = 1048576) {
-      if (!canAdmitPhysical(8 * 1024 * 1024 + 4 * 16 * 1024)) return null;
-      const reservationId = randomUUID();
+      const reservedBytes = physicalReservationBytes(
+        outboxBudgetSnapshot(db),
+        8 * 1024 * 1024 + 4 * 16 * 1024,
+      );
 
-      return storage.write(() => {
+      return storage.admit(reservedBytes, (physical) => {
+        const reservationId = randomUUID();
+
         db.exec("BEGIN IMMEDIATE");
         try {
           const reserved = reserveFrameCapacity(db, limits, {
@@ -1387,7 +1453,7 @@ export function openHostState(opts: OpenHostStateOptions = {}): HostState {
               reservationId,
               walletId,
               frameBytes,
-              freeBytes: storage.snapshot().filesystemFreeBytes,
+              freeBytes: physical.filesystemFreeBytes,
             });
           db.exec("COMMIT");
           // A reservation — granted or refused — frees no capacity, so it
@@ -1411,13 +1477,12 @@ export function openHostState(opts: OpenHostStateOptions = {}): HostState {
       });
     },
     releaseRuntimeFrame(reservationId) {
-      return withRuntimeFileWrite(() => {
+      return storage.writeTemporary(() => {
+        // The TEMP foreign key releases file credits in the same statement.
         db.prepare(
-          "DELETE FROM runtime_frame_file_credits WHERE reservation_id = ? AND EXISTS (SELECT 1 FROM runtime_event_frames f WHERE f.reservation_id = runtime_frame_file_credits.reservation_id AND f.boot_id = ?)",
+          "DELETE FROM active_runtime_event_frames WHERE reservation_id = ? AND boot_id = ?",
         ).run(reservationId, bootId);
-        db.prepare(
-          "DELETE FROM runtime_event_frames WHERE reservation_id = ? AND boot_id = ?",
-        ).run(reservationId, bootId);
+        notifyCapacity();
       });
     },
     subscribeRuntimeCapacity(listener) {
@@ -1471,8 +1536,7 @@ export function openHostState(opts: OpenHostStateOptions = {}): HostState {
         if (rows.length === 0) break;
         for (const row of rows) {
           const wallet = walletFor.get(row.command_id, row.host_session_id) as
-            | LostWallet
-            | undefined;
+            LostWallet | undefined;
 
           if (
             wallet &&
@@ -1922,34 +1986,10 @@ export function openHostState(opts: OpenHostStateOptions = {}): HostState {
       }
     },
     appendRuntimeEvent(input) {
-      return storage.write(() => {
-        if (
-          !input.funding ||
-          (input.funding.partition === "regular" &&
-            !input.funding.reservationId)
-        )
-          assertPhysicalAdmission();
-        db.exec("BEGIN IMMEDIATE");
-
-        try {
-          const event = appendRuntimeEventInTransaction(db, {
-            limits,
-            hostKey,
-            bootId,
-            now,
-            input,
-          });
-
-          db.exec("COMMIT");
-          notifyCapacity();
-          notifyRuntimeEventListeners(event);
-
-          return event;
-        } catch (error) {
-          if (db.isTransaction) db.exec("ROLLBACK");
-          throw error;
-        }
-      });
+      return appendRuntimeEvents([input])[0]!;
+    },
+    appendRuntimeFrameEvents(inputs) {
+      return appendRuntimeEvents(inputs);
     },
     putReceiptWithRuntimeEvent(
       receipt: CommandReceiptRow,
@@ -2465,8 +2505,7 @@ function runtimeEventHealthSnapshot(
 ): Omit<RuntimeEventHealthSnapshot, "newWorkRefusedBy"> {
   getRuntimeEventStream(db, streamId);
   const row = db.prepare(RUNTIME_EVENT_HEALTH_SNAPSHOT_SQL).get() as
-    | RuntimeEventHealthSnapshotDbRow
-    | undefined;
+    RuntimeEventHealthSnapshotDbRow | undefined;
 
   if (row === undefined || row.stream_id !== streamId) {
     throw new HostRuntimeEventError(

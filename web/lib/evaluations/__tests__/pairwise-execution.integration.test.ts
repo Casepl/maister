@@ -241,20 +241,16 @@ Pick the better of the two candidates.
   });
   db = testDatabase.db;
 
-  ({ provisionJudgeAttempts } = await import(
-    "@/lib/evaluations/judges/launch"
-  ));
-  ({ evaluateAndAdvancePanel } = await import(
-    "@/lib/evaluations/aggregation/worker"
-  ));
+  ({ provisionJudgeAttempts } =
+    await import("@/lib/evaluations/judges/launch"));
+  ({ evaluateAndAdvancePanel } =
+    await import("@/lib/evaluations/aggregation/worker"));
   ({ submitBoundJudgeResult } = await import("@/lib/evaluations/judges/seal"));
   ({ issueJudgeAttemptToken } = await import("@/lib/agents/tokens"));
-  ({ sealEvidenceSnapshot } = await import(
-    "@/lib/evaluations/evidence/snapshots"
-  ));
-  ({ frozenExecutionParticipants } = await import(
-    "@/lib/evaluations/frozen-participants"
-  ));
+  ({ sealEvidenceSnapshot } =
+    await import("@/lib/evaluations/evidence/snapshots"));
+  ({ frozenExecutionParticipants } =
+    await import("@/lib/evaluations/frozen-participants"));
 
   projectId = randomUUID();
   await db.insert(schema.projects).values({

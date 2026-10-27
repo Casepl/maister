@@ -379,10 +379,7 @@ async function writeFinalOutcome(
   stagedAt: Date,
   fields: {
     lastFireOutcome:
-      | "launched"
-      | "queued_pending"
-      | "launch_failed"
-      | "incompatible_disabled";
+      "launched" | "queued_pending" | "launch_failed" | "incompatible_disabled";
     lastRunId: string | null;
     lastFireError: string | null;
     enabled?: boolean;

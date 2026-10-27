@@ -12,11 +12,7 @@ import { deriveRepoNameSafe } from "@/lib/repo-name";
 import { deriveTaskKey, TASK_KEY_REGEX } from "@/lib/social/task-key";
 
 type ErrorCode =
-  | "CONFLICT"
-  | "CONFIG"
-  | "FLOW_INSTALL"
-  | "UNAUTHORIZED"
-  | "PRECONDITION";
+  "CONFLICT" | "CONFIG" | "FLOW_INSTALL" | "UNAUTHORIZED" | "PRECONDITION";
 
 const ERROR_KEY: Record<ErrorCode, string> = {
   CONFLICT: "errorConflict",

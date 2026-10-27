@@ -24,10 +24,7 @@ function providerBelongsToAdapter(
 }
 
 export type SourceKind =
-  | "acp_probe"
-  | "provider_api"
-  | "curated"
-  | "agent_observed";
+  "acp_probe" | "provider_api" | "curated" | "agent_observed";
 
 export type ModelEntry = {
   id: string;

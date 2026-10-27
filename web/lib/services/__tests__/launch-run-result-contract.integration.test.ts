@@ -472,9 +472,8 @@ async function saveRunnerBinding(
   slotKey: string,
   mappedRunnerId: string,
 ): Promise<Response> {
-  const { PATCH } = await import(
-    "@/app/api/projects/[slug]/flow-runner-remaps/route"
-  );
+  const { PATCH } =
+    await import("@/app/api/projects/[slug]/flow-runner-remaps/route");
   const slug = `p-${projectId.slice(0, 8)}`;
 
   return PATCH(

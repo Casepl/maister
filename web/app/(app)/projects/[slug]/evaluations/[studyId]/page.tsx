@@ -105,8 +105,7 @@ export default async function StudyDetailPage({
       runId: (row.runId as string | null) ?? null,
       runStatus:
         ((row.runIdentity as { status?: string } | null)?.status as
-          | string
-          | undefined) ?? null,
+          string | undefined) ?? null,
     }));
 
   const verdicts: VerdictView[] = verdictRows.map((row) => ({

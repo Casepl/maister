@@ -16,7 +16,10 @@ export const scheduledLaunchRequestBodySchema = z
     deliveryPolicy: storedDeliveryPolicySchema.optional(),
     executionPolicy: executionPolicySchema.optional(),
     packageVersions: z
-      .record(z.enum(["keep", "adopt", "cut_and_adopt", "try_once"]))
+      .record(
+        z.string(),
+        z.enum(["keep", "adopt", "cut_and_adopt", "try_once"]),
+      )
       .optional(),
     brainContext: z.boolean().nullable().optional(),
     autoPromote: z.boolean().optional(),
@@ -25,7 +28,7 @@ export const scheduledLaunchRequestBodySchema = z
 
 export const createScheduledLaunchBodySchema = z
   .object({
-    taskId: z.string().uuid(),
+    taskId: z.string().guid(),
     scheduledLocalTime: z.string().min(1).max(64),
     timezone: z.string().min(1).max(255),
     disambiguation: z.enum(["earlier", "later"]).optional(),

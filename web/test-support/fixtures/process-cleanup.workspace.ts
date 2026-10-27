@@ -1,4 +1,4 @@
-import { defineWorkspace } from "vitest/config";
+import { defineConfig } from "vitest/config";
 
 import workspace from "../../vitest.workspace";
 
@@ -12,13 +12,17 @@ if (
   throw new Error("cleanup control requires the existing integration project");
 }
 
-export default defineWorkspace([
-  {
-    ...integration,
-    test: {
-      ...integration.test,
-      include: ["test-support/fixtures/process-cleanup-*.case.ts"],
-      testTimeout: 600_000,
-    },
+export default defineConfig({
+  test: {
+    projects: [
+      {
+        ...integration,
+        test: {
+          ...integration.test,
+          include: ["test-support/fixtures/process-cleanup-*.case.ts"],
+          testTimeout: 600_000,
+        },
+      },
+    ],
   },
-]);
+});

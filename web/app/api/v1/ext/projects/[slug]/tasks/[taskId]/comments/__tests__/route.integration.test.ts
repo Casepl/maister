@@ -215,9 +215,8 @@ beforeAll(async () => {
 
   fx.readOnlyToken = readOnly.secret;
 
-  const routes = await import(
-    "@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/comments/route"
-  );
+  const routes =
+    await import("@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/comments/route");
 
   GET = routes.GET;
   POST = routes.POST;

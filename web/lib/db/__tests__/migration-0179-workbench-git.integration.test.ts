@@ -9,6 +9,7 @@ import {
   startMainPostgresTestDbUpTo,
   type StartedPostgresTestDb,
 } from "@/test-support/pg-container";
+import { pgErrorOf } from "@/lib/db/pg-error";
 
 // ADR-181 migration `0179_workbench_git_publication`: the publication triple on
 // `workspaces` and the public-branch template on `projects`. Seeded on the
@@ -39,7 +40,7 @@ async function refusal(query: ReturnType<typeof sql>): Promise<string> {
   try {
     await db.execute(query);
   } catch (err) {
-    return String((err as { constraint?: string }).constraint ?? err);
+    return String(pgErrorOf(err)?.constraint ?? err);
   }
   throw new Error("expected the statement to be refused");
 }

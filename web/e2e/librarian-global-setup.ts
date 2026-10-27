@@ -1,24 +1,28 @@
-import { Pool } from "pg";
-import { drizzle } from "drizzle-orm/node-postgres";
 import { execFile } from "node:child_process";
 import { mkdir, rm } from "node:fs/promises";
 import { createServer } from "node:http";
 import path from "node:path";
 import { promisify } from "node:util";
 
-import { resolvePostgresDbUrl } from "@/lib/db/postgres-url";
-import { startRealSupervisor } from "@/test-support/real-supervisor";
-import { seedLibrarianPlatform } from "@/test-support/librarian-seed";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 
 import {
   LIBRARIAN_SUPERVISOR_CONTROL_PORT,
   LIBRARIAN_SUPERVISOR_PORT,
 } from "./_seed/librarian-lane";
 
+import { seedLibrarianPlatform } from "@/test-support/librarian-seed";
+import { startRealSupervisor } from "@/test-support/real-supervisor";
+import { resolvePostgresDbUrl } from "@/lib/db/postgres-url";
+
 const execFileAsync = promisify(execFile);
 
-function qualificationAdapter(value: string | undefined): "claude" | "codex" | undefined {
-  if (value === undefined || value === "claude" || value === "codex") return value;
+function qualificationAdapter(
+  value: string | undefined,
+): "claude" | "codex" | undefined {
+  if (value === undefined || value === "claude" || value === "codex")
+    return value;
 
   throw new Error(`unsupported librarian qualification adapter: ${value}`);
 }
@@ -27,7 +31,9 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   const pool = new Pool({ connectionString: resolvePostgresDbUrl() });
   const worktreesRoot = process.env.MAISTER_WORKTREES_ROOT;
   const runtimeRoot = path.resolve("e2e/.runtime-librarian-web");
-  const liveAdapter = qualificationAdapter(process.env.MAISTER_LIBRARIAN_QUALIFY_ADAPTER);
+  const liveAdapter = qualificationAdapter(
+    process.env.MAISTER_LIBRARIAN_QUALIFY_ADAPTER,
+  );
 
   if (!worktreesRoot)
     throw new Error("librarian lane requires MAISTER_WORKTREES_ROOT");

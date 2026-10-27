@@ -626,8 +626,7 @@ function maxDurationMinutesFor(
 
   if (!node) return null;
   const settings = node.settings as
-    | { limits?: { maxDurationMinutes?: number } }
-    | undefined;
+    { limits?: { maxDurationMinutes?: number } } | undefined;
   const cap = settings?.limits?.maxDurationMinutes;
 
   return typeof cap === "number" ? cap : null;

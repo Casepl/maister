@@ -14,6 +14,7 @@ import {
   RUN_SCHEDULE_PRESETS,
   type RunSchedulePresetId,
 } from "@/lib/run-schedules/presets";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 const inputClass =
   "min-h-[36px] rounded-lg border border-line bg-paper px-3 font-mono text-[12px] text-ink outline-none focus:border-amber";
@@ -126,9 +127,7 @@ export function ScheduleEditModal({
 
   const dialogRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
-  const onCloseRef = useRef(onClose);
-
-  onCloseRef.current = onClose;
+  const onCloseRef = useLatestRef(onClose);
 
   useEffect(() => {
     restoreFocusRef.current = document.activeElement as HTMLElement | null;
@@ -183,12 +182,11 @@ export function ScheduleEditModal({
     };
   }, []);
 
-  useEffect(() => {
-    if (!taskId) {
-      setRunners([]);
+  // No task, no runners to offer.
+  if (!taskId && runners.length > 0) setRunners([]);
 
-      return;
-    }
+  useEffect(() => {
+    if (!taskId) return;
 
     let cancelled = false;
 

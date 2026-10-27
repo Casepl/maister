@@ -21,7 +21,7 @@ const ENDPOINT = "POST /api/v1/ext/runs/cancel";
 
 const bodySchema = z
   .object({
-    childRunId: z.string().uuid(),
+    childRunId: z.string().guid({ error: "Invalid uuid" }),
   })
   .strict();
 

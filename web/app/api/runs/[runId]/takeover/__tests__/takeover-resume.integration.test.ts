@@ -568,9 +568,8 @@ describe("takeover return → runner resume (CRITICAL)", () => {
 
     // Let the route's own microtask + an explicit F3-style re-dispatch race.
     const { runFlow } = await import("@/lib/flows/runner");
-    const { runTakeoverReturnRecoverySweep } = await import(
-      "@/lib/runs/resume-recovery"
-    );
+    const { runTakeoverReturnRecoverySweep } =
+      await import("@/lib/runs/resume-recovery");
 
     await Promise.all([
       runFlow(s.runId, { db } as never).catch(() => {}),

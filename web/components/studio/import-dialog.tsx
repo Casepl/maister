@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { readApiError } from "@/lib/api-error";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 export type ImportDialogLabels = {
   title: string;
@@ -105,19 +106,14 @@ export function ImportDialog({
   const [step, setStep] = useState<Step>({ kind: "pick" });
 
   const dialogRef = useRef<HTMLDivElement>(null);
-  const onCloseRef = useRef(onClose);
-
-  onCloseRef.current = onClose;
+  const onCloseRef = useLatestRef(onClose);
 
   // Stable per-mount session id used only when no editor session was provided.
-  const ownSessionRef = useRef<string>("");
-
-  if (ownSessionRef.current === "") {
-    ownSessionRef.current =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `imp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  }
+  const [ownSession] = useState(() =>
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `imp-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  );
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -188,7 +184,7 @@ export function ImportDialog({
     try {
       const res = await fetch(
         `/api/studio/local-packages/${packageId}/import`,
-        { method: "POST", body: buildForm("preview", ownSessionRef.current) },
+        { method: "POST", body: buildForm("preview", ownSession) },
       );
 
       if (!res.ok) {
@@ -227,7 +223,7 @@ export function ImportDialog({
       {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ sessionId: ownSessionRef.current }),
+        body: JSON.stringify({ sessionId: ownSession }),
       },
     );
 
@@ -244,7 +240,7 @@ export function ImportDialog({
       return null;
     }
 
-    return ownSessionRef.current;
+    return ownSession;
   }
 
   async function runCommit(): Promise<void> {

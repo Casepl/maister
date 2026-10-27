@@ -133,9 +133,8 @@ beforeAll(async () => {
     databaseName: "review_feedback_preview_route_test",
   });
   db = testDatabase.db;
-  ({ POST } = await import(
-    "@/app/api/runs/[runId]/hitl/[hitlRequestId]/review-feedback-preview/route"
-  ));
+  ({ POST } =
+    await import("@/app/api/runs/[runId]/hitl/[hitlRequestId]/review-feedback-preview/route"));
 }, 180_000);
 
 afterAll(async () => {

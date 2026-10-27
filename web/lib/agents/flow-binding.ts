@@ -85,9 +85,8 @@ export async function resolveFlowBoundAgent(args: {
     );
   }
 
-  const { resolveEffectiveAgentDefinition } = await import(
-    "@/lib/agents/effective"
-  );
+  const { resolveEffectiveAgentDefinition } =
+    await import("@/lib/agents/effective");
   const effective = await resolveEffectiveAgentDefinition(
     { agentId: args.agentId, projectId },
     _db,

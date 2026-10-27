@@ -95,14 +95,24 @@ export function isolationPartFiles(part) {
   return part === 1 ? laneSuites.isolation.slice(0, 2) : laneSuites.isolation.slice(2);
 }
 
-export function parseLaneInvocation(args) {
+export function isolationFiles(platform = process.platform) {
+  assert(platform === "darwin" || platform === "linux", `unsupported isolation platform: ${platform}`);
+
+  return platform === "darwin" ? laneSuites.isolation :
+    [...laneSuites.isolation, "test-support/__tests__/linux-isolation-driver.integration.test.ts"];
+}
+
+export function parseLaneInvocation(args, platform = process.platform) {
   const [slice, flag, shard, ...extra] = args;
 
   assert(Object.hasOwn(laneSuites, slice ?? ""), "usage: run-stage-ab-tests.mjs web|supervisor|isolation [--shard i/n]");
   assert.equal(extra.length, 0, "usage: unexpected A/B lane arguments");
-  if (flag === undefined && shard === undefined) return { slice, files: laneSuites[slice] };
+  const files = slice === "isolation" ? isolationFiles(platform) : laneSuites[slice];
+
+  if (flag === undefined && shard === undefined) return { slice, files };
   if (flag === "--part") {
     assert.equal(slice, "isolation", "only isolation accepts --part");
+    assert.equal(platform, "darwin", "only Darwin isolation accepts --part");
     assert(/^[12]\/2$/u.test(shard ?? ""), "usage: isolation --part 1/2|2/2");
 
     return { slice, files: isolationPartFiles(Number(shard[0])) };
@@ -138,7 +148,7 @@ export function vitestArgs({ files, reportPath, concurrency }) {
   return [
     "node_modules/vitest/vitest.mjs", "run", ...files, "--project=integration",
     "--reporter=json", `--outputFile=${reportPath}`, "--reporter=default",
-    `--maxWorkers=${concurrency}`, "--minWorkers=1",
+    `--maxWorkers=${concurrency}`,
   ];
 }
 
@@ -219,11 +229,12 @@ export const requiredIsolationCases = {
   "test-support/__tests__/execution-ab-preflight.integration.test.ts": [
     "I-CI: the real driver denies the host root and the real PostgreSQL container is reachable"
   ],
-  // The interim driver tree owns these two controls. A10 promotes the complete
-  // five-case Linux suite into the default serial platform manifest.
   "test-support/__tests__/linux-isolation-driver.integration.test.ts": [
     "LI-boundary: exact mounts deny private reads and escape paths while descendants retain authorized access",
-    "LI-refusal: unavailable capabilities and invalid policies refuse launch and probes release on every failure"
+    "LI-refusal: unavailable capabilities and invalid policies refuse launch and probes release on every failure",
+    "LI-term: verified graceful forwarding preserves production drain and exact application code or signal",
+    "LI-kill: namespace and outer death terminate detached resistant descendants without touching siblings",
+    "LI-parent: startup ready and active-probe parent death close the namespace before exit-sweep containment"
   ]
 };
 
@@ -250,6 +261,11 @@ export function validateLaneReport(report, files) {
       assert.equal(result.assertionResults.filter((item) => item.title === title).length, 1,
         `A/B required case missing or duplicated: ${file}: ${title}`);
     }
+    if (laneSuites.isolation.includes(file) ||
+      file === "test-support/__tests__/linux-isolation-driver.integration.test.ts" ||
+      file === "test-support/__tests__/execution-ab-preflight.integration.test.ts")
+      assert.equal(result.assertionResults.length, requiredIsolationCases[file].length,
+        `A/B unexpected isolation case: ${file}`);
   }
   assert.equal(report.numFailedTests, 0);
   assert.equal(report.numPendingTests, 0);
@@ -258,7 +274,7 @@ export function validateLaneReport(report, files) {
   assert.equal(report.success, true, "A/B reporter recorded errors");
 }
 
-export async function runStageAbLane({ slice, files = laneSuites[slice], workspace, evidenceDirectory = process.env.MAISTER_TEST_EVIDENCE_DIR, owningInvocation }) {
+export async function runStageAbLane({ slice, files = slice === "isolation" ? isolationFiles() : laneSuites[slice], workspace, evidenceDirectory = process.env.MAISTER_TEST_EVIDENCE_DIR, owningInvocation }) {
   const startedAt = Date.now();
   assertSupportedNode(process.versions.node);
   assert(Object.hasOwn(laneSuites, slice ?? ""), "usage: run-stage-ab-tests.mjs web|supervisor|isolation");
@@ -276,7 +292,7 @@ export async function runStageAbLane({ slice, files = laneSuites[slice], workspa
   const env = { ...process.env, ...await fixtureProcessEnvironment(invocation), MAISTER_TEST_DOCKER_PROBE_TIMEOUT_MS: "30000" };
   const args = ["--import", FIXTURE_WATCHDOG, ...vitestArgs({ files, reportPath, concurrency })];
 
-  if (workspace) args.push("--workspace", workspace);
+  if (workspace) args.push("--config", workspace);
   let child;
   let escalation;
   let caughtSignal;
@@ -304,6 +320,10 @@ export async function runStageAbLane({ slice, files = laneSuites[slice], workspa
   process.on("SIGTERM", onTerminate);
   try {
     await registerProcess(invocation, { role: "runner", caseName: slice, rootRole: "invocation", root: null, bootId: invocation.id, logFile: null }, process.pid);
+    logInvocation(invocation, "lane-selection", {
+      platform: process.platform, slice, files, concurrency,
+      requiredCases: files.flatMap((file) => requiredIsolationCases[file] ?? []),
+    });
     if (slice !== "supervisor") {
       const reaper = await retainLaneReaper(acquisition.signal);
 

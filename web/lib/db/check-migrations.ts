@@ -6,6 +6,8 @@ import { join } from "node:path";
 
 import { sql, type SQL } from "drizzle-orm";
 
+import { pgErrorOf } from "./pg-error";
+
 // Runtime counterpart to the journal-ordering lint in
 // __tests__/migration-journal-integrity.test.ts. The lint guards the journal
 // at authoring time; this guards a *live database* at boot / in CI. It answers
@@ -85,7 +87,7 @@ async function collectPending(
   } catch (err) {
     // 42P01 = undefined_table: the ledger doesn't exist yet, so nothing has
     // been applied. Any other error (connection, auth) is not ours to swallow.
-    if ((err as { code?: string }).code === "42P01") applied = new Set();
+    if (pgErrorOf(err)?.code === "42P01") applied = new Set();
     else throw err;
   }
 
@@ -116,7 +118,7 @@ export async function findAppliedUnknownToJournal(
       )
     ).rows;
   } catch (err) {
-    if ((err as { code?: string }).code === "42P01") return [];
+    if (pgErrorOf(err)?.code === "42P01") return [];
     throw err;
   }
 
@@ -180,7 +182,7 @@ export async function mainMigrationLedgerHighWater(
 
     return Number.isFinite(parsed) ? parsed : null;
   } catch (err) {
-    if ((err as { code?: string }).code === "42P01") return null;
+    if (pgErrorOf(err)?.code === "42P01") return null;
     throw err;
   }
 }

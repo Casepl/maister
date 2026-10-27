@@ -21,7 +21,7 @@ const ENDPOINT = "POST /api/v1/ext/runs/collect";
 
 const bodySchema = z
   .object({
-    childRunId: z.string().uuid().optional(),
+    childRunId: z.string().guid({ error: "Invalid uuid" }).optional(),
     all: z.boolean().optional(),
   })
   .strict()

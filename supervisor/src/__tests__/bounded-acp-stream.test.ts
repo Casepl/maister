@@ -1,4 +1,4 @@
-import type { AnyMessage, Stream } from "@agentclientprotocol/sdk";
+import type { AnyMessage, Stream } from "@agentclientprotocol/sdk/unstable";
 import type { BoundedAcpClient } from "../bounded-acp-stream";
 
 import { createWriteStream } from "node:fs";

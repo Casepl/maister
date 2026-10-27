@@ -252,9 +252,8 @@ describe("POST /api/runs/{runId}/reattach", () => {
       await gitConfigValue(repo.parent, `branch.${run.branch}.merge`),
     ).toBe(`refs/heads/${PUBLIC}`);
 
-    const { exportWorkbenchBranch } = await import(
-      "@/lib/workbench-lifecycle/service"
-    );
+    const { exportWorkbenchBranch } =
+      await import("@/lib/workbench-lifecycle/service");
     const published = await exportWorkbenchBranch(run.runId, {
       remote: "origin",
       branchName: null,

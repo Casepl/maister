@@ -35,7 +35,9 @@ it("IT-LAU-11: Claude owner and summary sessions deny host built-ins on disk", a
     );
 
     await materializeLibrarianSummaryAdapterSettings(cwd, "claude");
-    const summarySettings = JSON.parse(await readFile(settingsPath, "utf8")) as {
+    const summarySettings = JSON.parse(
+      await readFile(settingsPath, "utf8"),
+    ) as {
       permissions: { allow: string[]; deny: string[] };
     };
 

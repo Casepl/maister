@@ -99,8 +99,7 @@ async function gatherAttachments(
 
       if (!install) return null;
       const manifest = install.manifest as
-        | { sourceSubpath?: string }
-        | undefined;
+        { sourceSubpath?: string } | undefined;
 
       return {
         id: install.name as string,

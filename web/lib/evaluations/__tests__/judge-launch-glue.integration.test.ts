@@ -137,9 +137,8 @@ Judge the bound evidence snapshot.
 
   ({ launchJudgePanel, provisionJudgeAttempts, defaultJudgeSpawn } =
     await import("@/lib/evaluations/judges/launch"));
-  ({ issueJudgeAttemptToken, EVALUATION_JUDGE_TOKEN_SCOPES } = await import(
-    "@/lib/agents/tokens"
-  ));
+  ({ issueJudgeAttemptToken, EVALUATION_JUDGE_TOKEN_SCOPES } =
+    await import("@/lib/agents/tokens"));
 
   projectId = randomUUID();
   await db.insert(schema.projects).values({

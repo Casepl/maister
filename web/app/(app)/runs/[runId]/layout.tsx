@@ -1031,13 +1031,15 @@ export default async function RunDetailLayout({
     capabilityNodes,
     resolvedCapabilitySet: resolvedSet,
     degradations: flowResultDegradations,
+    // eslint-disable-next-line react-hooks/purity -- async Server Component: one render per request reads the request clock.
     nowMs: Date.now(),
   });
   const showAgentCenter = shouldRenderAgentRunCenter(flowResultDto);
 
   const wallDurationMs = detail.endedAt
     ? Math.max(0, detail.endedAt.getTime() - detail.startedAt.getTime())
-    : Math.max(0, Date.now() - detail.startedAt.getTime());
+    : // eslint-disable-next-line react-hooks/purity -- async Server Component: one render per request reads the request clock.
+      Math.max(0, Date.now() - detail.startedAt.getTime());
   const policy = detail.deliveryPolicySnapshot;
   const displayWorktreePath = formatRunWorktreePath(
     detail.worktreePath,

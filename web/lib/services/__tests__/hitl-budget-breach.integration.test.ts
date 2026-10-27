@@ -1,3 +1,5 @@
+import type { getDb } from "@/lib/db/client";
+
 import { randomUUID } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -20,13 +22,15 @@ import {
   testPlatformRunnerRow,
   testRunnerSnapshot,
 } from "@/lib/__tests__/runner-fixtures";
-import type { getDb } from "@/lib/db/client";
 import * as schemaModule from "@/lib/db/schema";
 import { logExecPolicyAction } from "@/lib/runs/exec-policy-audit";
 import { proposeLibrarianCard } from "@/lib/librarian/cards";
 import { decideLibrarianCard } from "@/lib/librarian/card-decisions";
 import { respondToHitl, HitlActor } from "@/lib/services/hitl";
-import { seedActiveUser, seedLibrarianTurn } from "@/test-support/librarian-seed";
+import {
+  seedActiveUser,
+  seedLibrarianTurn,
+} from "@/test-support/librarian-seed";
 import {
   startMainPostgresTestDb,
   type StartedPostgresTestDb,
@@ -388,10 +392,14 @@ const userActor: HitlActor = {
 
 describe("librarian human confirmation for a budget breach", () => {
   it("IT-LOP-09: the card restarts through the human HITL response path", async () => {
-    const projectId = await seedProject(`card-budget-${randomUUID().slice(0, 8)}`);
+    const projectId = await seedProject(
+      `card-budget-${randomUUID().slice(0, 8)}`,
+    );
     const userId = await seedActiveUser(db);
     const turnId = await seedLibrarianTurn(db, userId);
-    const [turn] = await db.select().from(schema.librarianTurns)
+    const [turn] = await db
+      .select()
+      .from(schema.librarianTurns)
       .where(eq(schema.librarianTurns.id, turnId));
     const runId = await seedRun(projectId, null, {
       executionPolicy: {
@@ -400,25 +408,32 @@ describe("librarian human confirmation for a budget breach", () => {
       },
     });
     const hitlRequestId = await seedBudgetBreachHitl(runId);
-    await seedOpenAssignment(projectId, runId, hitlRequestId);
-    const proposed = await proposeLibrarianCard({
-      conversationId: turn.conversationId,
-      segmentId: turn.segmentId,
-      ownerUserId: userId,
-      proposal: {
-        action: "hitl_respond",
-        runId,
-        hitlRequestId,
-        response: { optionId: "raise", raiseTo: 4000 },
-      },
-      recordCreated: async () => {},
-    }, db as unknown as ReturnType<typeof getDb>);
 
-    const result = await decideLibrarianCard({
-      cardId: proposed.cardId,
-      user: { id: userId, role: "member", name: "Human owner" },
-      decision: "accept",
-    }, db as unknown as ReturnType<typeof getDb>);
+    await seedOpenAssignment(projectId, runId, hitlRequestId);
+    const proposed = await proposeLibrarianCard(
+      {
+        conversationId: turn.conversationId,
+        segmentId: turn.segmentId,
+        ownerUserId: userId,
+        proposal: {
+          action: "hitl_respond",
+          runId,
+          hitlRequestId,
+          response: { optionId: "raise", raiseTo: 4000 },
+        },
+        recordCreated: async () => {},
+      },
+      db as unknown as ReturnType<typeof getDb>,
+    );
+
+    const result = await decideLibrarianCard(
+      {
+        cardId: proposed.cardId,
+        user: { id: userId, role: "member", name: "Human owner" },
+        decision: "accept",
+      },
+      db as unknown as ReturnType<typeof getDb>,
+    );
 
     expect(result.statusCode).toBe(200);
     expect(vi.mocked(respondToHitl)).toHaveBeenCalledWith(
@@ -426,11 +441,22 @@ describe("librarian human confirmation for a budget breach", () => {
       { kind: "user", userId, label: "Human owner" },
       expect.any(Object),
     );
-    const [question] = await db.select().from(schema.hitlRequests)
+    const [question] = await db
+      .select()
+      .from(schema.hitlRequests)
       .where(eq(schema.hitlRequests.id, hitlRequestId));
+
     expect(question.respondedAt).not.toBeNull();
-    const [operation] = await db.select().from(schema.librarianOperations)
-      .where(eq(schema.librarianOperations.idempotencyKey, `card:${proposed.cardId}`));
+    const [operation] = await db
+      .select()
+      .from(schema.librarianOperations)
+      .where(
+        eq(
+          schema.librarianOperations.idempotencyKey,
+          `card:${proposed.cardId}`,
+        ),
+      );
+
     expect(operation.status).toBe("succeeded");
   });
 });
@@ -983,9 +1009,8 @@ describe("respondToHitl budget_breach integration — restart and park composite
   it("park retry after terminalization resolves without replaying preservation", async () => {
     const { runId } = await seedTaskBoundFlowRun("budget-park-redrive");
     const hitlRequestId = await seedBudgetBreachHitl(runId);
-    const { archiveWorkbench, snapshotWorkbenchCommit } = await import(
-      "@/lib/workbench-lifecycle/service"
-    );
+    const { archiveWorkbench, snapshotWorkbenchCommit } =
+      await import("@/lib/workbench-lifecycle/service");
     const archiveWorkbenchSpy = vi.mocked(archiveWorkbench);
     const snapshotWorkbenchCommitSpy = vi.mocked(snapshotWorkbenchCommit);
 

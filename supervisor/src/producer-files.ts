@@ -4,6 +4,8 @@ import { dirname, join } from "node:path";
 
 import { HostRuntimeEventError } from "./host-runtime-errors";
 
+const LOG_RESERVATION_BLOCK_BYTES = 64 * 1024;
+
 export type ProducerFiles = {
   spoolPath: string;
   tryReserveLogBytes: (bytes: number) => boolean;
@@ -26,6 +28,7 @@ export function prepareProducerFiles(input: {
   const spoolId = `spool:${sessionId}`;
   const spoolPath = join(dirname(logPath), `.acp-frame-${sessionId}.tmp`);
   let logBytes = 0;
+  let logCapacity = 0;
 
   state.reserveRuntimeFile(
     {
@@ -64,7 +67,24 @@ export function prepareProducerFiles(input: {
     spoolPath,
     tryReserveLogBytes(bytes) {
       try {
-        state.growRuntimeFile(logId, bytes, { kind: "producer", walletId });
+        if (!state.runtimeStorageAvailable())
+          throw new HostRuntimeEventError(
+            "runtime_storage_unavailable",
+            "runtime storage requires repair before producer capture resumes",
+          );
+        const needed = logBytes + bytes - logCapacity;
+
+        if (needed > 0) {
+          const reserved =
+            Math.ceil(needed / LOG_RESERVATION_BLOCK_BYTES) *
+            LOG_RESERVATION_BLOCK_BYTES;
+
+          state.growRuntimeFile(logId, reserved, {
+            kind: "producer",
+            walletId,
+          });
+          logCapacity += reserved;
+        }
 
         return true;
       } catch (error) {
@@ -78,14 +98,19 @@ export function prepareProducerFiles(input: {
       }
     },
     reserveTeardownLogBytes(bytes) {
-      state.growRuntimeFile(logId, bytes, { kind: "wallet", walletId });
+      const needed = Math.max(0, logBytes + bytes - logCapacity);
+
+      if (needed > 0) {
+        state.growRuntimeFile(logId, needed, { kind: "wallet", walletId });
+        logCapacity += needed;
+      }
     },
     recordLogBytes(bytes) {
       logBytes += bytes;
-      state.recordRuntimeFileBytes(logId, logBytes);
+      state.recordProducerFileBytes(logId, logBytes);
     },
     recordSpoolBytes(bytes) {
-      state.recordRuntimeFileBytes(spoolId, bytes);
+      state.recordProducerFileBytes(spoolId, bytes);
     },
     finish,
     abandonUnstarted: finish,

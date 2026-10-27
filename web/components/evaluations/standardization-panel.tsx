@@ -126,27 +126,28 @@ export function StandardizationPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (): Promise<void> => {
-    try {
-      const [eligRes, curRes] = await Promise.all([
+  const load = useCallback(
+    (): Promise<void> =>
+      Promise.all([
         evalRequest(
           `/api/projects/${slug}/evaluations/studies/${studyId}/standardization-eligibility`,
         ),
         evalRequest(
           `/api/projects/${slug}/evaluations/standardization?slot=default`,
         ),
-      ]);
-      const elig = (await eligRes.json()) as StandardizationEligibilityView;
-      const cur = (await curRes.json()) as {
-        current: StandardizedCurrentView | null;
-      };
+      ])
+        .then(async ([eligRes, curRes]) => {
+          const elig = (await eligRes.json()) as StandardizationEligibilityView;
+          const cur = (await curRes.json()) as {
+            current: StandardizedCurrentView | null;
+          };
 
-      setEligibility(elig);
-      setCurrent(cur.current);
-    } catch (err) {
-      setError(tErr(evalErrorKey(err)));
-    }
-  }, [slug, studyId, tErr]);
+          setEligibility(elig);
+          setCurrent(cur.current);
+        })
+        .catch((err: unknown) => setError(tErr(evalErrorKey(err)))),
+    [slug, studyId, tErr],
+  );
 
   useEffect(() => {
     void load();

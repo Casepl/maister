@@ -56,9 +56,8 @@ vi.mock("@/lib/authz", () => ({
 }));
 
 const { remoteBranchHead } = await import("@/lib/worktree");
-const { exportWorkbenchBranch } = await import(
-  "@/lib/workbench-lifecycle/service"
-);
+const { exportWorkbenchBranch } =
+  await import("@/lib/workbench-lifecycle/service");
 
 let testDatabase: StartedPostgresTestDb;
 let root: string;

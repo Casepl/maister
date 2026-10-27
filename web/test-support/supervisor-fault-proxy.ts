@@ -3,6 +3,7 @@ import type { Socket } from "node:net";
 import {
   createServer,
   request,
+  type IncomingHttpHeaders,
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
@@ -18,6 +19,28 @@ const COMMAND_OUTPUT_DISPOSITION = safeDownloadHeaders({
   fileName: "command-output.v2.json",
   mediaClass: "opaque",
 })["content-disposition"];
+
+function endToEndHeaders(headers: IncomingHttpHeaders): IncomingHttpHeaders {
+  const hopHeaders = new Set([
+    "connection",
+    "keep-alive",
+    "proxy-connection",
+    "te",
+    "trailer",
+    "transfer-encoding",
+    "upgrade",
+    ...(headers.connection ?? "")
+      .split(",")
+      .map((name) => name.trim().toLowerCase()),
+  ]);
+
+  // Each HTTP hop supplies its own framing and socket lifetime.
+  return Object.fromEntries(
+    Object.entries(headers).filter(
+      ([name]) => !hopHeaders.has(name.toLowerCase()),
+    ),
+  );
+}
 
 export class FaultBarrierError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -422,7 +445,10 @@ export async function startSupervisorFaultProxy(
     }
     const upstream = request(new URL(pathname, upstreamBase), {
       method,
-      headers: { ...incoming.headers, host: upstreamBase.host },
+      headers: {
+        ...endToEndHeaders(incoming.headers),
+        host: upstreamBase.host,
+      },
     });
 
     downstream.once("close", () => upstream.destroy());
@@ -447,7 +473,7 @@ export async function startSupervisorFaultProxy(
       );
       const forward = async (): Promise<void> => {
         if (pathname === "/runtime-events" && response.statusCode === 200) {
-          downstream.writeHead(200, response.headers);
+          downstream.writeHead(200, endToEndHeaders(response.headers));
           let remainder = Buffer.alloc(0);
 
           for await (const chunk of response) {
@@ -637,7 +663,10 @@ export async function startSupervisorFaultProxy(
         const rule = selectedRule;
 
         if (!rule) {
-          downstream.writeHead(received.status, response.headers);
+          downstream.writeHead(
+            received.status,
+            endToEndHeaders(response.headers),
+          );
           if (responseBody) {
             downstream.end(responseBody);
 
@@ -695,7 +724,10 @@ export async function startSupervisorFaultProxy(
         });
         rule.retainedBytes -= responseBody.length;
         if (downstream.destroyed) return;
-        downstream.writeHead(received.status, response.headers);
+        downstream.writeHead(
+          received.status,
+          endToEndHeaders(response.headers),
+        );
         downstream.end(responseBody);
       };
 

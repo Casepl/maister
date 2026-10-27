@@ -14,12 +14,7 @@ export async function withE2EDb<T>(fn: (pool: Pool) => Promise<T>): Promise<T> {
 
 export async function countRows(
   tableName:
-    | "projects"
-    | "runs"
-    | "scratch_runs"
-    | "tasks"
-    | "users"
-    | "workspaces",
+    "projects" | "runs" | "scratch_runs" | "tasks" | "users" | "workspaces",
   whereSql: string,
   values: readonly unknown[],
 ): Promise<number> {

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { usePathname, useSearchParams } from "next/navigation";
 
@@ -100,9 +100,12 @@ function WorkbenchDisclosure({
   const [open, setOpen] = useState(routeOpen);
   const Icon = open ? ChevronDownIcon : ChevronRightIcon;
 
-  useEffect(() => {
+  const [followedRoute, setFollowedRoute] = useState(routeOpen);
+
+  if (followedRoute !== routeOpen) {
+    setFollowedRoute(routeOpen);
     setOpen(routeOpen);
-  }, [routeOpen]);
+  }
 
   return (
     <details

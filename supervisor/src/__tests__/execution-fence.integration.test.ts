@@ -252,8 +252,7 @@ describe("execution fence", () => {
     });
 
     const exited = events.find((e) => e.type === "session.exited") as
-      | Extract<SessionEvent, { type: "session.exited" }>
-      | undefined;
+      Extract<SessionEvent, { type: "session.exited" }> | undefined;
 
     expect(exited?.reason).toBe("fenced");
 
@@ -409,8 +408,7 @@ describe("execution fence", () => {
     expect(epoch2.map((r) => r.sessionId)).toEqual([a.body.sessionId]);
 
     const exited = events.find((e) => e.type === "session.exited") as
-      | Extract<SessionEvent, { type: "session.exited" }>
-      | undefined;
+      Extract<SessionEvent, { type: "session.exited" }> | undefined;
 
     expect(exited?.reason).toBe("fenced");
     // When the lower-epoch session exited, nothing else had been spawned yet.
@@ -505,8 +503,7 @@ describe("execution fence", () => {
       expect(pendingPermissions.requestIds(sessionId)).toEqual([]);
 
       const exited = events.find((e) => e.type === "session.exited") as
-        | Extract<SessionEvent, { type: "session.exited" }>
-        | undefined;
+        Extract<SessionEvent, { type: "session.exited" }> | undefined;
 
       expect(exited?.reason).toBe("fenced");
 

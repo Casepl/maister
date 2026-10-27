@@ -23,9 +23,7 @@ const MAX_OBSERVATION_BYTES = 65_536;
 const CANONICAL_SEQUENCE = /^(0|[1-9][0-9]{0,18})$/;
 
 export type ObservationSourceStatus =
-  | "available"
-  | "unsupported"
-  | "unavailable";
+  "available" | "unsupported" | "unavailable";
 
 export type LagStreamIdentity = Readonly<{
   executionHostId: string;

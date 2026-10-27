@@ -6,12 +6,8 @@ import type { FaultBarrier } from "@/test-support/supervisor-fault-proxy";
 import { createHash, randomUUID } from "node:crypto";
 import { fork, type ChildProcess } from "node:child_process";
 import path from "node:path";
-import {
-  createServer,
-  get,
-  request as httpRequest,
-  type IncomingMessage,
-} from "node:http";
+import { DatabaseSync } from "node:sqlite";
+import { createServer, request as httpRequest } from "node:http";
 import { setTimeout as delay } from "node:timers/promises";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -100,6 +96,11 @@ import {
 } from "@/test-support/real-supervisor";
 import { seedNodePromptOwner } from "@/test-support/prompt-owner-fixture";
 import { startSupervisorFaultProxy } from "@/test-support/supervisor-fault-proxy";
+import { holdRuntimeObjectReads } from "@/test-support/held-http-reads";
+import {
+  invocationFromEnvironment,
+  logInvocation,
+} from "@/test-support/process-invocation";
 
 let database: StartedPostgresTestDb;
 let supervisor: RealSupervisor;
@@ -107,6 +108,36 @@ let hosts: ExecutionHosts;
 let worker: ProjectionWorker;
 let project: Awaited<ReturnType<typeof seedProjectRow>>;
 let restoreUrl: () => void = () => {};
+
+type ResponseSpool = Readonly<{
+  id: string;
+  capacity: number;
+  written: number;
+}>;
+
+function responseSpools(): ResponseSpool[] {
+  const state = new DatabaseSync(
+    path.join(supervisor.stateDir, "state.sqlite"),
+    {
+      readOnly: true,
+    },
+  );
+
+  try {
+    return state
+      .prepare(
+        "SELECT file_id, capacity_bytes, written_bytes FROM runtime_files WHERE kind = 'spool' AND private_path LIKE '%.response' ORDER BY file_id",
+      )
+      .all()
+      .map((row) => ({
+        id: String(row.file_id),
+        capacity: Number(row.capacity_bytes),
+        written: Number(row.written_bytes),
+      }));
+  } finally {
+    state.close();
+  }
+}
 
 async function createRunClient(name: string) {
   const runId = await seedRun(database.db, {
@@ -675,54 +706,85 @@ describe("AT-01 bounded output on the production supervisor", () => {
       .where(eq(executionCommands.id, handle.commandId));
 
     await untilIngested(handle.commandId);
-    await worker.stop();
-    const reference = parseCommandOutputReferenceV2(
-      command.receiptEvidence?.evidenceV2?.terminal?.result?.output,
-    );
-    const bytes = new Uint8Array(8 * 1024 * 1024).fill(120);
-    const objectId = randomUUID();
-    const sha256 = createHash("sha256").update(bytes).digest("hex");
+    const invocation = invocationFromEnvironment();
 
-    await producer.client.reserveRuntimeObject({
-      objectId,
-      kind: "generated_artifact",
-      logicalName: "draft-read-cap-control.bin",
-      mimeType: "application/octet-stream",
-      sizeBytes: bytes.length,
-      sha256,
-      generation: 1,
-      retentionClass: "run",
-    });
-    await producer.client.uploadRuntimeObject({
-      objectId,
-      generation: 1,
-      bytes,
-      sha256,
-    });
-    const proxy = await startSupervisorFaultProxy(supervisor.url);
-    const restoreOwnerUrl = useRealSupervisorUrl(proxy.url);
-    const occupiedReads: IncomingMessage[] = [];
+    if (!invocation)
+      throw new Error("held response fixture requires its invocation");
+    let proxy:
+      Awaited<ReturnType<typeof startSupervisorFaultProxy>> | undefined;
+    let restoreOwnerUrl: () => void = () => {};
+    let occupiedReads:
+      Awaited<ReturnType<typeof holdRuntimeObjectReads>> | undefined;
+    const priorSpools = new Set<string>();
+    const heldSpools = (): ResponseSpool[] =>
+      responseSpools().filter((spool) => !priorSpools.has(spool.id));
     const pendingBarriers = new Set<FaultBarrier>();
+    const pendingAssertions = new Set<Promise<unknown>>();
+    const cancellations = new Set<AbortController>();
+    const retainAssertion = (assertion: Promise<unknown>): Promise<unknown> => {
+      pendingAssertions.add(assertion);
+      void assertion.catch(() => undefined);
+
+      return assertion;
+    };
     let caseFailure: { error: unknown } | null = null;
 
     try {
-      // Unread real responses retain both host verification slots until cancelled.
-      for (let index = 0; index < 2; index += 1) {
-        const response = await new Promise<IncomingMessage>(
-          (resolve, reject) => {
-            get(
-              `${supervisor.url}/runtime-objects/${objectId}/content`,
-              resolve,
-            ).once("error", reject);
-          },
-        );
+      await worker.stop();
+      for (const spool of responseSpools()) priorSpools.add(spool.id);
+      const reference = parseCommandOutputReferenceV2(
+        command.receiptEvidence?.evidenceV2?.terminal?.result?.output,
+      );
+      const bytes = new Uint8Array(8 * 1024 * 1024).fill(120);
+      const objectId = randomUUID();
+      const sha256 = createHash("sha256").update(bytes).digest("hex");
 
-        occupiedReads.push(response);
-        expect(response.statusCode).toBe(200);
-      }
+      await producer.client.reserveRuntimeObject({
+        objectId,
+        kind: "generated_artifact",
+        logicalName: "draft-read-cap-control.bin",
+        mimeType: "application/octet-stream",
+        sizeBytes: bytes.length,
+        sha256,
+        generation: 1,
+        retentionClass: "run",
+      });
+      await producer.client.uploadRuntimeObject({
+        objectId,
+        generation: 1,
+        bytes,
+        sha256,
+      });
+      const activeProxy = await startSupervisorFaultProxy(supervisor.url);
+
+      proxy = activeProxy;
+      restoreOwnerUrl = useRealSupervisorUrl(activeProxy.url);
+      occupiedReads = await holdRuntimeObjectReads(
+        invocation,
+        `${supervisor.url}/runtime-objects/${objectId}/content`,
+      );
+      const expectedSpools = heldSpools();
+
+      expect(expectedSpools).toHaveLength(2);
+      for (const spool of expectedSpools)
+        expect(spool).toMatchObject({
+          capacity: bytes.length,
+          written: bytes.length,
+        });
+      const assertHeldSpools = (phase: string): void => {
+        expect(heldSpools()).toEqual(expectedSpools);
+        logInvocation(invocation, "held-response-spools", {
+          phase,
+          firstId: expectedSpools[0].id,
+          secondId: expectedSpools[1].id,
+          sizeBytes: bytes.length,
+        });
+      };
+
+      assertHeldSpools("acquired");
       const contentPath = `/runtime-objects/${reference.objectId}/content`;
       const countReads = (): number =>
-        proxy.traffic.filter(
+        activeProxy.traffic.filter(
           (request) => request.method === "GET" && request.path === contentPath,
         ).length;
       const beforeExhausted = countReads();
@@ -738,8 +800,9 @@ describe("AT-01 bounded output on the production supervisor", () => {
         details: { httpStatus: 409, reason: "command_in_progress" },
       });
       expect(countReads() - beforeExhausted).toBe(5);
+      assertHeldSpools("retries-exhausted");
 
-      const cancelledBusy = proxy.arm(
+      const cancelledBusy = activeProxy.arm(
         {
           caseId: "draft-owner-cancel-busy-response",
           method: "GET",
@@ -751,20 +814,24 @@ describe("AT-01 bounded output on the production supervisor", () => {
 
       pendingBarriers.add(cancelledBusy);
       const cancellation = new AbortController();
+
+      cancellations.add(cancellation);
       const beforeCancellation = countReads();
-      const cancelled = expect(
-        readPromptOutput({
-          db,
-          commandId: command.id,
-          signal: cancellation.signal,
+      const cancelled = retainAssertion(
+        expect(
+          readPromptOutput({
+            db,
+            commandId: command.id,
+            signal: cancellation.signal,
+          }),
+        ).rejects.toMatchObject({
+          code: "EXECUTOR_UNAVAILABLE",
+          details: { reason: "timeout" },
         }),
-      ).rejects.toMatchObject({
-        code: "EXECUTOR_UNAVAILABLE",
-        details: { reason: "timeout" },
-      });
+      );
 
       expect((await cancelledBusy.awaitReached()).status).toBe(409);
-      const heldRetry = proxy.arm(
+      const heldRetry = activeProxy.arm(
         {
           caseId: "draft-owner-cancel-retried-read",
           method: "GET",
@@ -782,9 +849,11 @@ describe("AT-01 bounded output on the production supervisor", () => {
       pendingBarriers.delete(heldRetry);
       cancellation.abort();
       await cancelled;
+      pendingAssertions.delete(cancelled);
       expect(countReads() - beforeCancellation).toBe(2);
+      assertHeldSpools("cancelled");
 
-      const heldRead = proxy.arm(
+      const heldRead = activeProxy.arm(
         {
           caseId: "draft-owner-content-read",
           method: "GET",
@@ -796,19 +865,21 @@ describe("AT-01 bounded output on the production supervisor", () => {
 
       pendingBarriers.add(heldRead);
       // The default registry stays closed until S2.7 supplies its domain adapter.
-      const unsupported = expect(
-        preparePromptOwner({
-          db,
-          command,
-          registry: agentPromptOwners,
-          signal: AbortSignal.timeout(15_000),
+      const unsupported = retainAssertion(
+        expect(
+          preparePromptOwner({
+            db,
+            command,
+            registry: agentPromptOwners,
+            signal: AbortSignal.timeout(15_000),
+          }),
+        ).rejects.toMatchObject({
+          details: { causeCode: "agent_variant_not_implemented" },
         }),
-      ).rejects.toMatchObject({
-        details: { causeCode: "agent_variant_not_implemented" },
-      });
+      );
 
       await heldRead.awaitReached();
-      const busyResponse = proxy.arm(
+      const busyResponse = activeProxy.arm(
         {
           caseId: "draft-owner-real-busy-response",
           method: "GET",
@@ -822,11 +893,19 @@ describe("AT-01 bounded output on the production supervisor", () => {
       heldRead.release();
       pendingBarriers.delete(heldRead);
       expect((await busyResponse.awaitReached()).status).toBe(409);
-      for (const response of occupiedReads) response.destroy();
-      occupiedReads.length = 0;
+      assertHeldSpools("busy-response-held");
+      await occupiedReads.release();
+      occupiedReads = undefined;
+      await expect.poll(heldSpools, { timeout: 5_000 }).toEqual([]);
+      logInvocation(invocation, "held-response-spools-released", {
+        firstId: expectedSpools[0].id,
+        secondId: expectedSpools[1].id,
+        remaining: 0,
+      });
       busyResponse.release();
       pendingBarriers.delete(busyResponse);
       await unsupported;
+      pendingAssertions.delete(unsupported);
       const owners = createAgentPromptOwners({
         prepareConsensusDraft: async ({
           owner,
@@ -884,41 +963,108 @@ describe("AT-01 bounded output on the production supervisor", () => {
 
       const cleanupErrors: unknown[] = [];
 
-      try {
-        for (const response of occupiedReads) response.destroy();
-        for (const barrier of pendingBarriers)
+      const cleanup = [
+        async (): Promise<void> => {
+          for (const cancellation of cancellations) cancellation.abort();
+        },
+        async (): Promise<void> => {
+          await occupiedReads?.release();
+        },
+        ...[...pendingBarriers].map((barrier) => async (): Promise<void> => {
           if (barrier.observations.length > 0) barrier.cut();
-      } catch (error) {
-        cleanupErrors.push(error);
-      } finally {
+        }),
+        async (): Promise<void> => {
+          await proxy?.close();
+        },
+        async (): Promise<void> => {
+          const assertions = await Promise.allSettled(pendingAssertions);
+          const failures = assertions
+            .filter((result) => result.status === "rejected")
+            .map((result) => result.reason as unknown)
+            .filter((error) => error !== caseFailure?.error);
+
+          if (failures.length > 0)
+            throw new AggregateError(
+              failures,
+              "draft owner pending assertions failed",
+            );
+        },
+        async (): Promise<void> => {
+          if (!caseFailure) return;
+          const removed = await db
+            .delete(executionCommands)
+            .where(
+              and(
+                eq(executionCommands.id, command.id),
+                eq(executionCommands.runId, producer.runId),
+                eq(executionCommands.ownerKind, "agent_turn"),
+              ),
+            )
+            .returning({
+              id: executionCommands.id,
+              applicationState: executionCommands.applicationState,
+              applicationAttempts: executionCommands.applicationAttempts,
+            });
+
+          expect(removed).toHaveLength(1);
+          logInvocation(invocation, "failed-draft-command-removed", {
+            commandId: removed[0].id,
+            applicationState: removed[0].applicationState,
+            applicationAttempts: removed[0].applicationAttempts,
+          });
+        },
+        async (): Promise<void> => {
+          if (!caseFailure) return;
+          const remaining = await db
+            .select({ id: executionCommands.id })
+            .from(executionCommands)
+            .where(eq(executionCommands.id, command.id));
+
+          logInvocation(
+            invocation,
+            "failed-draft-command-cleanup-observation",
+            {
+              commandId: command.id,
+              remaining: remaining.length,
+            },
+          );
+          expect(
+            remaining,
+            "failed draft command survived fixture cleanup",
+          ).toEqual([]);
+        },
+        async (): Promise<void> => {
+          worker = startProjectionWorker({
+            db,
+            projectors: canonicalProjectors,
+          });
+        },
+        async (): Promise<void> => {
+          await producer.client.deleteSession(producer.session.hostSessionId);
+        },
+      ];
+
+      for (const release of cleanup) {
         try {
-          await proxy.close();
+          await release();
         } catch (error) {
           cleanupErrors.push(error);
-        } finally {
-          try {
-            worker = startProjectionWorker({
-              db,
-              projectors: canonicalProjectors,
-            });
-          } catch (error) {
-            cleanupErrors.push(error);
-          } finally {
-            try {
-              await producer.client.deleteSession(
-                producer.session.hostSessionId,
-              );
-            } catch (error) {
-              cleanupErrors.push(error);
-            }
-          }
         }
       }
-      if (cleanupErrors.length > 0)
-        throw new AggregateError(
+      if (cleanupErrors.length > 0) {
+        const failure = new AggregateError(
           [...(caseFailure ? [caseFailure.error] : []), ...cleanupErrors],
           "draft owner fixture cleanup failed",
         );
+
+        logInvocation(invocation, "draft-owner-cleanup-failed", {
+          cleanupErrors: cleanupErrors.length,
+          originalErrorPreserved: caseFailure
+            ? failure.errors[0] === caseFailure.error
+            : null,
+        });
+        throw failure;
+      }
     }
   });
 

@@ -30,9 +30,7 @@ export type TemplateVariableEntry = {
 };
 
 export type TemplateVariableCatalogWarningCode =
-  | "schema_ref_out_of_scope"
-  | "schema_missing"
-  | "schema_invalid";
+  "schema_ref_out_of_scope" | "schema_missing" | "schema_invalid";
 
 export type TemplateVariableCatalogWarning = {
   code: TemplateVariableCatalogWarningCode;
@@ -59,9 +57,7 @@ export type BuildTemplateVariableCatalogInput = {
 };
 
 export type TemplateVariableUsageWarningCode =
-  | "missing_default"
-  | "unknown_path"
-  | "unavailable_path";
+  "missing_default" | "unknown_path" | "unavailable_path";
 
 export type TemplateVariableUsageWarning = {
   code: TemplateVariableUsageWarningCode;

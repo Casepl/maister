@@ -45,10 +45,7 @@ import {
 // ADR-185 / web.openapi.yaml: explicit DTO projections — never a row.
 
 export type LibrarianIndicatorState =
-  | "none"
-  | "running"
-  | "unread"
-  | "action_required";
+  "none" | "running" | "unread" | "action_required";
 
 export type LibrarianMessageDto = {
   id: string;

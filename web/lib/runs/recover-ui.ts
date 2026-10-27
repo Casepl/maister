@@ -3,13 +3,7 @@
 // truth so the component never string-matches.
 
 export type RecoverUiState =
-  | "resumed"
-  | "queued"
-  | "conflict"
-  | "busy"
-  | "gone"
-  | "retry"
-  | "error";
+  "resumed" | "queued" | "conflict" | "busy" | "gone" | "retry" | "error";
 
 // `reason` is the refusal's typed `details.reason` token, never its message.
 export function recoverHttpToUiState(

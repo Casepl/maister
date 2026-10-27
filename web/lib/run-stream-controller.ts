@@ -1,9 +1,5 @@
 export type RunStreamLifecycleKind =
-  | "connecting"
-  | "live"
-  | "reconnecting"
-  | "disconnected"
-  | "closed";
+  "connecting" | "live" | "reconnecting" | "disconnected" | "closed";
 
 export interface RunStreamLifecycle {
   kind: RunStreamLifecycleKind;
@@ -11,11 +7,7 @@ export interface RunStreamLifecycle {
 }
 
 export type RunStreamLifecycleEvent =
-  | "opened"
-  | "unexpected_close"
-  | "retrying"
-  | "manual_reconnect"
-  | "terminal";
+  "opened" | "unexpected_close" | "retrying" | "manual_reconnect" | "terminal";
 
 export const initialRunStreamLifecycle: RunStreamLifecycle = {
   kind: "connecting",

@@ -20,6 +20,7 @@ import { BRAIN_POLICY } from "./policy";
 
 import { MaisterError } from "@/lib/errors";
 import { getDb } from "@/lib/db/client";
+import { isUniqueViolation } from "@/lib/db/pg-error";
 
 const log = pino({
   name: "brain:retain",
@@ -180,8 +181,7 @@ export async function retain(
         LIMIT 1
       `);
       const best = near.rows[0] as
-        | { item_id: string; dist: number }
-        | undefined;
+        { item_id: string; dist: number } | undefined;
 
       if (best && 1 - Number(best.dist) > BRAIN_POLICY.dedupCosineThreshold) {
         if (kind === "state_fact") {
@@ -279,7 +279,7 @@ export async function retain(
     // Belt: the partial UNIQUE (project_id, content_hash) WHERE active turns a
     // pre-check race (unreachable given the advisory lock) into a constraint
     // violation. Resolve to the idempotent no-op — exactly one active row.
-    if ((err as { code?: string }).code === "23505") {
+    if (isUniqueViolation(err)) {
       const existing = await db.execute(sql`
         SELECT id FROM brain_items
         WHERE project_id = ${projectId} AND content_hash = ${contentHash}

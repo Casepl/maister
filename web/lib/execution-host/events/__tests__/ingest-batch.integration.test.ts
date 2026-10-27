@@ -9,7 +9,7 @@ import type { Db } from "@/lib/execution-host/db";
 import { randomUUID } from "node:crypto";
 
 import { drizzle } from "drizzle-orm/node-postgres";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import * as fullSchema from "@/lib/db/schema";
 import {
@@ -161,14 +161,24 @@ function scenario(f: Fixture) {
   };
 }
 
-function statementLog(): { db: Db; statements: string[] } {
+function statementLog(): {
+  db: Db;
+  statements: string[];
+  parameterCounts: number[];
+} {
   const statements: string[] = [];
+  const parameterCounts: number[] = [];
   const db = drizzle(testDatabase.pool, {
     schema: fullSchema,
-    logger: { logQuery: (query) => statements.push(query) },
+    logger: {
+      logQuery: (query, parameters) => {
+        statements.push(query);
+        parameterCounts.push(parameters.length);
+      },
+    },
   }) as unknown as Db;
 
-  return { db, statements };
+  return { db, statements, parameterCounts };
 }
 
 async function storedRows(f: Fixture) {
@@ -192,6 +202,90 @@ async function storedRows(f: Fixture) {
 }
 
 describe("runtime event batch ingest (ADR-167 amendment 2026-09-25)", () => {
+  it("preserves full-batch bigint positions and JSON payloads through one SQL parameter", async () => {
+    const f = await fixture(1);
+    const firstSequence = 9_007_199_254_740_993n;
+    const payload = {
+      update: {
+        text: "Quoted ' SQL $1 and Unicode 🙂",
+        nested: [null, true, 3],
+      },
+    };
+    const envelopes = Array.from({ length: 200 }, (_, index) =>
+      envelope(f, index, 0, {
+        sequence: (firstSequence + BigInt(index)).toString(),
+        payload,
+      }),
+    );
+    const log = statementLog();
+    const receivedAt = new Date("2026-10-26T12:00:00.123Z");
+    const fromEntries = Object.fromEntries;
+    let entryPairs = 0;
+    const observer = vi
+      .spyOn(Object, "fromEntries")
+      .mockImplementation((entries) => {
+        if (
+          Array.isArray(entries) &&
+          entries[0]?.[0] === "id" &&
+          entries[1]?.[0] === "source" &&
+          entries[2]?.[0] === "run_id"
+        )
+          entryPairs += entries.length;
+
+        return fromEntries(entries);
+      });
+    let result: Awaited<ReturnType<typeof ingestRuntimeEventBatch>>;
+
+    try {
+      result = await ingestRuntimeEventBatch({
+        db: log.db,
+        executionHostId: f.hostId,
+        envelopes,
+        now: receivedAt,
+      });
+    } finally {
+      observer.mockRestore();
+    }
+    // A full batch must not allocate a temporary key/value array per column.
+    expect(entryPairs).toBe(0);
+    const stored = await testDatabase.pool.query<{
+      host_sequence: string;
+      payload: typeof payload;
+      received_at: Date;
+      source_key: string | null;
+      run_sequence: string | null;
+    }>(
+      `select host_sequence::text, payload, received_at, source_key, run_sequence::text
+       from execution_events where execution_host_id = $1 order by host_sequence`,
+      [f.hostId],
+    );
+
+    expect(result.pendingGapCount).toBe(200);
+    expect(stored.rows).toEqual(
+      envelopes.map((raw) => ({
+        host_sequence: raw.sequence,
+        payload,
+        received_at: receivedAt,
+        source_key: null,
+        run_sequence: null,
+      })),
+    );
+    const insert = log.statements.findIndex((statement) =>
+      /^insert into "execution_events"/i.test(statement),
+    );
+
+    expect(log.parameterCounts[insert]).toBe(1);
+    const replay = await ingestRuntimeEventBatch({
+      db: log.db,
+      executionHostId: f.hostId,
+      envelopes,
+    });
+
+    expect(replay.results.every((row) => row.disposition === "duplicate")).toBe(
+      true,
+    );
+  });
+
   it("I1: commits a batch in one transaction with the per-event dispositions", async () => {
     const perEvent = await fixture(3);
     const batched = await fixture(3);
@@ -268,6 +362,8 @@ describe("runtime event batch ingest (ADR-167 amendment 2026-09-25)", () => {
     expect(runLocks).toHaveLength(1);
     expect(runLocks[0]!.index).toBeLessThan(firstInsert);
     expect(count(/^insert into "execution_events"/i)).toBe(1);
+    // One recordset keeps SQL construction bounded as the batch grows.
+    expect(log.parameterCounts[firstInsert]).toBe(1);
     expect(count(/^update "execution_event_streams"/i)).toBe(1);
     expect(count(/^update "execution_hosts"/i)).toBe(1);
     // Same committed state as the per-event path, row for row.

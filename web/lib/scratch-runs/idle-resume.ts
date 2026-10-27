@@ -383,9 +383,8 @@ export async function driveScratchIdleResume(args: {
         owner: { variant: "recovery" },
       });
     } catch (err) {
-      const { failScratchMessageTurn } = await import(
-        "@/lib/scratch-runs/service"
-      );
+      const { failScratchMessageTurn } =
+        await import("@/lib/scratch-runs/service");
 
       await failScratchMessageTurn({
         db,

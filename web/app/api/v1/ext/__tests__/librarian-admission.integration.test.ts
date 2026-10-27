@@ -131,9 +131,8 @@ beforeAll(async () => {
   promote = await import("@/app/api/v1/ext/runs/promote/route");
   discard = await import("@/app/api/v1/ext/runs/[runId]/discard/route");
   delegate = await import("@/app/api/v1/ext/runs/delegate/route");
-  respond = await import(
-    "@/app/api/v1/ext/runs/[runId]/hitl/[hitlRequestId]/respond/route"
-  );
+  respond =
+    await import("@/app/api/v1/ext/runs/[runId]/hitl/[hitlRequestId]/respond/route");
   agentMemory = await import("@/app/api/v1/ext/agent/memory/route");
 }, 180_000);
 

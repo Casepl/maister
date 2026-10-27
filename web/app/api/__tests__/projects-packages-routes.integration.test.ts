@@ -89,15 +89,12 @@ beforeAll(async () => {
     maisterYamlPath: join(workspaceRoot, "maister.yaml"),
   });
 
-  ({ POST: attachPOST, GET: attachGET } = await import(
-    "@/app/api/projects/[slug]/packages/route"
-  ));
-  ({ DELETE: detachDELETE } = await import(
-    "@/app/api/projects/[slug]/packages/[attachmentId]/route"
-  ));
-  ({ POST: trustPOST } = await import(
-    "@/app/api/projects/[slug]/packages/[attachmentId]/trust/route"
-  ));
+  ({ POST: attachPOST, GET: attachGET } =
+    await import("@/app/api/projects/[slug]/packages/route"));
+  ({ DELETE: detachDELETE } =
+    await import("@/app/api/projects/[slug]/packages/[attachmentId]/route"));
+  ({ POST: trustPOST } =
+    await import("@/app/api/projects/[slug]/packages/[attachmentId]/trust/route"));
 }, 180_000);
 
 afterAll(async () => {
@@ -272,9 +269,8 @@ describe("fork-beside-upstream name uniqueness (integration)", () => {
   it("attaching a fork cut with the upstream's name → 409 package_name_taken (pre-flow-guard)", async () => {
     const { forkPackageToLocal } = await import("@/lib/local-packages/fork");
     const { getLocalPackage } = await import("@/lib/local-packages/service");
-    const { cutLocalPackageVersion } = await import(
-      "@/lib/local-packages/versions"
-    );
+    const { cutLocalPackageVersion } =
+      await import("@/lib/local-packages/versions");
 
     const userId = randomUUID();
 
@@ -314,12 +310,10 @@ describe("fork-beside-upstream name uniqueness (integration)", () => {
   });
 
   it("after manifest rename (name + flow id) + re-cut, the fork attaches beside the upstream", async () => {
-    const { getLocalPackage, writeWorkingDirFile } = await import(
-      "@/lib/local-packages/service"
-    );
-    const { cutLocalPackageVersion } = await import(
-      "@/lib/local-packages/versions"
-    );
+    const { getLocalPackage, writeWorkingDirFile } =
+      await import("@/lib/local-packages/service");
+    const { cutLocalPackageVersion } =
+      await import("@/lib/local-packages/versions");
 
     const pkg = await getLocalPackage(localPackageId, db);
 

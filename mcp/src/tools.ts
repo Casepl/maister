@@ -1228,8 +1228,7 @@ function coerceNumericArgs(
 ): Record<string, unknown> {
   const properties = (
     TOOL_SPECS[name]?.inputSchema as
-      | { properties?: Record<string, unknown> }
-      | undefined
+      { properties?: Record<string, unknown> } | undefined
   )?.properties;
 
   if (!properties) return args;

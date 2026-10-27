@@ -238,8 +238,7 @@ async function untilReceipt(commandId: string): Promise<void> {
 function tamperTerminal(stopReason: string) {
   return (envelope: RuntimeEventEnvelope): RuntimeEventEnvelope => {
     const terminal = envelope.payload?.terminal as
-      | { result?: Record<string, unknown> }
-      | undefined;
+      { result?: Record<string, unknown> } | undefined;
 
     if (envelope.eventType !== "session.command" || !terminal?.result)
       return envelope;
@@ -344,8 +343,7 @@ describe("host-span settlement on the fake host", () => {
     const frontier = await frontierOf(handle.commandId);
     const output = (await command(handle.commandId)).receiptEvidence?.evidenceV2
       ?.terminal?.result?.output as
-      | { acceptedSequence: string; terminalSequence: string }
-      | undefined;
+      { acceptedSequence: string; terminalSequence: string } | undefined;
 
     expect(frontier).toBeGreaterThanOrEqual(BigInt(output!.acceptedSequence));
     expect(frontier).toBeLessThan(BigInt(output!.terminalSequence));

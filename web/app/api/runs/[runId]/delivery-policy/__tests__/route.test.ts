@@ -39,9 +39,7 @@ const fakeDb = {
 
             const run = state.runs[0];
             const policy = run?.deliveryPolicySnapshot as
-              | { trigger?: string }
-              | null
-              | undefined;
+              { trigger?: string } | null | undefined;
 
             if (
               run?.status !== "Review" ||

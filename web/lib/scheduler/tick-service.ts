@@ -247,9 +247,8 @@ async function runClaimedJob(
         const agentTickSummary = await runAgentTickJob({
           target: job.target,
           launcher: async () => {
-            const { dispatchDueAgentSchedules } = await import(
-              "@/lib/agents/triggers"
-            );
+            const { dispatchDueAgentSchedules } =
+              await import("@/lib/agents/triggers");
 
             return dispatchDueAgentSchedules() as Promise<
               Record<string, unknown>

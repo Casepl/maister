@@ -496,8 +496,7 @@ describe("Flow prompt owners through the production graph driver", () => {
       const lockKey = Math.floor(Math.random() * 2_000_000_000) + 1;
       let driver: ReturnType<typeof startDriver> | undefined;
       let continuation:
-        | ReturnType<typeof startFlowContinuationWorker>
-        | undefined;
+        ReturnType<typeof startFlowContinuationWorker> | undefined;
 
       await database.pool.query(
         `CREATE FUNCTION ${trigger}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.run_id = '${seeded.runId}' AND NEW.kind = 'session.prompt' THEN PERFORM pg_advisory_xact_lock(260910, ${lockKey}); PERFORM pg_sleep(greatest(0, extract(epoch from flow_driver_lease_expires_at - clock_timestamp())) + 0.15) FROM runs WHERE id = NEW.run_id; END IF; RETURN NEW; END $$`,
@@ -1952,8 +1951,7 @@ describe("Flow prompt owners through the production graph driver", () => {
       },
     );
     let continuation:
-      | ReturnType<typeof startFlowContinuationWorker>
-      | undefined;
+      ReturnType<typeof startFlowContinuationWorker> | undefined;
 
     try {
       await killBeforeSecondWorkAttempt(seeded.runId);
@@ -2078,8 +2076,7 @@ describe("Flow prompt owners through the production graph driver", () => {
       });
       const previousCap = process.env.MAISTER_MAX_CONCURRENT_RUNS;
       let continuation:
-        | ReturnType<typeof startFlowContinuationWorker>
-        | undefined;
+        ReturnType<typeof startFlowContinuationWorker> | undefined;
 
       try {
         if (window === "after_claim") {
@@ -2216,8 +2213,7 @@ describe("Flow prompt owners through the production graph driver", () => {
       { engineMin: "2.1.0" },
     );
     let continuation:
-      | ReturnType<typeof startFlowContinuationWorker>
-      | undefined;
+      ReturnType<typeof startFlowContinuationWorker> | undefined;
 
     try {
       await killBeforeSecondWorkAttempt(seeded.runId);
@@ -2316,8 +2312,7 @@ describe("Flow prompt owners through the production graph driver", () => {
       const lock = await database.pool.connect();
       let driver: ReturnType<typeof startDriver> | undefined;
       let continuation:
-        | ReturnType<typeof startFlowContinuationWorker>
-        | undefined;
+        ReturnType<typeof startFlowContinuationWorker> | undefined;
       let ownerWorker: ReturnType<typeof startPromptOwnerWorker> | undefined;
 
       try {
@@ -2722,8 +2717,7 @@ describe("Flow prompt owners through the production graph driver", () => {
       let driver: ReturnType<typeof startDriver> | undefined;
       let ownerWorker: ReturnType<typeof startPromptOwnerWorker> | undefined;
       let graphWorker:
-        | ReturnType<typeof startFlowContinuationWorker>
-        | undefined;
+        ReturnType<typeof startFlowContinuationWorker> | undefined;
 
       try {
         await lock.query("SELECT pg_advisory_lock(260906, $1)", [lockKey]);
@@ -3454,8 +3448,7 @@ describe("Flow prompt owners through the production graph driver", () => {
     });
     let ownerWorker: ReturnType<typeof startPromptOwnerWorker> | undefined;
     let continuation:
-      | ReturnType<typeof startFlowContinuationWorker>
-      | undefined;
+      ReturnType<typeof startFlowContinuationWorker> | undefined;
 
     try {
       await assertCrashResumeArmIsUnderTest(crashedRun.seeded.runId);
@@ -3578,8 +3571,7 @@ describe("Flow prompt owners through the production graph driver", () => {
     const crashedRun = await crashAgentRunMidTurn({ window: "before_apply" });
     let ownerWorker: ReturnType<typeof startPromptOwnerWorker> | undefined;
     let continuation:
-      | ReturnType<typeof startFlowContinuationWorker>
-      | undefined;
+      ReturnType<typeof startFlowContinuationWorker> | undefined;
 
     try {
       // The crashed turn already produced its terminal receipt; only the
@@ -3748,8 +3740,7 @@ describe("Flow prompt owners through the production graph driver", () => {
       window: "before_terminal",
     });
     let continuation:
-      | ReturnType<typeof startFlowContinuationWorker>
-      | undefined;
+      ReturnType<typeof startFlowContinuationWorker> | undefined;
 
     try {
       await assertCrashResumeArmIsUnderTest(crashedRun.seeded.runId);
@@ -3911,9 +3902,8 @@ describe("Flow prompt owners through the production graph driver", () => {
       .update(runs)
       .set({ resumeRequestedAt: new Date() })
       .where(eq(runs.id, parent.runId));
-    const { crashWaitingOnChildren } = await import(
-      "@/lib/runs/state-transitions"
-    );
+    const { crashWaitingOnChildren } =
+      await import("@/lib/runs/state-transitions");
 
     await crashWaitingOnChildren(parent.runId, "agent-session-gone", {
       db: database.db as unknown as Db,

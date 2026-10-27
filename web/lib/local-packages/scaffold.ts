@@ -19,12 +19,7 @@ import {
 // weight at install). Collisions reject; nothing is half-written.
 
 export type ScaffoldKind =
-  | "flow"
-  | "skill"
-  | "subagent"
-  | "agent"
-  | "mcp"
-  | "rule";
+  "flow" | "skill" | "subagent" | "agent" | "mcp" | "rule";
 
 export type ScaffoldResult =
   | { ok: true; files: AuthoredFlowPackageFile[]; navigate: string }

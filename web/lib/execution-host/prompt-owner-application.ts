@@ -40,10 +40,7 @@ export type PromptOwnerClaim = Readonly<{
   token: string;
 }>;
 export type PromptOwnerApplicationResult =
-  | "applied"
-  | "superseded"
-  | "poisoned"
-  | "deferred";
+  "applied" | "superseded" | "poisoned" | "deferred";
 
 // Route handlers and instrumentation are separate Next bundles in one process.
 const APPLICATIONS_KEY = Symbol.for("maister.prompt-owner-applications.v1");

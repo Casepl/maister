@@ -47,8 +47,7 @@ interface EmitUserScopedInput {
 }
 
 export type EmitWebhookEventInput =
-  | EmitProjectScopedInput
-  | EmitUserScopedInput;
+  EmitProjectScopedInput | EmitUserScopedInput;
 
 function isUserScoped(
   input: EmitWebhookEventInput,

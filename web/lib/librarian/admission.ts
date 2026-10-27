@@ -47,7 +47,11 @@ import { localHost } from "@/lib/execution-host/resolver";
 import { MaisterError } from "@/lib/errors";
 import { reconcileAdmittedLibrarianOperations } from "@/lib/librarian/operations";
 import { upgradeMaintenanceEngaged } from "@/lib/maintenance/upgrade-fence";
-import { countLiveRuns, effectivePoolCap, takeSchedulerLock } from "@/lib/scheduler";
+import {
+  countLiveRuns,
+  effectivePoolCap,
+  takeSchedulerLock,
+} from "@/lib/scheduler";
 
 const log = pino({
   name: "librarian.admission",
@@ -140,8 +144,7 @@ async function insertConversationRun(
   const runId = randomUUID();
   const live = await countLiveRuns(tx, "librarian");
   const { cap } = await effectivePoolCap(tx, "librarian");
-  const started =
-    !upgradeMaintenanceEngaged() && live < cap;
+  const started = !upgradeMaintenanceEngaged() && live < cap;
 
   await tx.insert(runs).values({
     id: runId,

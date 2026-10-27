@@ -582,8 +582,7 @@ async function processPushDelivery(
     SELECT payload, type FROM webhook_events WHERE id = ${claimed.event_id}
   `);
   const eventRow = (evResult.rows ?? [])[0] as
-    | { payload: WebhookEnvelopePayload | null; type: string }
-    | undefined;
+    { payload: WebhookEnvelopePayload | null; type: string } | undefined;
 
   if (!target || !eventRow?.payload) {
     return finishDelivery(db, {
@@ -679,8 +678,7 @@ async function processWebhookDelivery(
     SELECT payload, type FROM webhook_events WHERE id = ${claimed.event_id}
   `);
   const eventRow = (evResult.rows ?? [])[0] as
-    | { payload: WebhookEnvelopePayload | null; type: string }
-    | undefined;
+    { payload: WebhookEnvelopePayload | null; type: string } | undefined;
 
   if (!sub || !eventRow?.payload) {
     // Subscription or frozen payload vanished — record a config failure rather
