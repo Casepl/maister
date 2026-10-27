@@ -5,7 +5,7 @@ Current continuation branch: `codex/s53a-qualification`; retain this explicit pl
 Created: 2026-10-02.
 Refined through `aif-improve`: 2026-10-20 on working baseline `8237993223fa5a7c3aafe9db42d9438612990938`; implementation, verification and local phase commits authorized. Original planning/qualification sources remain separately attributed.
 Planning source: `f43ac1570380d2be19f7c59a70cd993f24ace440`.
-Status: **A1–A11 and G-LINUX are complete. Native Ubuntu Linux55 and Darwin50, independent preflights, bounded-output26, publish10 and full applicable regression inventories pass on exact Node 24.15.0 and 24.19.0. R20 passes on both platforms and Nodes with unchanged durability and threshold 360 rows/s; its original runtime-identical source receipts are retained explicitly below. A12/A13 final audit and local hosting-disposition commits follow C3. Existing macOS 19/31 hosting remains unchanged; Linux hosting is unqualified. Parent stabilization stays 43/45; S5.3/S5.4/C11 remain open. No push.**
+Status: **A1–A13, C3/G-LINUX and C4a are complete. Native Ubuntu Linux55 and Darwin50, separate preflights, bounded-output26, publish10, R20 and full applicable regressions pass on both exact Nodes. A13 retains the accepted macOS 19/31 hosting recipe; A14 is not applicable and Linux hosting remains unqualified. A15 local disposition follows. Parent stabilization stays 43/45; S5.3/S5.4/C11 remain open. No push.**
 
 Implementation authorized 2026-10-03 through `aif-implement`: execute the whole plan, commit by qualified phases and mark tasks only after their acceptance evidence passes. Initial implementation HEAD is the planning source. The current owner instruction authorizes local phase commits and explicitly forbids push; the earlier completed handoff authorization is historical.
 
@@ -326,8 +326,8 @@ Implementation follows repository conventions: strict explicit types, immutable 
 
 ### Phase 3 — Driver audit, explicit hosting decision and conditional migration
 
-- [ ] **A12 — Audit qualified driver and freeze the decision candidate.** Owner **Design/Qualification**. Depends: G-LINUX. Files: this plan and canonical test-infrastructure as-built Linux sections; no CI change yet. Re-derive API/DB/config/deployment impact from diff against the audited route/event/auth readers, main/Brain schemas/journals/snapshots and supervisor schema-version sources; reconcile every LNX requirement with exact-case/subcontrol evidence and all enforcement/lifecycle claims; adversarially review every corrective cycle. Recheck master/ADR allocations; if rebasing changes tested source, rerun affected controls and complete qualification before claiming candidate frozen. **Acceptance:** review findings resolved RED-first; no widening mounts/weakening assertions; no unqualified source/architecture substitution. **Logging:** INFO source/spec/case audit; ERROR unresolved gap, no new generic report task.
-- [ ] **A13 — Decide hosting from qualified Linux and accepted macOS evidence.** Owner **Design**. Depends: A12. Files: this plan, `docs/system-analytics/test-infrastructure.md`, parent S5.3a and R9 contract; allocated ADR metadata only if the actual decision requires it. Default to retaining the accepted two-part macOS recipe. Compare complete Linux local evidence and its prerequisites with the accepted macOS reports; record capability/maintenance/budget trade-offs, not an assumed speedup. If retention is selected, record A14 as not applicable by this decision (not implemented) and keep Linux hosting unqualified. If adoption is selected, apply D5's prospective contract amendment before A14. **Acceptance:** one explicit evidence-backed decision; all active contracts agree; S5.2 stays accepted at its original SHA, parent43/45 and S5.3/S5.4 remain open; no Linux hosted claim from local proof. **Logging:** INFO decision/source/evidence; ERROR contradictory status. Commit C4a before any CI code.
+- [x] **A12 — Audit qualified driver and freeze the decision candidate.** Owner **Design/Qualification**. Depends: G-LINUX. Files: this plan and canonical test-infrastructure as-built Linux sections; no CI change yet. Re-derive API/DB/config/deployment impact from diff against the audited route/event/auth readers, main/Brain schemas/journals/snapshots and supervisor schema-version sources; reconcile every LNX requirement with exact-case/subcontrol evidence and all enforcement/lifecycle claims; adversarially review every corrective cycle. Recheck master/ADR allocations; if rebasing changes tested source, rerun affected controls and complete qualification before claiming candidate frozen. **Acceptance:** review findings resolved RED-first; no widening mounts/weakening assertions; no unqualified source/architecture substitution. **Logging:** INFO source/spec/case audit; ERROR unresolved gap, no new generic report task.
+- [x] **A13 — Decide hosting from qualified Linux and accepted macOS evidence.** Owner **Design**. Depends: A12. Files: this plan, `docs/system-analytics/test-infrastructure.md`, parent S5.3a and R9 contract; allocated ADR metadata only if the actual decision requires it. Default to retaining the accepted two-part macOS recipe. Compare complete Linux local evidence and its prerequisites with the accepted macOS reports; record capability/maintenance/budget trade-offs, not an assumed speedup. If retention is selected, record A14 as not applicable by this decision (not implemented) and keep Linux hosting unqualified. If adoption is selected, apply D5's prospective contract amendment before A14. **Acceptance:** one explicit evidence-backed decision; all active contracts agree; S5.2 stays accepted at its original SHA, parent43/45 and S5.3/S5.4 remain open; no Linux hosted claim from local proof. **Logging:** INFO decision/source/evidence; ERROR contradictory status. Commit C4a before any CI code.
 
 - [ ] **A14 — Conditionally migrate qualified isolation hosting to standard Linux.** Owner **CI**. Depends: A13 explicitly selecting adoption. If A13 retains macOS, this task is not applicable and no recipe/finalizer implementation is required; preserve that disposition without an implementation checkbox. Files: `.github/workflows/ci.yml`, Linux setup script, new `scripts/finalize-isolation-linux-runtime.mjs`, invocation-reference publication in `scripts/run-stage-ab-tests.mjs`, existing cleanup suite's O2-runner control and `scripts/isolation-ci-workflow.test.mjs`; preserve O1/O1-default semantics and the Darwin provisioning script; adapt cleanup-shell controls by the explicitly configured workflow platform so a rollback is testable. RED existing workflow/script controls for wrong runtime/manifest/budget or borrowed cleanup, actual cleanup-shell timing/upload/cleanup failure cuts, plus real forced-runner-death finalization through O2-runner; GREEN standard ubuntu-24.04 setup and GNU timeout using unchanged formula, D5 reference/runner-death validation and reused `releaseInvocation`, safe shared-Docker finalization and actual artifact upload ordering. Validate the actual setup/timeout/finalization recipe on local Ubuntu 24.04 amd64 without dispatching hosted runs. After the last edit, repeat complete Linux55 plus independent preflight at both exact Nodes, Darwin50/preflight and full applicable phase gates; publish-reference crash windows, live/reused/unreadable runner refusal, replaced ledger/reference refusal and idempotent re-finalization must pass. **Acceptance:** both Node versions/four web legs/two runtime-supervisor legs remain on push; serial55 inventory + independent preflight;60-minute job/B unchanged; no shared daemon stop/prune; original failure preserved and survivors fail even after containment; full applicable suites/static/spec gates GREEN. **Logging:** bounded provisioning DEBUG, INFO capability/version/phase/timing/upload/cleanup, ERROR missing report/capability. No `set -x` over environment credentials.
 - [ ] **A15 — Commit final driver/hosting disposition and verify published changes.** Owner **Qualification**; hosting adoption remains owner-pushed. This continuation authorizes local commits only; the earlier handoff publication permission is historical. Depends: A12/A13 and, only for adoption, A14 with C4 validation. Files: this plan and existing parent/R9/canonical status fields. Reconcile every LNX requirement with the final source and reports; commit locally by the qualified checkpoints. For retention, record complete local driver qualification and the accepted macOS hosting decision separately; Linux hosting remains unqualified, and no Linux workflow is published. For adoption, present the final candidate to the owner and stop for owner push, then independently verify exact-SHA Linux55/preflight, all four web/two supervisor reports, remaining mandatory jobs, capabilities, timing/headroom and zero leaks under D5. Any subsequent pushed code requires its own applicable regression evidence; the old CI-R9d receipts do not qualify it. **Acceptance:** explicit driver qualification and hosting disposition with no borrowed source/platform evidence; S5.2's accepted historical checkpoint is preserved, S5.3/S5.4/C11 stay open for their other deliverables. Missing/failed Linux hosted evidence never becomes acceptance. **Logging:** INFO source/run/artifact/validator/headroom/decision; ERROR mismatch/incomplete/failure. No unsolicited publication, shared-branch merge, manual dispatch or rerun; the earlier Mac handoff push is historical and grants no current publication authority.
@@ -350,7 +350,7 @@ The qualification keeps Linux55 and Darwin50, separate preflight, serial
 isolation, fresh production builds, complete titles and zero leaks. R20 keeps
 its original 360 rows/s threshold, default budgets, duration and durability.
 Host load and power are diagnostic context under the owner's explicit
-amendments. A12/A13 audit and local disposition follow C3; hosting continues
+amendments. A12/A13 are complete; A15 records the local disposition. Hosting continues
 on the accepted macOS 19/31 recipe, with Linux hosting unqualified.
 
 ## Final native qualification
@@ -495,6 +495,63 @@ labelled RED/GREEN/mutant/restored directories retain executed evidence.
 The initial proxy control rejected its request before reaching the network,
 and one mutation setup asserted before editing: those two attempts are
 explicitly invalid controls and are excluded from falsification claims.
+
+## Qualified driver audit and hosting disposition
+
+A12 reconciles LNX-01–12 with the complete source-labelled evidence above.
+Production filesystem denial, supervisor positive witnesses, namespace escape
+refusals, immutable restart policy, cancellation handoffs, signal identity,
+parent death and cleanup all retain their original required titles and live
+foreign witnesses. The final review resolves the SQLite/PostgreSQL allocation
+and transport/fixture corrections, including canonical restart readiness in
+the scratch C4 owner, through reached behavioral RED, valid
+falsification and restored GREEN. The full inventory audit rejects omissions,
+duplicates, skips, source drift and leak containment presented as success.
+
+| Requirement | Final qualification and disposition |
+|---|---|
+| LNX-01 | I1/I4 and independent preflights retain actual private-storage denial and the supervisor's positive witness on both exact Nodes. |
+| LNX-02 | I2 and LI-boundary pass required application reads, exact workspace writes and read-only refusal. |
+| LNX-03 | LI-boundary passes descendant, alias/proc/FD/namespace and privilege escape controls with the frozen mount policy. |
+| LNX-04 | LI-refusal and O-identity pass capability, policy and inspection refusals before application execution. |
+| LNX-05 | O-identity and LI-kill retain identity-bound signals and live foreign witnesses; the selected-reader correction also rejects its unsafe foreign-signal mutant. |
+| LNX-06 | LI-term and O-signal retain production drain and distinguish application code 137 from SIGKILL. |
+| LNX-07 | LI-kill/LI-parent pass reached startup and running lifecycle cuts with zero survivors before containment. |
+| LNX-08 | I3 retains continuity; LI-refusal covers immutable restart and joined acquisition/handoff cancellations without later launches. |
+| LNX-09 | Existing local release and runner-death controls pass. The prospective Linux hosted finalizer is not applicable under A13 retention. |
+| LNX-10 | Both complete native inventories, exact titles, separate preflights, fresh builds, serial isolation and zero-leak sweeps pass the final four-source audit. |
+| LNX-11 | Original enforcement/lifecycle falsifications and new SQLite/PostgreSQL/proxy/ACK/readiness controls retain valid RED, mutants and exact restoration. Both Nodes and platforms have complete final evidence; runtime-identical R20 receipts retain their original identity. |
+| LNX-12 | A13 retains accepted macOS hosting. Linux qualification is local only; adoption, recipe migration and hosted acceptance are not claimed. |
+
+The diff introduces no public HTTP/status/request/response changes, SSE payload
+changes, new grants, configuration variables, CLI flags, dependencies, persistent
+schema or agent grammar. SQLite TEMP accounting is connection-local; durable
+accepted wallets, events, reservations and ACKs retain the existing schema and
+WAL/FULL. The event-plane analytics describe the implemented mechanisms.
+Runtime parity requires no new production binary, mount, port or compose
+setting. Linux test prerequisites remain the documented native Ubuntu/bwrap
+contract; production-container isolation is not claimed. Config-to-DB SET/CLEAR
+symmetry is not applicable because no such mapping changes. Architecture,
+rules and roadmap boundaries remain unchanged; no new ADR allocation is needed.
+
+A13 selects **retention of the accepted macOS 19/31 CI recipe**. Native Linux
+qualification establishes the local driver contract, including both exact
+Nodes, but does not establish a hosted runner's kernel/capabilities, package
+provisioning, artifact finalization or total job budget. The local timings do
+not imply a hosted speedup. Retention preserves the already accepted hosting
+contract without introducing an unqualified operational dependency. A14 is
+**not applicable by this decision**, not implemented or checked complete.
+Linux hosting remains unqualified. S5.2 retains its historical exact-SHA
+acceptance; new local receipts do not relabel that CI result.
+
+The remaining parent work is S5.3's separate-user deployment/browser lifecycle
+matrix and the S5.4/C11 final acceptance audit, including its recorded open
+findings. Parent completion remains **43/45**. Current authority is local
+commits only: no push, PR, shared-branch merge or hosted dispatch.
+
+Qualified C3 implementation commit: `34a9ebd9bf061301ad149eb86e9b471e81bf7df4`. Its non-Markdown tree matches
+the final qualified source hash above; later disposition commits change
+documentation only.
 
 ## Execution evidence
 

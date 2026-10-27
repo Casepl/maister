@@ -918,22 +918,19 @@ S4 rollback: before 0134, keep sources and all import checkpoints; stop maintena
   separate-user deployment/browser matrix are distinct S5.3 deliverables.
 
   The implemented `IsolationDriver` in
-  `web/test-support/process-isolation.ts` preserves the command-wrapping
-  seam used by `real-web.ts`. Both `sandbox-exec` and
-  `bubblewrap` drivers are implemented. S5.3a A8–A10 and their reached Linux
-  boundary/refusal/lifecycle controls are complete. Final code `3d97c9dcf`
-  passes native Ubuntu amd64 Linux55 plus independent preflight on exact
-  Node24.15.0 and24.19.0, with fresh builds and zero leaks. The existing S5.3a
-  plan retains source-labelled phase/corrective evidence and commands for the
-  owner's native Apple Silicon/Docker Desktop handoff. At `f16ec6124`, fresh
-  Darwin50/preflight and publish10 pass. Bounded-output passes25/26 with a
-  Darwin C-fixture compile failure; diagnostic R20 fails after PostgreSQL
-  reports storage exhaustion. Exact reports and limits are in the
-  [Mac handoff results](s53a-linux-isolation.md#native-darwin-handoff-results-2026-10-26).
-  C3/S5.3a are not fully qualified. Preserve the current macOS19/31 CI contract; A14 is excluded and
-  Linux hosted qualification remains unproved. Parent stabilization stays43/45.
-  No container/architecture substitution or old hosted receipt closes these
-  changed-source gates.
+  `web/test-support/process-isolation.ts` preserves the command-wrapping seam
+  used by `real-web.ts`. Both `sandbox-exec` and `bubblewrap` drivers are
+  implemented and locally qualified. S5.3a A8–A13/C3 have final native Ubuntu
+  amd64 Linux55 and Darwin Apple Silicon Darwin50 evidence, independent
+  preflights, bounded-output26, publish10, R20 and full applicable regressions
+  on exact Node 24.15.0 and 24.19.0. The
+  [final native qualification](s53a-linux-isolation.md#final-native-qualification)
+  records the frozen code hash, reports, timings, real corrective falsifications
+  and zero-leak proof. A13 retains the accepted macOS 19/31 CI recipe; A14 is not
+  applicable, and Linux hosting remains unqualified. S5.2 retains its historical
+  accepted source. Parent stabilization stays 43/45: separate-user deployment,
+  browser lifecycle and the final S5.4/C11 audit remain open. No old hosted
+  receipt is relabelled as acceptance of the corrective code.
 
   The final corrective iteration also carries the unresolved Librarian
   Testcontainers initialization timeout into this gate: collect phase evidence

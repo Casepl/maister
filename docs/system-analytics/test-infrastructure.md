@@ -934,7 +934,9 @@ to its original source. The plan retains earlier compiler,
 PostgreSQL storage, throughput and invalidated test attempts as corrective
 evidence.
 Hosting remains the accepted two-part macOS recipe; local Linux qualification
-does not qualify hosted execution.
+does not qualify hosted execution. A13 explicitly selects retention in the
+[qualified driver audit and hosting disposition](../../.ai-factory/plans/s53a-linux-isolation.md#qualified-driver-audit-and-hosting-disposition).
+A14 is not applicable, and the existing workflow is unchanged.
 
 | Owning file | Exact case title | Disposition |
 |---|---|---|
