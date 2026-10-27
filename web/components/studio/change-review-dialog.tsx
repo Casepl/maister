@@ -7,7 +7,7 @@ import type {
 } from "@/components/workbench/diff-view";
 import type { ReactElement } from "react";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { DiffView } from "@/components/workbench/diff-view";

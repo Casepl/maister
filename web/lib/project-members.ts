@@ -25,7 +25,6 @@ function db(): NodePgDatabase<typeof schema> {
   return getDb();
 }
 
-
 export interface ProjectMemberRow {
   memberId: string;
   userId: string;

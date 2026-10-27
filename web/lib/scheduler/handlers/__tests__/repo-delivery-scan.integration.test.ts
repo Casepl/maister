@@ -1,3 +1,5 @@
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
@@ -6,7 +8,6 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 
 import { eq } from "drizzle-orm";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   afterAll,
   afterEach,

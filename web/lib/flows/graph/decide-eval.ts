@@ -54,8 +54,7 @@ export function computeDecideOutcome(
 
     // No `when` matched → the single `default` (schema-guaranteed to exist).
     const def = (decide.cases ?? []).find((c) => !("when" in c)) as
-      | { default: true; target: string }
-      | undefined;
+      { default: true; target: string } | undefined;
 
     return def?.target;
   }

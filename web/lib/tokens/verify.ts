@@ -16,11 +16,7 @@ const { librarianTurns, projectTokens, users } =
 type Db = any;
 
 export type TokenAuthKind =
-  | "invalid"
-  | "expired"
-  | "revoked"
-  | "wrong-project"
-  | "owner-unavailable";
+  "invalid" | "expired" | "revoked" | "wrong-project" | "owner-unavailable";
 
 export class TokenAuthError extends Error {
   readonly kind: TokenAuthKind;

@@ -400,8 +400,8 @@ describe("AT-02 physical runtime storage", () => {
         createSession(host, { runId: "storage-failure-first" }),
         createSession(host, { runId: "storage-failure-second" }),
       ]);
-      const entries = sessions.map(
-        (session) => host.registry.get(session.sessionId)!,
+      const entries = sessions.map((session) =>
+        host.registry.get(session.sessionId)!,
       );
       const retained = host.hostState.runtimeEventOutboxStats().retainedCount;
 

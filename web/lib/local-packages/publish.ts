@@ -223,7 +223,7 @@ export async function publishLocalPackage(
   const sourceUrl = source.url;
   const crossRepo = Boolean(
     pkg.sourceRepoUrl &&
-      normalizeForCompare(pkg.sourceRepoUrl) !== normalizeForCompare(sourceUrl),
+    normalizeForCompare(pkg.sourceRepoUrl) !== normalizeForCompare(sourceUrl),
   );
 
   // Serialize publish per package: two concurrent publishes would interleave on the

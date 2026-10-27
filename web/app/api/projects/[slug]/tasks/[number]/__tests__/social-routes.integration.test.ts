@@ -175,15 +175,12 @@ beforeAll(async () => {
 
   fx.otherTaskNumber = other.number;
 
-  const routes = await import(
-    "@/app/api/projects/[slug]/tasks/[number]/comments/route"
-  );
-  const relations = await import(
-    "@/app/api/projects/[slug]/tasks/[number]/relations/route"
-  );
-  const subscription = await import(
-    "@/app/api/projects/[slug]/tasks/[number]/subscription/route"
-  );
+  const routes =
+    await import("@/app/api/projects/[slug]/tasks/[number]/comments/route");
+  const relations =
+    await import("@/app/api/projects/[slug]/tasks/[number]/relations/route");
+  const subscription =
+    await import("@/app/api/projects/[slug]/tasks/[number]/subscription/route");
 
   commentsGET = routes.GET;
   commentsPOST = routes.POST;

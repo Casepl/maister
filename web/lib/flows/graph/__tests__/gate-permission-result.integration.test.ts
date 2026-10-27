@@ -204,8 +204,7 @@ describe("Owned Flow completed gate permission result", () => {
       const driver = startProcess("flow-prompt-owner-process.ts", seeded.runId);
       let claimant: ReturnType<typeof startProcess> | undefined;
       let continuation:
-        | ReturnType<typeof startFlowContinuationWorker>
-        | undefined;
+        ReturnType<typeof startFlowContinuationWorker> | undefined;
 
       try {
         if (parentKind === "ai_coding") {

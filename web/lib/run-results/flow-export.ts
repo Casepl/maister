@@ -34,8 +34,7 @@ export function declaredResultExport(
   const declared =
     block && typeof block === "object"
       ? ((block as { export?: unknown }).export as
-          | { schema?: unknown; from?: unknown; required?: unknown }
-          | undefined)
+          { schema?: unknown; from?: unknown; required?: unknown } | undefined)
       : undefined;
 
   if (

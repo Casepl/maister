@@ -39,9 +39,12 @@ const patchBodySchema = z
     expectedRevision: z.number().int().nonnegative().optional(),
   })
   .strict()
-  .refine((body) => Object.keys(body).some((key) => key !== "expectedRevision"), {
-    message: "at least one field is required",
-  });
+  .refine(
+    (body) => Object.keys(body).some((key) => key !== "expectedRevision"),
+    {
+      message: "at least one field is required",
+    },
+  );
 
 // The full card editor is PUT-shaped: it writes the first-level editable task
 // fields as one issue-style save. Lifecycle fields stay owned by the run state.
@@ -144,7 +147,11 @@ async function handleTaskUpdate<T extends z.ZodType<UpdateTaskInput>>(
       );
     }
 
-    const updated = await updateTask(resolved.task.id, resolved.project.id, body);
+    const updated = await updateTask(
+      resolved.task.id,
+      resolved.project.id,
+      body,
+    );
 
     log.info({ slug, taskNumber, fields: Object.keys(body) }, label);
 

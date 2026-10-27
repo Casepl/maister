@@ -89,9 +89,8 @@ beforeAll(async () => {
   await fakeExecutionHosts(db);
 
   ({ launchAgentRun, buildAgentPrompt } = await import("@/lib/agents/launch"));
-  ({ resolveEffectiveAgentDefinition } = await import(
-    "@/lib/agents/effective"
-  ));
+  ({ resolveEffectiveAgentDefinition } =
+    await import("@/lib/agents/effective"));
 }, 180_000);
 
 afterAll(async () => {

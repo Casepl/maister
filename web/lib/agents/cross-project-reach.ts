@@ -30,8 +30,7 @@ export type ReachDenyReason =
   | "chain_depth_exhausted";
 
 export type ReachDecision =
-  | { allowed: true; reason: "ok" }
-  | { allowed: false; reason: ReachDenyReason };
+  { allowed: true; reason: "ok" } | { allowed: false; reason: ReachDenyReason };
 
 function inSubset(scopeLabel: string): boolean {
   return (CROSS_PROJECT_AGENT_SCOPES as readonly string[]).includes(scopeLabel);

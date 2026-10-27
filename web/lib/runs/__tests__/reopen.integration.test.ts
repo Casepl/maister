@@ -100,9 +100,8 @@ const actualWorktree =
   await vi.importActual<typeof import("@/lib/worktree")>("@/lib/worktree");
 const { reopenRun, assertReopenEligible } = await import("@/lib/runs/reopen");
 const { promoteRun } = await import("@/lib/runs/promote");
-const { runAutoPromoteJob } = await import(
-  "@/lib/scheduler/handlers/auto-promote"
-);
+const { runAutoPromoteJob } =
+  await import("@/lib/scheduler/handlers/auto-promote");
 const { deriveStage } = await import("@/lib/board");
 const { getOpenRelationBlockers } = await import("@/lib/social/relations");
 

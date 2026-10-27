@@ -20,11 +20,7 @@ const log = pino({
 });
 
 export type FlowAssistantActionLogState =
-  | "received"
-  | "validated"
-  | "applied"
-  | "rejected"
-  | "interrupted";
+  "received" | "validated" | "applied" | "rejected" | "interrupted";
 
 export type FlowAssistantActionLogRecord = {
   v: 1;

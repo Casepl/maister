@@ -225,9 +225,8 @@ describe("stranded agent turns (D-M3)", () => {
       .where(eq(schedulerJobRuns.id, attempt!.attemptId));
 
     expect(run.summary).toMatchObject({ strandedAgentTurns: expected });
-    const { collectExecutionEventLag } = await import(
-      "@/lib/execution-host/events/lag-read-model"
-    );
+    const { collectExecutionEventLag } =
+      await import("@/lib/execution-host/events/lag-read-model");
     const model = await collectExecutionEventLag({
       db: testDatabase.db as unknown as Db,
       health: { kind: "unavailable" } as never,

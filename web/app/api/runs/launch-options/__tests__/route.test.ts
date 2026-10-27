@@ -51,11 +51,9 @@ const fakeDb = {
       where: async () => state[tableNameOf(table)],
       then: <TResult1 = Row[], TResult2 = never>(
         onfulfilled?:
-          | ((value: Row[]) => TResult1 | PromiseLike<TResult1>)
-          | null,
+          ((value: Row[]) => TResult1 | PromiseLike<TResult1>) | null,
         onrejected?:
-          | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
-          | null,
+          ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
       ) =>
         Promise.resolve(state[tableNameOf(table)]).then(
           onfulfilled,
@@ -222,9 +220,8 @@ describe("consensus runner preview", () => {
       "requires a per-project binding",
     );
 
-    const { resolveTaskLaunchConfig } = await import(
-      "@/lib/runs/task-launch-config"
-    );
+    const { resolveTaskLaunchConfig } =
+      await import("@/lib/runs/task-launch-config");
     const config = await resolveTaskLaunchConfig("task-1");
 
     expect(config).toMatchObject({
@@ -303,9 +300,8 @@ describe("consensus runner preview", () => {
       errorCode: "CONFIG",
     });
 
-    const { resolveTaskLaunchConfig } = await import(
-      "@/lib/runs/task-launch-config"
-    );
+    const { resolveTaskLaunchConfig } =
+      await import("@/lib/runs/task-launch-config");
     const config = await resolveTaskLaunchConfig("task-1");
 
     expect(config).toMatchObject({
@@ -393,9 +389,8 @@ describe("consensus runner preview", () => {
 
     state.tasks[0].runnerId = "codex-ready";
     const taskBody = await (await invoke()).json();
-    const { resolveTaskLaunchConfig } = await import(
-      "@/lib/runs/task-launch-config"
-    );
+    const { resolveTaskLaunchConfig } =
+      await import("@/lib/runs/task-launch-config");
     const config = await resolveTaskLaunchConfig("task-1");
 
     expect(config).toMatchObject({
@@ -688,9 +683,8 @@ describe("GET /api/runs/launch-options per-session resolution (M42)", () => {
       errorCode: null,
     });
 
-    const { resolveTaskLaunchConfig } = await import(
-      "@/lib/runs/task-launch-config"
-    );
+    const { resolveTaskLaunchConfig } =
+      await import("@/lib/runs/task-launch-config");
 
     expect(await resolveTaskLaunchConfig("task-1")).toMatchObject({
       launchable: true,

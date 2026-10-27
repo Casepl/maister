@@ -2,7 +2,7 @@
 
 import type { ReactElement } from "react";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { readApiError } from "@/lib/api-error";
@@ -96,8 +96,8 @@ export function PublishDialog({
 
   const crossRepo = Boolean(
     options?.preselectedSourceId &&
-      sourceId &&
-      sourceId !== options.preselectedSourceId,
+    sourceId &&
+    sourceId !== options.preselectedSourceId,
   );
 
   async function publish(): Promise<void> {

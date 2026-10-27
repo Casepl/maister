@@ -70,9 +70,8 @@ afterAll(async () => {
 });
 
 beforeAll(async () => {
-  const routeModule = await import(
-    "@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/route"
-  );
+  const routeModule =
+    await import("@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/route");
 
   GET = routeModule.GET;
   PATCH = routeModule.PATCH;
@@ -357,7 +356,10 @@ describe("PATCH /api/v1/ext/projects/[slug]/tasks/[taskId]", () => {
     });
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ prompt: "Sharpened statement", revision: 1 });
+    expect(await res.json()).toMatchObject({
+      prompt: "Sharpened statement",
+      revision: 1,
+    });
   });
 
   it("forced success-audit failure rolls back the task update", async () => {

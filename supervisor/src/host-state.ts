@@ -266,9 +266,7 @@ export type HostRuntimeEventRow = {
 
 /** Why a retained span cannot be served; never a command outcome. */
 export type RuntimeEventSpanUnavailableReason =
-  | "replay_floor_lost"
-  | "stream_identity_changed"
-  | "beyond_emitted";
+  "replay_floor_lost" | "stream_identity_changed" | "beyond_emitted";
 
 /** One bounded page of the retained range `(after, through]`. */
 export type RuntimeEventSpanPage =
@@ -1538,8 +1536,7 @@ export function openHostState(opts: OpenHostStateOptions = {}): HostState {
         if (rows.length === 0) break;
         for (const row of rows) {
           const wallet = walletFor.get(row.command_id, row.host_session_id) as
-            | LostWallet
-            | undefined;
+            LostWallet | undefined;
 
           if (
             wallet &&
@@ -2508,8 +2505,7 @@ function runtimeEventHealthSnapshot(
 ): Omit<RuntimeEventHealthSnapshot, "newWorkRefusedBy"> {
   getRuntimeEventStream(db, streamId);
   const row = db.prepare(RUNTIME_EVENT_HEALTH_SNAPSHOT_SQL).get() as
-    | RuntimeEventHealthSnapshotDbRow
-    | undefined;
+    RuntimeEventHealthSnapshotDbRow | undefined;
 
   if (row === undefined || row.stream_id !== streamId) {
     throw new HostRuntimeEventError(

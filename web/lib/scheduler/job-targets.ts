@@ -15,8 +15,7 @@ export type SchedulerCommandConsolePingTarget = {
 };
 
 export type SchedulerCommandTarget =
-  | SchedulerCommandHttpPingTarget
-  | SchedulerCommandConsolePingTarget;
+  SchedulerCommandHttpPingTarget | SchedulerCommandConsolePingTarget;
 
 export type SchedulerFlowRunTarget = {
   baseBranch?: string;
@@ -28,9 +27,7 @@ export type SchedulerFlowRunTarget = {
 export type SchedulerNoTarget = Record<string, never>;
 
 export type SchedulerJobTarget =
-  | SchedulerCommandTarget
-  | SchedulerFlowRunTarget
-  | SchedulerNoTarget;
+  SchedulerCommandTarget | SchedulerFlowRunTarget | SchedulerNoTarget;
 
 export type SchedulerTargetSummary =
   | {

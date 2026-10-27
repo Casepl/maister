@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { usePathname, useSearchParams } from "next/navigation";
 

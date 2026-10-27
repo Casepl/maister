@@ -59,6 +59,7 @@ export function CutVersionDialog({
   );
 
   const onCloseRef = useLatestRef(onClose);
+
   useEffect(() => {
     dialogRef.current?.focus();
 

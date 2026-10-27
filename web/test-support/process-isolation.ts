@@ -205,8 +205,7 @@ export function resolveIsolationDriver(
 }
 
 export type AccessProbe =
-  | { outcome: "readable"; bytes: number }
-  | { outcome: "denied"; code: string };
+  { outcome: "readable"; bytes: number } | { outcome: "denied"; code: string };
 
 export type LinuxApplicationObservation = Readonly<{
   ready: Promise<number>;

@@ -155,8 +155,7 @@ const fakeDb: FakeDb = {
               ) => TResult1 | PromiseLike<TResult1>)
             | null,
           onrejected?:
-            | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
-            | null,
+            ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
         ) => rows().then(onfulfilled, onrejected),
       };
 
@@ -190,9 +189,8 @@ vi.mock("@/lib/authz", () => ({
 vi.mock("@/lib/scratch-runs/prompt-intent", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("@/lib/scratch-runs/prompt-intent")>();
-  const { scratchPromptIntentFixture } = await import(
-    "@/test-support/scratch-prompt-intent-fixture"
-  );
+  const { scratchPromptIntentFixture } =
+    await import("@/test-support/scratch-prompt-intent-fixture");
 
   return {
     ...actual,
@@ -235,9 +233,8 @@ const hostCatalogue = vi.hoisted(() => ({
 
 vi.mock("@/lib/execution-host", async () => {
   const sup = await import("@/lib/supervisor-client");
-  const { executionHostModuleMock } = await import(
-    "@/test-support/execution-host-module-mock"
-  );
+  const { executionHostModuleMock } =
+    await import("@/test-support/execution-host-module-mock");
   const mock = executionHostModuleMock(sup as never);
 
   hostCatalogue.objects = mock.runtimeObjects;

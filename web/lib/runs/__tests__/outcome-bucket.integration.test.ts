@@ -5,10 +5,11 @@
 // particular which `workspaces` row it reads when a run has several — is a
 // database fact, and this is the suite that pins it.
 
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+
 import { randomUUID } from "node:crypto";
 
 import { sql } from "drizzle-orm";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import * as schema from "@/lib/db/schema";

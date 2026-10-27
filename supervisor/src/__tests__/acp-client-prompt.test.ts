@@ -1,9 +1,9 @@
 import type { Logger } from "pino";
+import type { AcpConnection } from "../acp-connection";
 
 import * as acp from "@agentclientprotocol/sdk/unstable";
 import { describe, expect, it, vi } from "vitest";
 
-import type { AcpConnection } from "../acp-connection";
 import { sendPromptOnConnection } from "../acp-client";
 
 function fakeLogger(): Logger {
@@ -15,9 +15,7 @@ function fakeLogger(): Logger {
   } as unknown as Logger;
 }
 
-function fakeConn(
-  promptSpy: ReturnType<typeof vi.fn>,
-): AcpConnection {
+function fakeConn(promptSpy: ReturnType<typeof vi.fn>): AcpConnection {
   return { prompt: promptSpy } as unknown as AcpConnection;
 }
 

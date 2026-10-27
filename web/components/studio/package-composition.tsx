@@ -7,7 +7,7 @@ import type { PackageBom } from "@/lib/queries/package-bom";
 import type { CompositionKind } from "@/lib/local-packages/composition";
 import type { ReactElement, ReactNode } from "react";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 

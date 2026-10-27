@@ -17,10 +17,7 @@ export type NodeKind =
   | null;
 
 export type RecoverPlan =
-  | "resume-agent"
-  | "resume-gate"
-  | "redispatch"
-  | "discard-only";
+  "resume-agent" | "resume-gate" | "redispatch" | "discard-only";
 
 // The node kinds that run an ACP session and therefore recover by RESUMING it
 // rather than by re-running. Identical to the set `admitNodePrompt` admits as

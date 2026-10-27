@@ -29,9 +29,7 @@ export const PERMISSION_POLICIES = [
 export type PermissionPolicy = (typeof PERMISSION_POLICIES)[number];
 
 export type AdapterModelChannel =
-  | "settings_local"
-  | "set_session_model"
-  | "advisory";
+  "settings_local" | "set_session_model" | "advisory";
 
 export type AdapterResumeStrategy =
   | "session_resume"

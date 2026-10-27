@@ -89,9 +89,8 @@ beforeAll(async () => {
 
   triggers = await import("@/lib/agents/triggers");
   ({ applyTriageVerdict } = await import("@/lib/services/triage"));
-  ({ runAutoLaunchTriagedJob } = await import(
-    "@/lib/scheduler/handlers/auto-launch-triaged"
-  ));
+  ({ runAutoLaunchTriagedJob } =
+    await import("@/lib/scheduler/handlers/auto-launch-triaged"));
 }, 180_000);
 
 afterAll(async () => {

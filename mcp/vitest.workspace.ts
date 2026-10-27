@@ -1,7 +1,7 @@
+import type { TestProjectInlineConfiguration } from "vitest/config";
+
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-
-import type { TestProjectInlineConfiguration } from "vitest/config";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

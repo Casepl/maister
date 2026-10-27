@@ -495,10 +495,7 @@ export function boundedAcpStream(input: {
   stdin: NodeWritable;
   client: BoundedAcpClient;
   onLine?: (line: string) => void;
-  onUpdateFrame?: (
-    params: SessionNotification,
-    line: string,
-  ) => Promise<void>;
+  onUpdateFrame?: (params: SessionNotification, line: string) => Promise<void>;
   onFailure: (error: SupervisorError) => void;
 }): BoundedAcpStream {
   if (input.source.readableObjectMode !== true)

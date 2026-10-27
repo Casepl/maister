@@ -313,12 +313,7 @@ export type LaunchRunInput = {
   // (agent_id, trigger_event_id) claim dedups an at-least-once redelivery.
   // null/absent for a normal board launch (carries no trigger event).
   triggerSource?:
-    | "manual"
-    | "cron"
-    | "domain_event"
-    | "webhook"
-    | "flow"
-    | "scheduled";
+    "manual" | "cron" | "domain_event" | "webhook" | "flow" | "scheduled";
   triggerEventId?: number | null;
   triggerPayload?: Record<string, unknown> | null;
   // Owner binding for an agent cron/domain-event launch. This is server-owned

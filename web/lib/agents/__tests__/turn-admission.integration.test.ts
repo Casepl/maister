@@ -267,9 +267,9 @@ describe("Durable agent turn admission", () => {
       db.update(agentTurns).set(binding).where(eq(agentTurns.id, next.id)),
     ).rejects.toMatchObject({
       cause: {
-      code: "23505",
-      constraint: "agent_turns_active_run_uq",
-    },
+        code: "23505",
+        constraint: "agent_turns_active_run_uq",
+      },
     });
     await expect(
       db
@@ -278,9 +278,9 @@ describe("Durable agent turn admission", () => {
         .where(eq(agentTurns.id, first.id)),
     ).rejects.toMatchObject({
       cause: {
-      code: "23514",
-      constraint: "agent_turns_binding_immutable",
-    },
+        code: "23514",
+        constraint: "agent_turns_binding_immutable",
+      },
     });
     const operationKey = `agent_turn:persistent_message:${first.id}:${first.ordinal}`;
     const command = await issueOwnedPrompt(db, {

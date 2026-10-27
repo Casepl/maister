@@ -38,8 +38,14 @@ describe("resolveCapabilityGuardDecision", () => {
       escalationThreshold: 1,
     };
 
-    expect(resolveCapabilityGuardDecision(profile, { title: "Read" }).decision).toBe("deny");
-    expect(resolveCapabilityGuardDecision(profile, { title: "mcp__maister__project_list" }).decision).toBe("deny");
+    expect(
+      resolveCapabilityGuardDecision(profile, { title: "Read" }).decision,
+    ).toBe("deny");
+    expect(
+      resolveCapabilityGuardDecision(profile, {
+        title: "mcp__maister__project_list",
+      }).decision,
+    ).toBe("deny");
   });
   it("allows an in-profile tool call (tools enforced)", () => {
     expect(

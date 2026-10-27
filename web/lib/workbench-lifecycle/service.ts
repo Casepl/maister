@@ -1834,9 +1834,8 @@ async function cascadeOrchestratorIfNeeded(run: LifecycleRun): Promise<void> {
 
   if (!hasChildren) return;
 
-  const { cascadeAbandonRunTreeAndStopSessions } = await import(
-    "@/lib/orchestrator/cascade"
-  );
+  const { cascadeAbandonRunTreeAndStopSessions } =
+    await import("@/lib/orchestrator/cascade");
 
   await cascadeAbandonRunTreeAndStopSessions(
     run.id,
@@ -2173,9 +2172,8 @@ function defaultWorkbenchLifecycleDeps(): WorkbenchLifecycleDeps {
       return { finalized: result.finalized };
     },
     cleanupAgentMaterializations: async ({ runId, worktreePath }) => {
-      const { cleanupRunMaterializations } = await import(
-        "@/lib/capabilities/cleanup"
-      );
+      const { cleanupRunMaterializations } =
+        await import("@/lib/capabilities/cleanup");
 
       await cleanupRunMaterializations({
         runId,
@@ -2184,9 +2182,8 @@ function defaultWorkbenchLifecycleDeps(): WorkbenchLifecycleDeps {
       });
     },
     stopScratchWorkbench: async (runId) => {
-      const { stopScratchWorkbench } = await import(
-        "@/lib/scratch-runs/service"
-      );
+      const { stopScratchWorkbench } =
+        await import("@/lib/scratch-runs/service");
       const result = await stopScratchWorkbench(runId);
 
       return {

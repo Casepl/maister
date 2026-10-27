@@ -133,7 +133,6 @@ describe("AT-02 aggregate runtime file capacity", () => {
       expect(capacityWakes).toBe(0);
       // Only the two explicit live-accounting reads per iteration above.
       expect(readsDuringCapture).toBe(64);
-
     } finally {
       vi.restoreAllMocks();
       observer.close();

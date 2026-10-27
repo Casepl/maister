@@ -9,7 +9,7 @@ import {
   DiffView as GitDiffView,
   SplitSide,
 } from "@git-diff-view/react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { OutdatedThreadsSection } from "@/components/workbench/outdated-threads";

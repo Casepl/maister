@@ -799,12 +799,7 @@ export interface RailWorkspaceData {
 }
 
 export type RailWorkspaceTone =
-  | "running"
-  | "waiting"
-  | "needs"
-  | "human"
-  | "review"
-  | "crashed";
+  "running" | "waiting" | "needs" | "human" | "review" | "crashed";
 
 export type RailTtlState = "active" | "warning" | "due";
 

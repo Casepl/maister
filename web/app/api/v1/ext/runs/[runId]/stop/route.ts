@@ -20,6 +20,7 @@ import { isStoppableRunStatus } from "@/lib/workbench-lifecycle/policy";
 
 const ENDPOINT = "POST /api/v1/ext/runs/[runId]/stop";
 const bodySchema = z.object({}).strict();
+
 type RouteParams = { params: Promise<{ runId: string }> };
 
 export async function POST(

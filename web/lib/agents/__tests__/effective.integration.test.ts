@@ -395,9 +395,8 @@ describe("resolveAgentProfileMcpServers (RD7)", () => {
        VALUES ('github', 'stdio', 'github-mcp', true, 'trusted')`,
     );
 
-    const { resolveAgentProfileMcpServers } = await import(
-      "@/lib/agents/launch"
-    );
+    const { resolveAgentProfileMcpServers } =
+      await import("@/lib/agents/launch");
 
     // Trusted package revision → the stdio server reaches the session.
     const trusted = await resolveAgentProfileMcpServers({
@@ -443,9 +442,8 @@ describe("resolveAgentProfileMcpServers (RD7)", () => {
 
   it("fails closed when a declared catalog MCP cannot resolve", async () => {
     const p = await seedProject("eff-mcps-missing");
-    const { resolveAgentProfileMcpServers } = await import(
-      "@/lib/agents/launch"
-    );
+    const { resolveAgentProfileMcpServers } =
+      await import("@/lib/agents/launch");
 
     await expect(
       resolveAgentProfileMcpServers({

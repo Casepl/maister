@@ -117,8 +117,7 @@ async function executablePath(binary: string): Promise<string | null> {
 
 function textOf(update: Record<string, unknown>): string {
   const content = update.content as
-    | { type?: string; text?: string }
-    | undefined;
+    { type?: string; text?: string } | undefined;
 
   return content?.type === "text" ? (content.text ?? "") : "";
 }

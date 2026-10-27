@@ -1028,10 +1028,7 @@ export type HooksConfig = NonNullable<StartSessionRequest["hooksConfig"]>;
 // ADR-108 (M40): a guardrail rule and its frozen lifecycle/disposition — see the
 // rule × lifecycle matrix in docs/system-analytics/guardrail-hooks.md.
 export type HookRule =
-  | "path_guard"
-  | "repetition"
-  | "no_progress"
-  | "capability_guard";
+  "path_guard" | "repetition" | "no_progress" | "capability_guard";
 export type HookLifecycle = "pre_tool_call" | "post_turn";
 export type HookDisposition = "deny" | "halt";
 

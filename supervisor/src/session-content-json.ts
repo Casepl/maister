@@ -15,7 +15,7 @@ function invalidContent(): SupervisorError {
 /** Encodes strings without building a second complete escaped string or buffer. */
 function* stringParts(value: string): Generator<string> {
   yield '"';
-  for (let offset = 0; offset < value.length; ) {
+  for (let offset = 0; offset < value.length;) {
     let end = Math.min(offset + STRING_CHUNK_CHARS, value.length);
     const last = value.charCodeAt(end - 1);
     const next = value.charCodeAt(end);

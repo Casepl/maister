@@ -232,16 +232,13 @@ beforeAll(async () => {
   ({ defaultLaunchRunSeam } = await import("@/lib/evaluations/launch-seam"));
   ({ createStudy } = await import("@/lib/evaluations/studies"));
   ({ createControlledRecipe } = await import("@/lib/evaluations/recipes"));
-  ({ createControlledLaunchBatch, runControlledLaunchBatch } = await import(
-    "@/lib/evaluations/launch-batch"
-  ));
+  ({ createControlledLaunchBatch, runControlledLaunchBatch } =
+    await import("@/lib/evaluations/launch-batch"));
   ({ maxConcurrentRunsCap } = await import("@/lib/scheduler"));
-  ({ buildFlowContractProjection } = await import(
-    "@/lib/evaluations/preflight-loaders"
-  ));
-  ({ computeInputContractDigest, computeArtifactContractDigest } = await import(
-    "@/lib/evaluations/recipe"
-  ));
+  ({ buildFlowContractProjection } =
+    await import("@/lib/evaluations/preflight-loaders"));
+  ({ computeInputContractDigest, computeArtifactContractDigest } =
+    await import("@/lib/evaluations/recipe"));
 
   // Silence the unused-binding lint on the imported symbol; the real seam path
   // is what the drive exercises. (launchRun is imported so a future direct-call

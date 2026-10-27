@@ -51,7 +51,8 @@ export function connectAcpClient(
   }
   if (extMethod) {
     app.onRequest("*", ({ method, params }) => {
-      if (!method.startsWith("_")) throw acp.RequestError.methodNotFound(method);
+      if (!method.startsWith("_"))
+        throw acp.RequestError.methodNotFound(method);
 
       return extMethod(method, params);
     });

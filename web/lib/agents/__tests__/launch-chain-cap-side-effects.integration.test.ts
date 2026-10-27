@@ -76,9 +76,8 @@ beforeAll(async () => {
   // ADR-166: every launch places the run on the local execution host.
   await fakeExecutionHosts(db);
 
-  ({ launchAgentRun, agentWorkdirPath, agentWorktreeBranchName } = await import(
-    "@/lib/agents/launch"
-  ));
+  ({ launchAgentRun, agentWorkdirPath, agentWorktreeBranchName } =
+    await import("@/lib/agents/launch"));
 }, 240_000);
 
 afterAll(async () => {

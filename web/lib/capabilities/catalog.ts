@@ -157,8 +157,7 @@ function normalizeCapability(
     version: c.version ?? null,
     revision: c.revision ?? null,
     agents: c.agents as
-      | CapabilityAgent[]
-      | Partial<Record<CapabilityAgent, string>>,
+      CapabilityAgent[] | Partial<Record<CapabilityAgent, string>>,
     enforceability: c.enforceability,
     selectedByDefault: c.selected_by_default,
     selectable: c.enforceability !== "unsupported",
@@ -407,8 +406,7 @@ async function assertConfigDoesNotOverwriteAuthoredRecord(
     )
     .limit(1);
   const existing = rows[0] as
-    | { id: string; material: Record<string, unknown> }
-    | undefined;
+    { id: string; material: Record<string, unknown> } | undefined;
 
   if (existing?.material.origin === "authored") {
     throw new MaisterError(

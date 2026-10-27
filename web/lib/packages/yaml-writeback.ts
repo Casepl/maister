@@ -22,8 +22,7 @@ export type PackagesPinEntry = {
 };
 
 export type WriteBackOp =
-  | { op: "upsert"; entry: PackagesPinEntry }
-  | { op: "remove"; id: string };
+  { op: "upsert"; entry: PackagesPinEntry } | { op: "remove"; id: string };
 
 export type WriteBackResult = "ok" | "failed" | "skipped";
 

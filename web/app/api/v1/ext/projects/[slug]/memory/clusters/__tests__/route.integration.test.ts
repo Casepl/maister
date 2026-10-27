@@ -129,9 +129,8 @@ beforeAll(async () => {
   ctx = await startBrainTestDb();
   dbRef = ctx.db;
 
-  const mod = await import(
-    "@/app/api/v1/ext/projects/[slug]/memory/clusters/route"
-  );
+  const mod =
+    await import("@/app/api/v1/ext/projects/[slug]/memory/clusters/route");
 
   GET = mod.GET;
 }, 180_000);

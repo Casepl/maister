@@ -268,9 +268,8 @@ async function maybeCompletePanel(
   bound: BoundAttempt,
   d: Db,
 ): Promise<boolean> {
-  const { evaluateAndAdvancePanel } = await import(
-    "@/lib/evaluations/aggregation/worker"
-  );
+  const { evaluateAndAdvancePanel } =
+    await import("@/lib/evaluations/aggregation/worker");
 
   return evaluateAndAdvancePanel(bound.executionId, d);
 }

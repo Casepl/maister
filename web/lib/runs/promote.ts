@@ -121,9 +121,7 @@ export type PromoteRunContext = {
   // CONFLICT instead of opening a human merge-conflict assignment — the
   // coordinator / auto-promote leaves the child in Review for a human to resolve.
   actor?:
-    | { kind: "user" }
-    | { kind: "agent"; agentId: string }
-    | { kind: "system" };
+    { kind: "user" } | { kind: "agent"; agentId: string } | { kind: "system" };
 };
 
 // M37 (ADR-100): the promotion owner — the session user for a human promote,
@@ -561,8 +559,7 @@ export function scratchPromotionTarget(
 // minted only by the parked finalize (`finalizeParkedPullRequest`), which never
 // enters `promoteRun`, so `PromoteRunInput.attribution` keeps its one value.
 type PromotionAttribution =
-  | NonNullable<PromoteRunInput["attribution"]>
-  | { source: "pr_finalize" };
+  NonNullable<PromoteRunInput["attribution"]> | { source: "pr_finalize" };
 
 function promotionModeForEffectiveMode(
   mode: EffectivePromotionMode,

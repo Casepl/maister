@@ -3,6 +3,7 @@
 import type { ReactElement } from "react";
 
 import { useEffect, useRef, useState } from "react";
+
 import { useLatestRef } from "@/lib/use-latest-ref";
 
 // T3.4 — typed-edge connect modal (spec §4.7, D7). Collects the `outcome` for a

@@ -725,12 +725,10 @@ describe("ADR-150 — controlled-launch seam idempotency (T1.2)", () => {
   });
 
   it("threads a recipe hard-pin slot binding onto the run's session runner", async () => {
-    const { defaultLaunchRunSeam } = await import(
-      "@/lib/evaluations/launch-seam"
-    );
-    const { buildFlowContractProjection } = await import(
-      "@/lib/evaluations/preflight-loaders"
-    );
+    const { defaultLaunchRunSeam } =
+      await import("@/lib/evaluations/launch-seam");
+    const { buildFlowContractProjection } =
+      await import("@/lib/evaluations/preflight-loaders");
     const { computeArtifactContractDigest, computeInputContractDigest } =
       await import("@/lib/evaluations/recipe");
     const taskId = await seedTask();

@@ -69,9 +69,8 @@ beforeAll(async () => {
   pool = testDatabase.pool;
   db = testDatabase.db;
 
-  ({ consumeAgentSession, parkPersistentAgent } = await import(
-    "@/lib/agents/launch"
-  ));
+  ({ consumeAgentSession, parkPersistentAgent } =
+    await import("@/lib/agents/launch"));
 }, 180_000);
 
 afterAll(async () => {

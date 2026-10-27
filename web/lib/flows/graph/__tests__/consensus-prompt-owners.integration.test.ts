@@ -2254,7 +2254,10 @@ describe("Consensus prompt owners through the production graph driver", () => {
           } as NonNullable<typeof command.ownerRef>,
         })
         .where(eq(executionCommands.id, command.id)),
-    ).rejects.toHaveProperty("cause.message", expect.stringMatching(/immutable/));
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringMatching(/immutable/),
+    );
     const original = {
       applicationState: command.applicationState,
       completionAppliedAt: command.completionAppliedAt,

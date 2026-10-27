@@ -1,12 +1,6 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import {
-  mkdir,
-  mkdtemp,
-  readFile,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -659,6 +653,7 @@ describe("shared Testcontainers Postgres helper", () => {
     let unexpected: StartedPostgresTestDb | undefined;
     const created: string[] = [];
     const createdInvocations: (string | undefined)[] = [];
+
     try {
       const siblingInvocation =
         sibling.container.getLabels()[INVOCATION_CONTAINER_LABEL];
@@ -679,6 +674,7 @@ describe("shared Testcontainers Postgres helper", () => {
             throw error;
           }
         });
+
       restoreSpies.push(() => engineStart.mockRestore());
       const create = vi
         .spyOn(client.container, "create")
@@ -692,6 +688,7 @@ describe("shared Testcontainers Postgres helper", () => {
 
           return container;
         });
+
       restoreSpies.push(() => create.mockRestore());
       const start = vi
         .spyOn(PostgreSqlContainer.prototype, "start")
@@ -703,6 +700,7 @@ describe("shared Testcontainers Postgres helper", () => {
             }),
           );
         });
+
       restoreSpies.push(() => start.mockRestore());
 
       const error: unknown = await startBarePostgresTestDb({
@@ -710,6 +708,7 @@ describe("shared Testcontainers Postgres helper", () => {
       })
         .then((database) => {
           unexpected = database;
+
           return database;
         })
         .catch((cause: unknown) => cause);

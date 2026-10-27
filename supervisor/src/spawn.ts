@@ -180,7 +180,7 @@ export async function spawnSession(
       envKeys: Object.keys(request.executor.env ?? {}).sort(),
       hasAdapterEnv: Boolean(
         request.adapterLaunch?.env &&
-          Object.keys(request.adapterLaunch.env).length > 0,
+        Object.keys(request.adapterLaunch.env).length > 0,
       ),
       adapterEnvKeys: Object.keys(request.adapterLaunch?.env ?? {}).sort(),
       hasCapabilityProfile: Boolean(

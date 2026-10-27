@@ -172,9 +172,8 @@ beforeAll(async () => {
   ({ launchAgentRun } = await import("@/lib/agents/launch"));
   ({ runFlow } = await import("@/lib/flows/runner"));
   ({ promoteNextPending } = await import("@/lib/scheduler"));
-  ({ buildOrchestratorResumeConsumer } = await import(
-    "@/lib/domain-events/orchestrator-resume"
-  ));
+  ({ buildOrchestratorResumeConsumer } =
+    await import("@/lib/domain-events/orchestrator-resume"));
   ({ dispatchDomainEvents } = await import("@/lib/domain-events/dispatch"));
 
   supervisor = await startTestSupervisor({

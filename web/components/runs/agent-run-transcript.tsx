@@ -60,9 +60,7 @@ export function AgentRunTranscript({
   const load = useCallback((): Promise<void> => {
     const reqId = (reqIdRef.current += 1);
 
-    return fetch(
-      `/api/runs/${encodeURIComponent(runId)}/transcript`,
-    )
+    return fetch(`/api/runs/${encodeURIComponent(runId)}/transcript`)
       .then(async (res) => {
         if (!res.ok) return;
         const body = (await res.json()) as { messages: TranscriptMessage[] };

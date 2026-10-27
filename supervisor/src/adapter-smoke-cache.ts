@@ -69,9 +69,7 @@ type AdapterSmokeCacheEntry = z.infer<typeof AdapterSmokeCacheEntrySchema>;
 type AdapterSmokeEvidence = z.infer<typeof AdapterSmokeEvidenceSchema>;
 
 export type AdapterSmokeStatus =
-  | "not_required"
-  | "pending"
-  | AdapterSmokeCacheEntry["status"];
+  "not_required" | "pending" | AdapterSmokeCacheEntry["status"];
 
 export type AdapterSmokeDiagnostic = {
   readonly status: AdapterSmokeStatus;

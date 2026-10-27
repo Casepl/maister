@@ -285,16 +285,15 @@ async function makeOpts(over: {
 }) {
   const runFlow = vi.fn(async () => {});
 
-  const listWorktrees = vi.fn(
-    async (): Promise<WorktreeInfo[]> =>
-      (over.worktreePaths ?? []).map((p) => ({
-        path: p,
-        branch: "b",
-        head: "h",
-        bare: false,
-        locked: false,
-        prunable: false,
-      })),
+  const listWorktrees = vi.fn(async (): Promise<WorktreeInfo[]> =>
+    (over.worktreePaths ?? []).map((p) => ({
+      path: p,
+      branch: "b",
+      head: "h",
+      bare: false,
+      locked: false,
+      prunable: false,
+    })),
   );
 
   // ADR-166: the sweep lists sessions through a fake local host.

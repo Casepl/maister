@@ -135,9 +135,8 @@ beforeAll(async () => {
     projectors: canonicalProjectors,
   });
   service = await import("@/lib/scratch-runs/service");
-  ({ POST: recoverRoute } = await import(
-    "@/app/api/scratch-runs/[runId]/recover/route"
-  ));
+  ({ POST: recoverRoute } =
+    await import("@/app/api/scratch-runs/[runId]/recover/route"));
   for (const key of [
     "DB_URL",
     "MAISTER_RUNTIME_ROOT",

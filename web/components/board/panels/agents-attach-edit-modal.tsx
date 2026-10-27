@@ -12,6 +12,7 @@ import type { AgentConfigParam } from "@/lib/agents/definition";
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+
 import { useLatestRef } from "@/lib/use-latest-ref";
 
 // (ADR-111) Seed each control from the effective value: the instance config

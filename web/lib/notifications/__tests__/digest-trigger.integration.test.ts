@@ -574,9 +574,8 @@ describe("IT-NTF-15 decision-opening domain events", () => {
 
   it("emits run.review_opened for a TOP-LEVEL run, not run.review", async () => {
     const { runId, projectId, taskId } = await seedRunForEvents();
-    const { emitDelegatedReviewIfChild } = await import(
-      "@/lib/runs/delegated-review-emit"
-    );
+    const { emitDelegatedReviewIfChild } =
+      await import("@/lib/runs/delegated-review-emit");
 
     const emitted = await emitDelegatedReviewIfChild(db, {
       runId,
@@ -604,9 +603,8 @@ describe("IT-NTF-15 decision-opening domain events", () => {
   it("still emits run.review for a delegated CHILD", async () => {
     const parent = await seedRunForEvents();
     const child = await seedRunForEvents();
-    const { emitDelegatedReviewIfChild } = await import(
-      "@/lib/runs/delegated-review-emit"
-    );
+    const { emitDelegatedReviewIfChild } =
+      await import("@/lib/runs/delegated-review-emit");
 
     await emitDelegatedReviewIfChild(db, {
       runId: child.runId,

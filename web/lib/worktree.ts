@@ -3738,8 +3738,7 @@ export async function readBlob(args: ReadBlobArgs): Promise<RepoBlobResult> {
 // ---------------------------------------------------------------------------
 
 export type SyncApplyResult =
-  | { ok: true }
-  | { ok: false; conflict: true; conflictedFiles: string[] };
+  { ok: true } | { ok: false; conflict: true; conflictedFiles: string[] };
 
 // `git merge-base --is-ancestor a b`: is `a` reachable from `b`? Exit 0 = yes,
 // exit 1 = no; any other exit is a real git failure. Both inputs are resolved
@@ -4312,8 +4311,7 @@ export async function setBranchUpstream(
 }
 
 export type ForceWithLeaseResult =
-  | { pushed: true }
-  | { pushed: false; leaseFailed: true };
+  { pushed: true } | { pushed: false; leaseFailed: true };
 
 // ADR-141 (branch sync): push `branch` from its worktree with an EXPLICIT-SHA
 // force-with-lease (`refs/heads/<branch>:<expectedSha>`), so the lease authority

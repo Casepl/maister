@@ -442,7 +442,10 @@ describe("ADR-111 launch-time config snapshot", () => {
           trigger: { source: "manual" },
           db,
         }),
-      ).rejects.toHaveProperty("cause.message", expect.stringContaining("forced agent-question supersession failure"));
+      ).rejects.toHaveProperty(
+        "cause.message",
+        expect.stringContaining("forced agent-question supersession failure"),
+      );
     } finally {
       await pool.query(
         "DROP TRIGGER IF EXISTS raise_agent_question_supersession ON hitl_requests",
@@ -557,9 +560,8 @@ describe("ADR-111 launch-time config snapshot", () => {
           result.runId,
         ),
       );
-    const { resolveEffectiveAgentDefinition } = await import(
-      "@/lib/agents/effective"
-    );
+    const { resolveEffectiveAgentDefinition } =
+      await import("@/lib/agents/effective");
     const effective = await resolveEffectiveAgentDefinition(
       { agentId, projectId },
       db,

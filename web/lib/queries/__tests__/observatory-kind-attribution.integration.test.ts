@@ -1,6 +1,7 @@
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+
 import { randomUUID } from "node:crypto";
 
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import * as schema from "@/lib/db/schema";

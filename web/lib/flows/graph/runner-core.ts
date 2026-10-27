@@ -241,8 +241,7 @@ export async function loadRun(db: Db, runId: string): Promise<LoadedRun> {
         hostSessionId: (row.hostSessionId ?? null) as string | null,
         capabilityAgent: (row.capabilityAgent ?? null) as string | null,
         runnerResolutionTier: (row.runnerResolutionTier ?? null) as
-          | string
-          | null,
+          string | null,
       },
     ]),
   );

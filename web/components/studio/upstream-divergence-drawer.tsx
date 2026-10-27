@@ -7,7 +7,7 @@ import type {
 } from "@/components/workbench/diff-view";
 import type { ReactElement } from "react";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { DiffView } from "@/components/workbench/diff-view";
@@ -58,6 +58,7 @@ export function UpstreamDivergenceDrawer({
   const [source, setSource] = useState<string>("working_dir");
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const onCloseRef = useLatestRef(onClose);
+
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {
       if (event.key === "Escape") {
@@ -114,7 +115,10 @@ export function UpstreamDivergenceDrawer({
             return;
           }
 
-          setState({ kind: "ready", divergence: body as unknown as DivergenceDto });
+          setState({
+            kind: "ready",
+            divergence: body as unknown as DivergenceDto,
+          });
         })
         .catch(() => {
           setState({

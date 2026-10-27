@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { renderStatementPrompt, taskStatementSchema } from "@/lib/tasks/statement";
+import {
+  renderStatementPrompt,
+  taskStatementSchema,
+} from "@/lib/tasks/statement";
 
 describe("UT-TST-03: deterministic statement rendering", () => {
   it("renders equal statements byte-identically in the fixed section order", () => {
@@ -24,7 +27,9 @@ describe("UT-TST-03: deterministic statement rendering", () => {
     });
 
     expect(renderStatementPrompt(first)).toBe(renderStatementPrompt(second));
-    expect(renderStatementPrompt(first)).toContain("## Acceptance criteria\n- The API responds");
+    expect(renderStatementPrompt(first)).toContain(
+      "## Acceptance criteria\n- The API responds",
+    );
     expect(renderStatementPrompt(first).indexOf("## Context")).toBeLessThan(
       renderStatementPrompt(first).indexOf("## Goal"),
     );

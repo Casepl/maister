@@ -48,8 +48,7 @@ export type McpServerDraft = {
 
 export type McpFormError = { field: string; message: string };
 export type McpFormResult =
-  | { ok: true }
-  | { ok: false; errors: McpFormError[] };
+  { ok: true } | { ok: false; errors: McpFormError[] };
 
 const ID_RE = /^[A-Za-z0-9._-]+$/;
 

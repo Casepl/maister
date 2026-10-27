@@ -53,9 +53,8 @@ vi.mock("@/lib/social/comments", async (orig) => {
 });
 
 // Imported AFTER the mocks so the module graph binds the stubs.
-const { runAutoPromoteJob, CANDIDATE_LIMIT } = await import(
-  "@/lib/scheduler/handlers/auto-promote"
-);
+const { runAutoPromoteJob, CANDIDATE_LIMIT } =
+  await import("@/lib/scheduler/handlers/auto-promote");
 const { runSchedulerTick } = await import("@/lib/scheduler/tick-service");
 
 const schema = fullSchema as unknown as Record<string, any>;

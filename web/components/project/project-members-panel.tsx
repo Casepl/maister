@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import clsx from "clsx";
+
 import { useLatestRef } from "@/lib/use-latest-ref";
 
 export interface ProjectMemberSerialised {

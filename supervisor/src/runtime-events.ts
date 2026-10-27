@@ -269,12 +269,7 @@ export type RuntimeEventDraft = {
 };
 
 type JsonValue =
-  | null
-  | boolean
-  | number
-  | string
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+  null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
 function encodedByteLength(value: unknown): number {
   return Buffer.byteLength(JSON.stringify(value), "utf8");

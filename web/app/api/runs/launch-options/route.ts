@@ -207,9 +207,7 @@ function projectFlowLaunchIssue(args: {
   revisionById: Map<string, Record<string, any>>;
 }): FlowLaunchIssue | null {
   const enabledRevisionId = args.projectFlow.enabledRevisionId as
-    | string
-    | null
-    | undefined;
+    string | null | undefined;
 
   if (!enabledRevisionId) {
     return "no_revision";

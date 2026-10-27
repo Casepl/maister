@@ -86,9 +86,8 @@ async function read(table: any, id: string): Promise<any> {
 }
 
 async function boundary(input: Record<string, unknown>) {
-  const { applyTurnLostBoundary } = await import(
-    "@/lib/runs/turn-lost-boundary"
-  );
+  const { applyTurnLostBoundary } =
+    await import("@/lib/runs/turn-lost-boundary");
 
   return applyTurnLostBoundary({
     db,
@@ -234,9 +233,8 @@ describe("the flow GATE owner refuses a lost turn (ADR-177 T3.3)", () => {
     seeded: Awaited<ReturnType<typeof seedGate>>,
     error: Record<string, unknown>,
   ): Promise<string> {
-    const { flowPromptOwnerAdapter } = await import(
-      "@/lib/flows/graph/prompt-owner"
-    );
+    const { flowPromptOwnerAdapter } =
+      await import("@/lib/flows/graph/prompt-owner");
     const command = await read(executionCommands, seeded.commandId);
     const prepared = await flowPromptOwnerAdapter.prepare({
       db,

@@ -13,10 +13,7 @@ import {
 } from "react";
 
 export type LibrarianIndicatorState =
-  | "none"
-  | "running"
-  | "unread"
-  | "action_required";
+  "none" | "running" | "unread" | "action_required";
 
 type LibrarianContextValue = {
   ownerId: string;

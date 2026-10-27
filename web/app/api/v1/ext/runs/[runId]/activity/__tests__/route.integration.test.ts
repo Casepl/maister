@@ -48,9 +48,8 @@ vi.mock("@/lib/ext-activity/service", async (importOriginal) => {
 let GET: typeof import("@/app/api/v1/ext/runs/[runId]/activity/route").GET;
 
 beforeAll(async () => {
-  const routeModule = await import(
-    "@/app/api/v1/ext/runs/[runId]/activity/route"
-  );
+  const routeModule =
+    await import("@/app/api/v1/ext/runs/[runId]/activity/route");
 
   GET = routeModule.GET;
 });

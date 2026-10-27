@@ -127,12 +127,7 @@ const MAX_RUNTIME_EVENT_ARRAY = 1_024;
 const MAX_RUNTIME_EVENT_STRING_BYTES = 65_536;
 
 type JsonValue =
-  | null
-  | boolean
-  | number
-  | string
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+  null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
 const EVENT_SCHEMA_PAIRS = new Map(
   RUNTIME_EVENT_TYPES.map((eventType, index) => [

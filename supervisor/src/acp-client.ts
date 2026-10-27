@@ -89,9 +89,7 @@ export function readSessionCapabilities(initResp: {
   _meta?: unknown;
 }): SessionCapabilities {
   const meta = initResp._meta as
-    | { steering?: { supported?: unknown } | null }
-    | null
-    | undefined;
+    { steering?: { supported?: unknown } | null } | null | undefined;
 
   return { steering: { supported: meta?.steering?.supported === true } };
 }

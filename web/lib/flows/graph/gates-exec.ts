@@ -582,8 +582,7 @@ async function runOneGate(
               agent: loaded.executor.agent,
               model: loaded.executor.model,
               env: (loaded.executor.env ?? undefined) as
-                | Record<string, string>
-                | undefined,
+                Record<string, string> | undefined,
             },
             // The executor is legacy display/compatibility metadata. The
             // supervisor applies the configured model and provider only from
@@ -756,8 +755,7 @@ async function runOneGate(
       // explicitly `skipped` rather than silently absent (forward-compat for
       // gate kinds a future engine introduces).
       const out = gate.output as
-        | { id?: string; kind?: ArtifactKind }
-        | undefined;
+        { id?: string; kind?: ArtifactKind } | undefined;
 
       if (out?.id) {
         await recordSkippedArtifact(

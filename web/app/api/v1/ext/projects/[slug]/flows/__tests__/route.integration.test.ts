@@ -41,9 +41,8 @@ beforeAll(async () => {
     .insert(schema.platformAcpRunners)
     .values(testPlatformRunnerRow(randomUUID(), "claude"));
 
-  const routeModule = await import(
-    "@/app/api/v1/ext/projects/[slug]/flows/route"
-  );
+  const routeModule =
+    await import("@/app/api/v1/ext/projects/[slug]/flows/route");
 
   GET = routeModule.GET;
 }, 180_000);

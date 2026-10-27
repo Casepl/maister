@@ -243,13 +243,11 @@ export async function wakeParkedCoordinator(input: {
     coordinator.nodeAttemptId !== input.expectedAttemptId
   )
     return { kind: "skipped", reason: "stale_attempt" };
-  if (
-    !(
-      coordinator.nodeType === "orchestrator" &&
-      (input.allowFailedOrchestratorChild ||
-        coordinator.failedChildWakeAt !== null)
-    )
-  ) {
+  if (!(
+    coordinator.nodeType === "orchestrator" &&
+    (input.allowFailedOrchestratorChild ||
+      coordinator.failedChildWakeAt !== null)
+  )) {
     const pending = await pendingCoordinatorChildCount(
       input.db,
       input.parentRunId,

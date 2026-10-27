@@ -146,7 +146,10 @@ describe("IT-LAU-07: librarian requests are attributed and fail closed on audit"
         tasks.POST(request(await turnToken(turnId), taskBody(title)), {
           params: Promise.resolve({ slug: project.slug }),
         }),
-      ).rejects.toHaveProperty("cause.message", expect.stringMatching(/audit sink unavailable/));
+      ).rejects.toHaveProperty(
+        "cause.message",
+        expect.stringMatching(/audit sink unavailable/),
+      );
     } finally {
       await db.execute(
         sql.raw(`DROP TRIGGER refuse_librarian_audit ON token_audit_log`),

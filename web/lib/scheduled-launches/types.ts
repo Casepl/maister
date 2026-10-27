@@ -43,11 +43,7 @@ export type ScheduledLaunchRequest = {
 };
 
 export type ScheduledLaunchAttemptState =
-  | "Reserved"
-  | "Materialized"
-  | "RunLinked"
-  | "Cleaned"
-  | "Failed";
+  "Reserved" | "Materialized" | "RunLinked" | "Cleaned" | "Failed";
 
 export type ScheduledLaunchEventKind =
   | "created"

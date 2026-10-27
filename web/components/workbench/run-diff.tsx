@@ -244,8 +244,7 @@ export async function fetchReviewThreads(
 }
 
 export type ReviewThreadsResult =
-  | { threads: ReviewThread[] }
-  | { error: string };
+  { threads: ReviewThread[] } | { error: string };
 
 // The threads-effect body (exported for unit tests — effects do not run under
 // renderToStaticMarkup): review mode off → no request at all.

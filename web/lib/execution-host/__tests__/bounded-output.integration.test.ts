@@ -711,12 +711,10 @@ describe("AT-01 bounded output on the production supervisor", () => {
     if (!invocation)
       throw new Error("held response fixture requires its invocation");
     let proxy:
-      | Awaited<ReturnType<typeof startSupervisorFaultProxy>>
-      | undefined;
+      Awaited<ReturnType<typeof startSupervisorFaultProxy>> | undefined;
     let restoreOwnerUrl: () => void = () => {};
     let occupiedReads:
-      | Awaited<ReturnType<typeof holdRuntimeObjectReads>>
-      | undefined;
+      Awaited<ReturnType<typeof holdRuntimeObjectReads>> | undefined;
     const priorSpools = new Set<string>();
     const heldSpools = (): ResponseSpool[] =>
       responseSpools().filter((spool) => !priorSpools.has(spool.id));

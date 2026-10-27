@@ -781,7 +781,10 @@ describe("review_comments (ADR-072, migration 0039)", () => {
            values ('${newId()}', '${ids.runId}', '${ids.hitlId}', 'review', 1, 'Reviewer', 'no anchor')`,
         ),
       ),
-    ).rejects.toHaveProperty("cause.message", expect.stringContaining("review_comments_anchor_root_check"));
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringContaining("review_comments_anchor_root_check"),
+    );
 
     // Partial anchor: line_content missing.
     await expect(
@@ -791,7 +794,10 @@ describe("review_comments (ADR-072, migration 0039)", () => {
            values ('${newId()}', '${ids.runId}', '${ids.hitlId}', 'review', 1, 'Reviewer', 'a.ts', 'new', 1, 'partial anchor')`,
         ),
       ),
-    ).rejects.toHaveProperty("cause.message", expect.stringContaining("review_comments_anchor_root_check"));
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringContaining("review_comments_anchor_root_check"),
+    );
   });
 
   it("rejects a reply carrying anchor fields (CHECK)", async () => {
@@ -808,7 +814,10 @@ describe("review_comments (ADR-072, migration 0039)", () => {
            values ('${newId()}', '${ids.runId}', '${ids.hitlId}', 'review', 1, '${root.id}', 'Author', 'a.ts', 'new', 1, 'x', 'anchored reply')`,
         ),
       ),
-    ).rejects.toHaveProperty("cause.message", expect.stringContaining("review_comments_anchor_root_check"));
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringContaining("review_comments_anchor_root_check"),
+    );
 
     // A single stray anchor field on a reply.
     await expect(
@@ -818,7 +827,10 @@ describe("review_comments (ADR-072, migration 0039)", () => {
            values ('${newId()}', '${ids.runId}', '${ids.hitlId}', 'review', 1, '${root.id}', 'Author', 7, 'stray line')`,
         ),
       ),
-    ).rejects.toHaveProperty("cause.message", expect.stringContaining("review_comments_anchor_root_check"));
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringContaining("review_comments_anchor_root_check"),
+    );
   });
 
   it("rejects a side value outside old|new (CHECK)", async () => {
@@ -831,7 +843,10 @@ describe("review_comments (ADR-072, migration 0039)", () => {
            values ('${newId()}', '${ids.runId}', '${ids.hitlId}', 'review', 1, 'Reviewer', 'a.ts', 'left', 1, 'x', 'bad side')`,
         ),
       ),
-    ).rejects.toHaveProperty("cause.message", expect.stringContaining("review_comments_side_check"));
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringContaining("review_comments_side_check"),
+    );
   });
 
   it("rejects a status value outside open|resolved (CHECK)", async () => {
@@ -844,7 +859,10 @@ describe("review_comments (ADR-072, migration 0039)", () => {
            values ('${newId()}', '${ids.runId}', '${ids.hitlId}', 'review', 1, 'Reviewer', 'a.ts', 'new', 1, 'x', 'bad status', 'closed')`,
         ),
       ),
-    ).rejects.toHaveProperty("cause.message", expect.stringContaining("review_comments_status_check"));
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringContaining("review_comments_status_check"),
+    );
   });
 
   it("cascades comments when the run is deleted", async () => {

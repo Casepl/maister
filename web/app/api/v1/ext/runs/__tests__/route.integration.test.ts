@@ -237,14 +237,12 @@ describe("POST /api/v1/ext/runs", () => {
     await db
       .insert(schema.librarianConversations)
       .values({ id: conversationId, userId });
-    await db
-      .insert(schema.librarianSegments)
-      .values({
-        id: segmentId,
-        conversationId,
-        ordinal: 0,
-        startedAt: new Date(),
-      });
+    await db.insert(schema.librarianSegments).values({
+      id: segmentId,
+      conversationId,
+      ordinal: 0,
+      startedAt: new Date(),
+    });
     await db.insert(schema.librarianTurns).values({
       id: turnId,
       conversationId,

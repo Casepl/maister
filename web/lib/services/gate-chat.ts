@@ -930,8 +930,7 @@ export async function sendGateChatTurn(args: {
         stepId,
         executor: {
           agent: (run.runnerSnapshot?.capabilityAgent ?? "claude") as
-            | "claude"
-            | "codex",
+            "claude" | "codex",
           model: run.runnerSnapshot?.model ?? "unknown",
         },
         runner: run.runnerSnapshot

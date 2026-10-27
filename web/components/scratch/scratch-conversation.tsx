@@ -590,10 +590,7 @@ export function ScratchConversation({
           ) {
             return;
           }
-          const descriptor = hitlErrorText(
-            body,
-            pendingHitl.answerState,
-          );
+          const descriptor = hitlErrorText(body, pendingHitl.answerState);
 
           setHitlError({
             requestKey,
@@ -607,10 +604,7 @@ export function ScratchConversation({
           if (isStoredAnswerDeliveryReason(body?.details?.reason)) {
             setLocalAnswer({
               requestKey,
-              payload: canReplayHitlAnswer(
-                pendingHitl.kind,
-                pendingHitl.schema,
-              )
+              payload: canReplayHitlAnswer(pendingHitl.kind, pendingHitl.schema)
                 ? (payload as NonNullable<
                     ScratchDetail["pendingHitl"]
                   >["storedResponse"])
@@ -635,10 +629,7 @@ export function ScratchConversation({
         ) {
           setLocalAnswer({
             requestKey,
-            payload: canReplayHitlAnswer(
-              pendingHitl.kind,
-              pendingHitl.schema,
-            )
+            payload: canReplayHitlAnswer(pendingHitl.kind, pendingHitl.schema)
               ? (payload as NonNullable<
                   ScratchDetail["pendingHitl"]
                 >["storedResponse"])

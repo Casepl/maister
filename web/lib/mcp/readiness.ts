@@ -39,8 +39,7 @@ export type McpReadinessResult = {
 // falsely NotReady until an operator edited an unrelated supervisor variable.
 // `null` = the host read failed, which yields Unknown like a dead host.
 export type McpEnvPresenceInput =
-  | readonly { readonly name: string; readonly present: boolean }[]
-  | null;
+  readonly { readonly name: string; readonly present: boolean }[] | null;
 
 export type McpReadinessContext = {
   readonly presence: McpEnvPresenceInput;

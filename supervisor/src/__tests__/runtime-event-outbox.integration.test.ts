@@ -740,6 +740,7 @@ describe("Stage B durable host event outbox", () => {
         );
       }
       const frameOnlyVersion = observer.prepare("PRAGMA data_version").get();
+
       state.putReceipt({
         ...receipt,
         phase: "completed",
@@ -949,8 +950,7 @@ describe("Stage B durable host event outbox", () => {
           "SELECT envelope_json FROM runtime_event_outbox WHERE stream_id = ? AND sequence = ?",
         )
         .get(event.streamId, (BigInt(event.sequence) + 1n).toString()) as
-        | { envelope_json: string }
-        | undefined;
+        { envelope_json: string } | undefined;
 
       const sibling = next
         ? (JSON.parse(next.envelope_json) as {

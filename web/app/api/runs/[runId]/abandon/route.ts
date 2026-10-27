@@ -164,9 +164,8 @@ export async function POST(
           return notAbandonable;
         }
 
-        const { cascadeAbandonRunTreeAndStopSessions } = await import(
-          "@/lib/orchestrator/cascade"
-        );
+        const { cascadeAbandonRunTreeAndStopSessions } =
+          await import("@/lib/orchestrator/cascade");
 
         await cascadeAbandonRunTreeAndStopSessions(
           runId,

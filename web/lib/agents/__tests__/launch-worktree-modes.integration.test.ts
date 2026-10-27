@@ -64,9 +64,8 @@ beforeAll(async () => {
   // ADR-166: every launch places the run on the local execution host.
   await fakeExecutionHosts(db);
 
-  ({ launchAgentRun, sharedAgentWorktreePath } = await import(
-    "@/lib/agents/launch"
-  ));
+  ({ launchAgentRun, sharedAgentWorktreePath } =
+    await import("@/lib/agents/launch"));
 }, 180_000);
 
 afterAll(async () => {
@@ -389,9 +388,8 @@ describe("M37 Phase 10 — worktree allocation modes via launchAgentRun", () => 
     const rows = await workspaceRows(sharedPath);
 
     expect(rows).toHaveLength(1);
-    const { readWorktreeProvenanceMetadata } = await import(
-      "@/lib/worktree-provenance"
-    );
+    const { readWorktreeProvenanceMetadata } =
+      await import("@/lib/worktree-provenance");
     const provenance = await readWorktreeProvenanceMetadata(sharedPath);
 
     expect(provenance.runId).toBe(rows[0].run_id);
@@ -463,9 +461,8 @@ describe("M37 Phase 10 — worktree allocation modes via launchAgentRun", () => 
     expect(trees.filter((w) => w.path === sharedPath)).toHaveLength(1);
 
     // The tree is now resolvable for a promote (the resolver keys on the row).
-    const { resolveSharedTreeWorkspaceForUpdate } = await import(
-      "@/lib/runs/shared-tree"
-    );
+    const { resolveSharedTreeWorkspaceForUpdate } =
+      await import("@/lib/runs/shared-tree");
 
     await db.transaction(async (tx) => {
       const ws = await resolveSharedTreeWorkspaceForUpdate(tx, {
@@ -550,9 +547,8 @@ describe("M37 Phase 10 — worktree allocation modes via launchAgentRun", () => 
     expect(await workspaceRows(sharedPath)).toHaveLength(1);
 
     // Someone rewrote the tree's provenance under the allocator's row.
-    const { installWorktreeProvenance } = await import(
-      "@/lib/worktree-provenance"
-    );
+    const { installWorktreeProvenance } =
+      await import("@/lib/worktree-provenance");
 
     await installWorktreeProvenance({
       worktreePath: sharedPath,

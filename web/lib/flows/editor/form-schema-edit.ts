@@ -39,8 +39,7 @@ export type FieldEdit =
     };
 
 export type ParseResult =
-  | { ok: true; schema: FormSchema }
-  | { ok: false; error: string };
+  { ok: true; schema: FormSchema } | { ok: false; error: string };
 
 /**
  * Parse + validate a `schemas/*.json` (or `output.result`) doc against

@@ -131,10 +131,13 @@ export async function retrieveLibrarianContext(
     if (row.toSeq > coveredToSeq) coveredToSeq = row.toSeq;
   }
   if (invalidated > 0) {
-    const [conversation] = await tx.select().from(librarianConversations)
+    const [conversation] = await tx
+      .select()
+      .from(librarianConversations)
       .where(eq(librarianConversations.userId, input.ownerId));
 
-    if (conversation) await queueLibrarianSummary(tx, conversation, input.segmentId);
+    if (conversation)
+      await queueLibrarianSummary(tx, conversation, input.segmentId);
   }
   const history = visibleHistory.filter((row) => row.seq > coveredToSeq);
   const memoryRows = input.useMemory

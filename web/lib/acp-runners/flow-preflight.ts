@@ -124,18 +124,15 @@ export function toFlowRunnerSlotPreviews(
   return [
     ...inspection.sessions
       .filter((session) => session.bindable)
-      .map(
-        (session): FlowRunnerSlotPreview => ({
-          slotKey: session.slotKey,
-          label: session.label,
-          kind: session.kind,
-          mappedRunnerId: session.mappedRunnerId,
-          runnerId:
-            session.status === "resolved" ? session.resolution.runnerId : null,
-          errorCode:
-            session.status === "unresolved" ? session.error.code : null,
-        }),
-      ),
+      .map((session): FlowRunnerSlotPreview => ({
+        slotKey: session.slotKey,
+        label: session.label,
+        kind: session.kind,
+        mappedRunnerId: session.mappedRunnerId,
+        runnerId:
+          session.status === "resolved" ? session.resolution.runnerId : null,
+        errorCode: session.status === "unresolved" ? session.error.code : null,
+      })),
     ...inspection.consensus.map(toConsensusRunnerSlotPreview),
   ];
 }

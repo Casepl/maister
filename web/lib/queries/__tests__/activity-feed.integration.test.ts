@@ -297,9 +297,8 @@ beforeAll(async () => {
     [fx.subscription, fx.project, JSON.stringify(["run.done"])],
   );
 
-  ({ getCrossProjectActivityFeed } = await import(
-    "@/lib/queries/activity-feed"
-  ));
+  ({ getCrossProjectActivityFeed } =
+    await import("@/lib/queries/activity-feed"));
 }, 180_000);
 
 afterAll(async () => {

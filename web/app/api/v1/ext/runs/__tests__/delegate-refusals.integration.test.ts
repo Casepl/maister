@@ -69,9 +69,8 @@ beforeAll(async () => {
   db = testDatabase.db;
 
   ({ issueOrchestratorRunToken } = await import("@/lib/agents/tokens"));
-  ({ POST: delegatePost } = await import(
-    "@/app/api/v1/ext/runs/delegate/route"
-  ));
+  ({ POST: delegatePost } =
+    await import("@/app/api/v1/ext/runs/delegate/route"));
 }, 180_000);
 
 afterAll(async () => {

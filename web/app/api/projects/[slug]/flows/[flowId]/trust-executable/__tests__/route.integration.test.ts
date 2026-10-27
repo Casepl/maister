@@ -162,9 +162,8 @@ beforeAll(async () => {
     .set({ execTrust: "untrusted", setupStatus: "pending" })
     .where(eq(schema.flowRevisions.id, setupResult.revisionId));
 
-  ({ POST } = await import(
-    "@/app/api/projects/[slug]/flows/[flowId]/trust-executable/route"
-  ));
+  ({ POST } =
+    await import("@/app/api/projects/[slug]/flows/[flowId]/trust-executable/route"));
 }, 180_000);
 
 afterAll(async () => {

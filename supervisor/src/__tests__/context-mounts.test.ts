@@ -18,6 +18,7 @@
 
 import type { ContextMount, SessionRecord, SupervisorError } from "../types";
 import type { Logger } from "pino";
+import type { AcpConnection } from "../acp-connection";
 
 import { EventEmitter } from "node:events";
 import { createWriteStream } from "node:fs";
@@ -29,7 +30,6 @@ import { PassThrough, Readable, Writable } from "node:stream";
 import * as acp from "@agentclientprotocol/sdk/unstable";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { AcpConnection } from "../acp-connection";
 import { createAcpConnection, sendPromptOnConnection } from "../acp-client";
 import { captureAcpFrames } from "../bounded-acp-stream";
 import {

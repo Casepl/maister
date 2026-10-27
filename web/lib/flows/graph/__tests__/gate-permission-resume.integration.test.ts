@@ -225,8 +225,7 @@ describe("Owned Flow checkpointed gate permission resume", () => {
       const occupiedReads: IncomingMessage[] = [];
       let claimProcess: ReturnType<typeof startProcess> | undefined;
       let continuation:
-        | ReturnType<typeof startFlowContinuationWorker>
-        | undefined;
+        ReturnType<typeof startFlowContinuationWorker> | undefined;
 
       try {
         if (heldRead && proxy) {

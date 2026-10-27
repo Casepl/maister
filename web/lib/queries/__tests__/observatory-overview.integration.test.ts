@@ -5,9 +5,10 @@
 // whether the project-less group is visible, and whether the query count stays
 // fixed as the project list grows. None of that can be proven in the unit lane.
 
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+
 import { randomUUID } from "node:crypto";
 
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import * as schema from "@/lib/db/schema";

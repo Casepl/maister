@@ -110,7 +110,10 @@ describe("migration 0087 — priority-ordered task queue columns (ADR-121)", () 
 
     await expect(
       insertTask(projectId, ", priority", `, 'critical'`),
-    ).rejects.toHaveProperty("cause.message", expect.stringMatching(/tasks_priority_check/));
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringMatching(/tasks_priority_check/),
+    );
   });
 
   it("triage_confidence CHECK rejects -0.001 and 1.001; accepts 0, 1, NULL (F4)", async () => {
@@ -133,9 +136,15 @@ describe("migration 0087 — priority-ordered task queue columns (ADR-121)", () 
     // Rejected — out of [0,1].
     await expect(
       insertTask(projectId, ", triage_confidence", `, -0.001`),
-    ).rejects.toHaveProperty("cause.message", expect.stringMatching(/tasks_triage_confidence_check/));
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringMatching(/tasks_triage_confidence_check/),
+    );
     await expect(
       insertTask(projectId, ", triage_confidence", `, 1.001`),
-    ).rejects.toHaveProperty("cause.message", expect.stringMatching(/tasks_triage_confidence_check/));
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringMatching(/tasks_triage_confidence_check/),
+    );
   });
 });

@@ -198,9 +198,8 @@ async function assertGitRegistryOwnership(
     );
   const canonicalWorktreePath = await realpath(worktree.worktreePath);
   const canonicalRegisteredPaths = await Promise.all(
-    registeredPaths.map(
-      async (registeredPath: string): Promise<string> =>
-        realpath(registeredPath),
+    registeredPaths.map(async (registeredPath: string): Promise<string> =>
+      realpath(registeredPath),
     ),
   );
 

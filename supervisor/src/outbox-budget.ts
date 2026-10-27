@@ -766,8 +766,7 @@ export function settleReceiptBudget(
       "SELECT wallet_id, remaining_rows FROM runtime_event_teardowns WHERE command_id = ? AND completed = 0",
     )
     .get(receipt.commandId) as
-    | { wallet_id: string; remaining_rows: number }
-    | undefined;
+    { wallet_id: string; remaining_rows: number } | undefined;
 
   if (teardown) {
     db.prepare(

@@ -248,10 +248,10 @@ export async function createOwnedSession(input: {
           supersedesCommandId: predecessor?.id ?? null,
           sessionFallback: Boolean(
             predecessor &&
-              (predecessor.createIntent?.sessionFallback ||
-                (readCreateIntent(predecessor, client.host.hostKey).envelope
-                  .payload.resumeSessionId &&
-                  !normalized.resumeSessionId)),
+            (predecessor.createIntent?.sessionFallback ||
+              (readCreateIntent(predecessor, client.host.hostKey).envelope
+                .payload.resumeSessionId &&
+                !normalized.resumeSessionId)),
           ),
           envelope: issued.envelope,
         });

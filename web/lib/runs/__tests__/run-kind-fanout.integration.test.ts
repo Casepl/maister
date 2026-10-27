@@ -74,9 +74,8 @@ describe("IT-LCV-04 part 2: a librarian run appears in no project read model or 
   });
 
   it("is absent from the global admin's /runs ledger", async () => {
-    const { listRunsPage, normalizeRunsListFilters } = await import(
-      "@/lib/queries/runs-list"
-    );
+    const { listRunsPage, normalizeRunsListFilters } =
+      await import("@/lib/queries/runs-list");
     const page = await listRunsPage({
       db: db as never,
       filters: normalizeRunsListFilters({}),
@@ -95,9 +94,8 @@ describe("IT-LCV-04 part 2: a librarian run appears in no project read model or 
   });
 
   it("is never counted in the Observatory's project-less platform group", async () => {
-    const { getObservatoryOverview } = await import(
-      "@/lib/queries/observatory-overview"
-    );
+    const { getObservatoryOverview } =
+      await import("@/lib/queries/observatory-overview");
     const table = await getObservatoryOverview(db as never, [], {
       since: new Date(Date.now() - 30 * 86_400_000),
       until: new Date(Date.now() + 86_400_000),

@@ -10,13 +10,7 @@ import type {
 import type { QuickReply } from "@/lib/scratch-runs/transcript";
 import type { ReactElement } from "react";
 
-import {
-  useCallback,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import clsx from "clsx";
 

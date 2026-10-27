@@ -49,13 +49,7 @@ export interface NotificationsPanelProps {
 }
 
 type State =
-  | "loading"
-  | "unsupported"
-  | "denied"
-  | "off"
-  | "on"
-  | "busy"
-  | "failed";
+  "loading" | "unsupported" | "denied" | "off" | "on" | "busy" | "failed";
 
 /** The VAPID public key crosses the wire base64url and must reach `subscribe` as bytes. */
 function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {

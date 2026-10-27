@@ -59,9 +59,8 @@ beforeAll(async () => {
   db = testDatabase.db;
 
   ({ requireGlobalRole } = await import("@/lib/authz"));
-  ({ buildLeftRailSections } = await import(
-    "@/components/chrome/left-rail-sections"
-  ));
+  ({ buildLeftRailSections } =
+    await import("@/components/chrome/left-rail-sections"));
 }, 180_000);
 
 afterAll(async () => {

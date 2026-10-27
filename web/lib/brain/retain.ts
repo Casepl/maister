@@ -181,8 +181,7 @@ export async function retain(
         LIMIT 1
       `);
       const best = near.rows[0] as
-        | { item_id: string; dist: number }
-        | undefined;
+        { item_id: string; dist: number } | undefined;
 
       if (best && 1 - Number(best.dist) > BRAIN_POLICY.dedupCosineThreshold) {
         if (kind === "state_fact") {

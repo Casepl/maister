@@ -6,8 +6,7 @@ import type { SessionRecord } from "./types";
 export type LogWriteAdmission = { kind: "capture" } | { kind: "drain" };
 
 export type FrameAdmission =
-  | { kind: "decode"; release: () => void }
-  | { kind: "drain" };
+  { kind: "decode"; release: () => void } | { kind: "drain" };
 
 // ADR-183 D6: how long a producer may stay paused by outbox pressure before
 // the host checkpoints it gracefully (ADR-180's teardown). One stall window;

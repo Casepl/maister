@@ -1065,7 +1065,6 @@ function mapAuthoredCapabilityCreateError(
   return err;
 }
 
-
 function nullableDate(value: Date | string | null): Date | null {
   return value === null ? null : dateValue(value);
 }

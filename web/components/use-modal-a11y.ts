@@ -2,7 +2,8 @@
 
 import type { RefObject } from "react";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
+
 import { useLatestRef } from "@/lib/use-latest-ref";
 
 const FOCUSABLE =

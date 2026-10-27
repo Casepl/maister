@@ -149,13 +149,11 @@ beforeAll(async () => {
   pool = testDatabase.pool;
   db = testDatabase.db;
 
-  ({ buildAutoLaunchRunPlanConsumer } = await import(
-    "@/lib/domain-events/auto-launch"
-  ));
+  ({ buildAutoLaunchRunPlanConsumer } =
+    await import("@/lib/domain-events/auto-launch"));
   ({ emitDomainEvent } = await import("@/lib/domain-events/outbox"));
-  ({ promoteChildRunForToken, promoteRun } = await import(
-    "@/lib/runs/promote"
-  ));
+  ({ promoteChildRunForToken, promoteRun } =
+    await import("@/lib/runs/promote"));
   ({ markReworkFromReview } = await import("@/lib/runs/state-transitions"));
 }, 180_000);
 

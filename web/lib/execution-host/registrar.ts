@@ -32,11 +32,7 @@ export type ObservedHost = {
 };
 
 export type RegistrationAction =
-  | "insert"
-  | "touch"
-  | "restart"
-  | "retire_and_insert"
-  | "refuse";
+  "insert" | "touch" | "restart" | "retire_and_insert" | "refuse";
 
 export type RegistrationObservation = {
   activeRow: Pick<ExecutionHost, "hostKey" | "lastBootId"> | null;
@@ -126,7 +122,6 @@ export type EnsureLocalHostOptions = {
   logger?: Logger;
   healthTimeoutMs?: number;
 };
-
 
 function withinMarkWindow(hostId: string, now: Date): boolean {
   const last = state.unavailableMarkedAt.get(hostId);

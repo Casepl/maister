@@ -6,6 +6,7 @@ import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import clsx from "clsx";
+
 import { useLatestRef } from "@/lib/use-latest-ref";
 
 // ADR-126 / T18: the per-lane popup editor. Mirrors user-edit-modal.tsx focus-trap

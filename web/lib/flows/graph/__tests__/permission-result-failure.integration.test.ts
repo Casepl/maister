@@ -656,8 +656,7 @@ describe("Owned Flow completed-command failure handoff", () => {
       let claimant: ReturnType<typeof startProcess> | undefined;
       let responder: ReturnType<typeof startProcess> | undefined;
       let continuation:
-        | ReturnType<typeof startFlowContinuationWorker>
-        | undefined;
+        ReturnType<typeof startFlowContinuationWorker> | undefined;
 
       try {
         await expect
@@ -1181,8 +1180,7 @@ describe("Owned Flow completed-command failure handoff", () => {
       const seeded = await seedFailureFlow(owner);
       const driver = startProcess("flow-prompt-owner-process.ts", seeded.runId);
       let continuation:
-        | ReturnType<typeof startFlowContinuationWorker>
-        | undefined;
+        ReturnType<typeof startFlowContinuationWorker> | undefined;
 
       try {
         await expect

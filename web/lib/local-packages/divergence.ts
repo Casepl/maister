@@ -56,8 +56,7 @@ export async function loadInstallDir(
 }> {
   const rows = await d.select().from(pi).where(eq(pi.id, installId));
   const install = rows[0] as
-    | { installedPath?: string; versionLabel?: string }
-    | undefined;
+    { installedPath?: string; versionLabel?: string } | undefined;
 
   if (!install || !install.installedPath) {
     throw new MaisterError("CONFIG", `${context} unavailable: ${installId}`);

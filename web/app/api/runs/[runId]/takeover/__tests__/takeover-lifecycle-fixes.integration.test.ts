@@ -450,9 +450,8 @@ beforeAll(async () => {
 
   ({ POST: claimPOST } = await import("../claim/route"));
   ({ POST: returnPOST } = await import("../return/route"));
-  ({ POST: respondPOST } = await import(
-    "../../hitl/[hitlRequestId]/respond/route"
-  ));
+  ({ POST: respondPOST } =
+    await import("../../hitl/[hitlRequestId]/respond/route"));
   ({ POST: abandonPOST } = await import("../../abandon/route"));
   ({ runGraph } = await import("@/lib/flows/graph/runner-graph"));
   ({ loadRun } = await import("@/lib/flows/graph/runner-core"));

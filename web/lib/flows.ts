@@ -648,8 +648,7 @@ export async function gitRevParseHead(opts: {
 }
 
 export type LocalDirectorySourceResult =
-  | { kind: "local"; absPath: string }
-  | { kind: "git" };
+  { kind: "local"; absPath: string } | { kind: "git" };
 
 export async function isLocalDirectorySource(
   source: string,

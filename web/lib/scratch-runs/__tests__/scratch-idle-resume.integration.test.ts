@@ -632,9 +632,8 @@ describe("scratch idle resume after a host park (D-A8)", () => {
   it("C3: the resumed session is re-prompted with the interrupted turn's own message, never a newer queued one", async () => {
     const { runId, hitlId } = await parkedDialog();
     // Sent while the first turn ran: queued behind it, its own turn next.
-    const { appendScratchMessage } = await import(
-      "@/lib/scratch-runs/messages"
-    );
+    const { appendScratchMessage } =
+      await import("@/lib/scratch-runs/messages");
     const queued = await db.transaction((tx) =>
       appendScratchMessage(tx as never, {
         runId,

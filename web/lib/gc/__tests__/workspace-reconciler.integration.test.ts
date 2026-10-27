@@ -141,13 +141,23 @@ describe("runWorkspaceReconciliationSweep", () => {
         .update(schema.workspaceReconciliationFindings)
         .set({ attemptCount: -1 })
         .where(eq(schema.workspaceReconciliationFindings.id, findingId)),
-    ).rejects.toHaveProperty("cause.message", expect.stringContaining("workspace_reconciliation_findings_attempt_count_check"));
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringContaining(
+        "workspace_reconciliation_findings_attempt_count_check",
+      ),
+    );
     await expect(
       db
         .update(schema.workspaceReconciliationFindings)
         .set({ state: "resolved" })
         .where(eq(schema.workspaceReconciliationFindings.id, findingId)),
-    ).rejects.toHaveProperty("cause.message", expect.stringContaining("workspace_reconciliation_findings_resolved_shape_check"));
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringContaining(
+        "workspace_reconciliation_findings_resolved_shape_check",
+      ),
+    );
     await expect(
       db
         .update(schema.workspaceReconciliationFindings)

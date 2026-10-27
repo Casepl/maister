@@ -33,9 +33,8 @@ vi.mock("@/lib/flows/graph/artifact-store", () => ({
   }) => `proj:${runId}:event:${eventId}`,
 }));
 
-const { canonicalArtifactProjector } = await import(
-  "@/lib/projector/artifact-projector"
-);
+const { canonicalArtifactProjector } =
+  await import("@/lib/projector/artifact-projector");
 
 // `nodeAttemptId: null` keeps attribution out of the transaction entirely, so
 // these stay unit tests: `canonicalAttribution` returns before touching `tx`.

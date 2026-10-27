@@ -52,7 +52,6 @@ export function isAdmissible(
   }
 }
 
-
 export async function getActiveAssignment(
   db: Db,
   runId: string,

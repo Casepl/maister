@@ -37,7 +37,6 @@ function db(): NodePgDatabase<typeof schema> {
   return getDb();
 }
 
-
 export type CredentialFailureReason = "invalid" | "pending" | "disabled";
 
 export type CredentialAccountResult =

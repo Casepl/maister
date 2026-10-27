@@ -41,10 +41,7 @@ export type PromotionTrigger = "manual" | "auto_on_ready";
 
 // C2 — how much commit history survives.
 export type CommitPolicy =
-  | "keep_all"
-  | "squash_rework"
-  | "squash_on_promote"
-  | "defer";
+  "keep_all" | "squash_rework" | "squash_on_promote" | "defer";
 
 // C3 — dirty-worktree resolution (discard is never an automatic value).
 export type DirtyResolution = "ask" | "commit" | "proceed";

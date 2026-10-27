@@ -70,12 +70,10 @@ export async function requestLibrarianReset(
   try {
     await stopLibrarianTurn(ownerId, db);
   } catch (error) {
-    if (
-      !(
-        error instanceof MaisterError &&
-        error.details?.reason === "no_active_turn"
-      )
-    )
+    if (!(
+      error instanceof MaisterError &&
+      error.details?.reason === "no_active_turn"
+    ))
       log.warn({ ownerId, error }, "librarian reset stop will retry");
   }
 
@@ -168,12 +166,10 @@ export async function sweepLibrarianResets(db: Db): Promise<number> {
       try {
         await stopLibrarianTurn(row.userId, db);
       } catch (error) {
-        if (
-          !(
-            error instanceof MaisterError &&
-            error.details?.reason === "no_active_turn"
-          )
-        )
+        if (!(
+          error instanceof MaisterError &&
+          error.details?.reason === "no_active_turn"
+        ))
           throw error;
       }
       if ((await acknowledgeLibrarianReset(row.userId, db)) === "none")

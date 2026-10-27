@@ -409,8 +409,7 @@ export function RunHitlResponse({
         },
       );
       const body = (await res.json().catch(() => null)) as
-        | (ReviewFeedbackPreview & { code?: string })
-        | null;
+        (ReviewFeedbackPreview & { code?: string }) | null;
 
       if (!res.ok || body === null || !("feedback" in body)) {
         reportError(body ?? {});

@@ -454,12 +454,10 @@ describe("POST /api/runs/{runId}/pr/finalize", () => {
   // injected; the fact loader, the FOR UPDATE claim and git stay production.
   it("lets exactly one of two concurrent finalizes win", async () => {
     const run = await prRun();
-    const { depsFromOptions } = await import(
-      "@/lib/workbench-lifecycle/service"
-    );
-    const { finalizePullRequestRun } = await import(
-      "@/lib/workbench-git/service"
-    );
+    const { depsFromOptions } =
+      await import("@/lib/workbench-lifecycle/service");
+    const { finalizePullRequestRun } =
+      await import("@/lib/workbench-git/service");
     const base = depsFromOptions(undefined);
     // The window the promotion claim must close: both racers are past every
     // pre-claim check (the policy, the published-head proof) with the slot
@@ -515,12 +513,10 @@ describe("POST /api/runs/{runId}/pr/finalize", () => {
   // `Crashed`, claimed, and later flipped the running run to Done.
   it("decides on the run's status under the run's lock: a recover committing mid-claim is not finalized", async () => {
     const run = await prRun({ status: "Crashed" });
-    const { depsFromOptions } = await import(
-      "@/lib/workbench-lifecycle/service"
-    );
-    const { finalizePullRequestRun } = await import(
-      "@/lib/workbench-git/service"
-    );
+    const { depsFromOptions } =
+      await import("@/lib/workbench-lifecycle/service");
+    const { finalizePullRequestRun } =
+      await import("@/lib/workbench-git/service");
     const deps = {
       ...depsFromOptions(undefined),
       requireActiveSession: async () => ({ id: OPERATOR }),
@@ -613,9 +609,8 @@ describe("POST /api/runs/{runId}/pr/finalize", () => {
 
     expect((await post(run.runId)).status).toBe(200);
 
-    const { runPrStateScanJob } = await import(
-      "@/lib/scheduler/handlers/pr-state-scan"
-    );
+    const { runPrStateScanJob } =
+      await import("@/lib/scheduler/handlers/pr-state-scan");
 
     // The provider merges the PR onto `main`.
     await gitIn(repo.parent, [
@@ -642,9 +637,8 @@ describe("POST /api/runs/{runId}/pr/finalize", () => {
     });
     expect((await workspaceRow(db, run.workspaceId)).prState).toBe("merged");
 
-    const { runRepoDeliveryScanJob } = await import(
-      "@/lib/scheduler/handlers/repo-delivery-scan"
-    );
+    const { runRepoDeliveryScanJob } =
+      await import("@/lib/scheduler/handlers/repo-delivery-scan");
 
     await runRepoDeliveryScanJob({
       projectId: run.projectId,

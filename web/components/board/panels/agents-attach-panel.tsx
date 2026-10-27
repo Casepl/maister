@@ -25,9 +25,7 @@ export type AttachScheduleView = {
 
 export type AutoApplyMode = "off" | "permissions" | "full";
 export type OnBudgetBreachMode =
-  | "escalate"
-  | "terminate"
-  | "terminate_restorable";
+  "escalate" | "terminate" | "terminate_restorable";
 
 // (ADR-106) Instance runner-policy override projection (the AgentRunnerPolicy
 // `{autoApply, onBudgetBreach}` shape). Each field unset → inherit the agent

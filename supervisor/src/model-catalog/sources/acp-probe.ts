@@ -18,10 +18,7 @@ import {
 
 import * as acp from "@agentclientprotocol/sdk/unstable";
 
-import {
-  connectAcpClient,
-  type AcpClientHandlers,
-} from "../../acp-connection";
+import { connectAcpClient, type AcpClientHandlers } from "../../acp-connection";
 import { readSessionModels, type LegacyModelInfo } from "../../session-models";
 import {
   clientCapabilitiesForAdapter,
