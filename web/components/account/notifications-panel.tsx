@@ -69,6 +69,26 @@ function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
+async function probePushState(): Promise<State> {
+  if (
+    typeof window === "undefined" ||
+    !("serviceWorker" in navigator) ||
+    !("PushManager" in window)
+  ) {
+    return "unsupported";
+  }
+  if (Notification.permission === "denied") return "denied";
+
+  try {
+    const registration = await navigator.serviceWorker.getRegistration();
+    const subscription = await registration?.pushManager.getSubscription();
+
+    return subscription ? "on" : "off";
+  } catch {
+    return "off";
+  }
+}
+
 export function NotificationsPanel({
   publicKey,
   registeredEndpoints,
@@ -78,26 +98,7 @@ export function NotificationsPanel({
 
   useEffect(() => {
     if (publicKey === null) return;
-    if (
-      typeof window === "undefined" ||
-      !("serviceWorker" in navigator) ||
-      !("PushManager" in window)
-    ) {
-      setState("unsupported");
-
-      return;
-    }
-    if (Notification.permission === "denied") {
-      setState("denied");
-
-      return;
-    }
-
-    void navigator.serviceWorker
-      .getRegistration()
-      .then((registration) => registration?.pushManager.getSubscription())
-      .then((subscription) => setState(subscription ? "on" : "off"))
-      .catch(() => setState("off"));
+    void probePushState().then(setState);
   }, [publicKey]);
 
   async function enable(): Promise<void> {

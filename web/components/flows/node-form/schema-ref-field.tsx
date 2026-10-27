@@ -74,9 +74,12 @@ export function SchemaRefField({
     [schemaFiles],
   );
 
-  useEffect(() => {
+  const [draftSource, setDraftSource] = useState(selectedContent);
+
+  if (draftSource !== selectedContent) {
+    setDraftSource(selectedContent);
     setJsonDraft(selectedContent);
-  }, [selectedContent]);
+  }
 
   function writeCreate(): void {
     if (!schemaFiles || !onWriteSchemaFile) return;

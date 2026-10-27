@@ -16,7 +16,13 @@ import type { FlowLayout } from "@/lib/flows/graph/presentation-layout";
 import type { GraphTopology } from "@/lib/flows/graph/topology";
 import type { ReactElement, ReactNode } from "react";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import dynamic from "next/dynamic";
 import { stringify as stringifyYaml } from "yaml";
 
@@ -187,13 +193,15 @@ export function FlowEditorTabs({
   // debounce that follows sees equality and does not bounce the canvas.
   const canvasManifestRef = useRef<FlowYamlV1 | null>(initialManifest);
 
-  // Mirrors of the live buffer + the last-loaded server content. The resync
-  // effect uses them to adopt a server refresh (e.g. the AI assistant wrote to
-  // the working dir) without ever clobbering in-progress human edits.
-  const yamlRef = useRef(yaml);
+  // Every reseed hands the canvas `seed.manifest`, so that is what it reflects.
+  useLayoutEffect(() => {
+    if (seed) canvasManifestRef.current = seed.manifest;
+  }, [seed]);
 
-  yamlRef.current = yaml;
-  const serverBaselineRef = useRef(initialYaml);
+  // The last-loaded server content. Adopting a server refresh (e.g. the AI
+  // assistant wrote to the working dir) compares the buffer against it so
+  // in-progress human edits are never clobbered.
+  const [serverBaseline, setServerBaseline] = useState(initialYaml);
 
   const runYamlSync = useCallback(() => {
     const decision = syncYamlToCanvas(yaml, canvasManifestRef.current);
@@ -246,22 +254,17 @@ export function FlowEditorTabs({
   // the human has NOT diverged from the previously-loaded content. Unsaved edits
   // are never clobbered; once the buffer is back at the baseline a later refresh
   // can sync again.
-  useEffect(() => {
-    if (initialYaml === serverBaselineRef.current) return;
-
-    const userDiverged = yamlRef.current !== serverBaselineRef.current;
-
-    serverBaselineRef.current = initialYaml;
-    if (userDiverged) return;
-
-    setYaml(initialYaml);
-    if (initialManifest && topology && layout) {
-      canvasManifestRef.current = initialManifest;
-      setSeed({ manifest: initialManifest, topology, layout });
-      setSeedKey((k) => k + 1);
-      setLiveManifest(initialManifest);
+  if (initialYaml !== serverBaseline) {
+    setServerBaseline(initialYaml);
+    if (yaml === serverBaseline) {
+      setYaml(initialYaml);
+      if (initialManifest && topology && layout) {
+        setSeed({ manifest: initialManifest, topology, layout });
+        setSeedKey((k) => k + 1);
+        setLiveManifest(initialManifest);
+      }
     }
-  }, [initialManifest, initialYaml, layout, topology]);
+  }
 
   // Leaving the YAML drawer flushes the pending yaml→canvas sync FIRST, so the
   // canvas shows the latest edits and the still-pending debounce becomes a no-op.

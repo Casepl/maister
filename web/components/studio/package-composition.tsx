@@ -140,9 +140,12 @@ export function PackageComposition({
   const [filter, setFilter] = useState("");
   const filterable = activeTab === "skills" || isInlineKind(activeTab);
 
-  useEffect(() => {
+  const [filterTab, setFilterTab] = useState(activeTab);
+
+  if (filterTab !== activeTab) {
+    setFilterTab(activeTab);
     setFilter("");
-  }, [activeTab]);
+  }
 
   const tabs: PackageTabDescriptor[] = COMPOSITION_TAB_IDS.map((id) => ({
     id,

@@ -719,20 +719,24 @@ export function ControlledLaunch({
   }, []);
 
   const pollBatch = useCallback(
-    async (batchId: string): Promise<void> => {
-      try {
-        const res = await evalRequest(
-          `/api/projects/${slug}/evaluations/studies/${studyId}/launch-batches/${batchId}`,
-        );
-        const dto = (await res.json()) as LaunchBatch;
+    (batchId: string): Promise<void> => {
+      const poll = async (): Promise<void> => {
+        try {
+          const res = await evalRequest(
+            `/api/projects/${slug}/evaluations/studies/${studyId}/launch-batches/${batchId}`,
+          );
+          const dto = (await res.json()) as LaunchBatch;
 
-        setBatch(dto);
-        if (dto.items.some((i) => NON_TERMINAL_ITEM.has(i.status))) {
-          pollTimer.current = setTimeout(() => void pollBatch(batchId), 2000);
+          setBatch(dto);
+          if (dto.items.some((i) => NON_TERMINAL_ITEM.has(i.status))) {
+            pollTimer.current = setTimeout(() => void poll(), 2000);
+          }
+        } catch {
+          // Stop polling on a transient read failure; the last snapshot stays.
         }
-      } catch {
-        // Stop polling on a transient read failure; the last snapshot stays.
-      }
+      };
+
+      return poll();
     },
     [slug, studyId],
   );

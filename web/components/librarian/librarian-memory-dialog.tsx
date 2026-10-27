@@ -35,14 +35,16 @@ export function LibrarianMemoryDialog(input: {
 
   useModalA11y(dialogRef, input.onClose, input.open);
 
-  const refresh = useCallback(async (): Promise<void> => {
-    const response = await fetch("/api/librarian/memory", {
-      cache: "no-store",
-    });
-
-    if (!response.ok) throw new Error("memory list unavailable");
-    setList((await response.json()) as MemoryList);
-  }, []);
+  const refresh = useCallback(
+    (): Promise<void> =>
+      fetch("/api/librarian/memory", { cache: "no-store" }).then(
+        async (response) => {
+          if (!response.ok) throw new Error("memory list unavailable");
+          setList((await response.json()) as MemoryList);
+        },
+      ),
+    [],
+  );
 
   useEffect(() => {
     if (input.open) void refresh().catch(() => setError(true));

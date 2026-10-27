@@ -25,7 +25,14 @@ import Text from "@tiptap/extension-text";
 import { PluginKey } from "@tiptap/pm/state";
 import { EditorContent, useEditor } from "@tiptap/react";
 import Suggestion from "@tiptap/suggestion";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
   canonicalToSegments,
@@ -35,6 +42,7 @@ import {
   type ComposerSegment,
 } from "@/lib/capabilities/composer-serialize";
 import { surfaceFormForSkill } from "@/lib/capabilities/token-normalizer";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 export type CapabilityComposerLabels = {
   /** "claude-only" / "not on <runner>" advisory badge text. */
@@ -627,27 +635,17 @@ export function CapabilityComposer({
     useState<VariableMenuState>(EMPTY_VARIABLE_MENU);
   const [warningMenu, setWarningMenu] =
     useState<VariableMenuState>(EMPTY_VARIABLE_MENU);
-  const suggestionRef = useRef(suggestion);
-  const variableSuggestionRef = useRef(variableSuggestion);
-  const submitShortcutRef = useRef(onSubmitShortcut);
+  const suggestionRef = useLatestRef(suggestion);
+  const variableSuggestionRef = useLatestRef(variableSuggestion);
+  const submitShortcutRef = useLatestRef(onSubmitShortcut);
   const editorRef = useRef<Editor | null>(null);
   const composerRootRef = useRef<HTMLDivElement | null>(null);
-  const valueRef = useRef(value);
-  const onChangeRef = useRef(onChange);
-  const agentRef = useRef(agent);
+  const valueRef = useLatestRef(value);
+  const onChangeRef = useLatestRef(onChange);
+  const agentRef = useLatestRef(agent);
   const warningMenuId = useId();
-
-  suggestionRef.current = suggestion;
-  variableSuggestionRef.current = variableSuggestion;
-  submitShortcutRef.current = onSubmitShortcut;
-  valueRef.current = value;
-  onChangeRef.current = onChange;
-  agentRef.current = agent;
-  const catalogRef = useRef(catalog);
-  const variableCatalogRef = useRef(variableCatalog);
-
-  catalogRef.current = catalog;
-  variableCatalogRef.current = variableCatalog;
+  const catalogRef = useLatestRef(catalog);
+  const variableCatalogRef = useLatestRef(variableCatalog);
   const displaySignature = useMemo(
     () => buildComposerDisplaySignature(agent, catalog),
     [agent, catalog],
@@ -717,11 +715,15 @@ export function CapabilityComposer({
       Text,
       CapabilityChip,
       Placeholder.configure({ placeholder: labels.placeholder }),
+      // TipTap calls these getters from editor events, never during render; the
+      // compiler cannot see through the plugin boundary.
+      // eslint-disable-next-line react-hooks/refs
       buildSuggestionExtension({
         getCatalog: () => catalogRef.current,
         setState: setSuggestion,
         getState: () => suggestionRef.current,
       }),
+      // eslint-disable-next-line react-hooks/refs
       buildVariableSuggestionExtension({
         getCatalog: () => variableCatalogRef.current,
         setState: setVariableSuggestion,
@@ -736,7 +738,9 @@ export function CapabilityComposer({
     },
   });
 
-  editorRef.current = editor;
+  useLayoutEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
 
   // External value / runner-switch sync: rebuild only when the canonical value
   // truly changed externally, or when chip display metadata changed.

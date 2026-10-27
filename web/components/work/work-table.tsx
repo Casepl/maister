@@ -8,10 +8,11 @@ import type {
 import type { ReactElement } from "react";
 
 import { BookmarkIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 
 import { WorkRowsTable } from "@/components/work/work-rows-table";
+import { useIsClient } from "@/lib/use-is-client";
 import { WORK_STAGES } from "@/lib/work/stage";
 import {
   WORK_GROUP_BYS,
@@ -90,18 +91,21 @@ export function WorkTable({
   locale,
   now,
 }: WorkTableProps): ReactElement {
-  const [savedViews, setSavedViews] = useState<SavedView[]>([]);
+  const isClient = useIsClient();
+  // localStorage is read once the client takes over so the server and the first
+  // client render agree; saved views are a per-browser convenience, never filter
+  // state. Edits made in this session replace the stored list.
+  const [editedViews, setEditedViews] = useState<SavedView[] | null>(null);
+  const storedViews = useMemo(
+    () => (isClient ? readSavedViews() : []),
+    [isClient],
+  );
+  const savedViews = editedViews ?? storedViews;
   const [draftName, setDraftName] = useState("");
   const numberFormat = new Intl.NumberFormat(locale);
 
-  // localStorage is read after mount so the server and the first client render
-  // agree; saved views are a per-browser convenience, never filter state.
-  useEffect(() => {
-    setSavedViews(readSavedViews());
-  }, []);
-
   function persist(next: SavedView[]): void {
-    setSavedViews(next);
+    setEditedViews(next);
     try {
       window.localStorage.setItem(SAVED_VIEWS_KEY, JSON.stringify(next));
     } catch {

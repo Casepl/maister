@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 export interface PackageSourceRow {
   id: string;
@@ -83,9 +84,7 @@ export function PackageSourceModal({
 
   const dialogRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
-  const onCloseRef = useRef(onClose);
-
-  onCloseRef.current = onClose;
+  const onCloseRef = useLatestRef(onClose);
 
   useEffect(() => {
     restoreFocusRef.current = document.activeElement as HTMLElement | null;

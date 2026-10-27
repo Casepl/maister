@@ -12,6 +12,7 @@ import type { AgentConfigParam } from "@/lib/agents/definition";
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 // (ADR-111) Seed each control from the effective value: the instance config
 // value when the operator set one, else the declared default. A param with
@@ -138,9 +139,7 @@ export function AttachEditModal({
 
   const dialogRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
-  const onCloseRef = useRef(onClose);
-
-  onCloseRef.current = onClose;
+  const onCloseRef = useLatestRef(onClose);
 
   useEffect(() => {
     restoreFocusRef.current = document.activeElement as HTMLElement | null;

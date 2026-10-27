@@ -158,6 +158,16 @@ export function ScratchConversation({
       : null;
   const activeHitlRequestKey = useRef(currentHitlRequestKey);
   const latestHitlRequestKey = useRef(currentHitlRequestKey);
+  const [lastHitlRequestKey, setLastHitlRequestKey] = useState(
+    currentHitlRequestKey,
+  );
+
+  if (
+    currentHitlRequestKey !== null &&
+    currentHitlRequestKey !== lastHitlRequestKey
+  ) {
+    setLastHitlRequestKey(currentHitlRequestKey);
+  }
 
   useEffect(() => {
     activeRunId.current = runId;
@@ -183,36 +193,52 @@ export function ScratchConversation({
   const resolvedInterruptEndpoint =
     interruptEndpoint ?? `/api/scratch-runs/${runId}/interrupt`;
 
-  const loadDetail = useCallback(async (): Promise<void> => {
+  const fetchDetail = useCallback(
+    (): Promise<void> =>
+      fetch(`/api/scratch-runs/${runId}`)
+        .then(async (response) => {
+          if (activeRunId.current !== runId) return;
+
+          if (!response.ok) {
+            setError(t(errorText(await response.json().catch(() => null))));
+
+            return;
+          }
+
+          const nextDetail = (await response.json()) as ScratchDetail;
+
+          if (activeRunId.current !== runId) return;
+          setDetail(nextDetail);
+          setDetailRevision((current) => current + 1);
+        })
+        .catch(() => {
+          if (activeRunId.current === runId) setError(t("errorGeneric"));
+        })
+        .finally(() => {
+          if (activeRunId.current === runId) setLoading(false);
+        }),
+    [runId],
+  );
+
+  const loadDetail = useCallback((): Promise<void> => {
     setLoading(true);
     setError(null);
 
-    try {
-      const response = await fetch(`/api/scratch-runs/${runId}`);
+    return fetchDetail();
+  }, [fetchDetail]);
 
-      if (activeRunId.current !== runId) return;
+  // The mount, and every switch to another run, starts a fresh load.
+  const [loadingRunId, setLoadingRunId] = useState(runId);
 
-      if (!response.ok) {
-        setError(t(errorText(await response.json().catch(() => null))));
-
-        return;
-      }
-
-      const nextDetail = (await response.json()) as ScratchDetail;
-
-      if (activeRunId.current !== runId) return;
-      setDetail(nextDetail);
-      setDetailRevision((current) => current + 1);
-    } catch {
-      if (activeRunId.current === runId) setError(t("errorGeneric"));
-    } finally {
-      if (activeRunId.current === runId) setLoading(false);
-    }
-  }, [runId]);
+  if (loadingRunId !== runId) {
+    setLoadingRunId(runId);
+    setLoading(true);
+    setError(null);
+  }
 
   useEffect(() => {
-    void loadDetail();
-  }, [loadDetail]);
+    void fetchDetail();
+  }, [fetchDetail]);
 
   const composerAgent: AdapterId = useMemo(() => {
     const rawAgent =
@@ -226,14 +252,15 @@ export function ScratchConversation({
     detail?.run.runnerSnapshot?.capabilityAgent,
   ]);
 
+  // A run without a project offers no commands.
+  if (!detail?.run.projectSlug && commandCatalog.length > 0) {
+    setCommandCatalog([]);
+  }
+
   useEffect(() => {
     const projectSlug = detail?.run.projectSlug;
 
-    if (!projectSlug) {
-      setCommandCatalog([]);
-
-      return;
-    }
+    if (!projectSlug) return;
 
     const encodedProjectSlug = encodeURIComponent(projectSlug);
     const controller = new AbortController();
@@ -319,9 +346,12 @@ export function ScratchConversation({
 
   // A notice describes the turn that was running when its message was sent;
   // the next turn (a dispatched queued message) must not inherit it.
-  useEffect(() => {
+  const [noticeStatus, setNoticeStatus] = useState(status);
+
+  if (noticeStatus !== status) {
+    setNoticeStatus(status);
     if (!canSendWhileBusy(status)) setDeliveryNotice(null);
-  }, [status]);
+  }
 
   useEffect(() => {
     onHeaderInfo?.({
@@ -350,17 +380,11 @@ export function ScratchConversation({
   };
   const quickReplies = useMemo(() => {
     if (!canCompose(status, detail?.run.status)) return [];
-    const messages = detail?.messages ?? [];
+    const lastAssistant = (detail?.messages ?? []).findLast(
+      (candidate) => candidate.role === "assistant",
+    );
 
-    for (let index = messages.length - 1; index >= 0; index -= 1) {
-      const candidate = messages[index];
-
-      if (candidate.role === "assistant") {
-        return parseQuickReplies(candidate.content);
-      }
-    }
-
-    return [];
+    return lastAssistant ? parseQuickReplies(lastAssistant.content) : [];
   }, [detail?.messages, detail?.run.status, status]);
   const renderMessageAttachments = useCallback(
     (messageId: string) => {
@@ -527,10 +551,12 @@ export function ScratchConversation({
     }
   }, [messageBodyExtras, resolvedInterruptEndpoint]);
 
+  const pendingHitl = detail?.pendingHitl;
+
   const answerHitl = useCallback(
     async (payload: Record<string, unknown>): Promise<void> => {
-      if (!detail?.pendingHitl || !canAct) return;
-      const requestKey = `${runId}:${detail.pendingHitl.hitlRequestId}`;
+      if (!pendingHitl || !canAct) return;
+      const requestKey = `${runId}:${pendingHitl.hitlRequestId}`;
       const requestIsCurrent = (): boolean =>
         activeRunId.current === runId &&
         activeHitlRequestKey.current === requestKey;
@@ -540,7 +566,7 @@ export function ScratchConversation({
 
       try {
         const response = await fetch(
-          `/api/runs/${runId}/hitl/${detail.pendingHitl.hitlRequestId}/respond`,
+          `/api/runs/${runId}/hitl/${pendingHitl.hitlRequestId}/respond`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -566,7 +592,7 @@ export function ScratchConversation({
           }
           const descriptor = hitlErrorText(
             body,
-            detail.pendingHitl.answerState,
+            pendingHitl.answerState,
           );
 
           setHitlError({
@@ -582,8 +608,8 @@ export function ScratchConversation({
             setLocalAnswer({
               requestKey,
               payload: canReplayHitlAnswer(
-                detail.pendingHitl.kind,
-                detail.pendingHitl.schema,
+                pendingHitl.kind,
+                pendingHitl.schema,
               )
                 ? (payload as NonNullable<
                     ScratchDetail["pendingHitl"]
@@ -610,8 +636,8 @@ export function ScratchConversation({
           setLocalAnswer({
             requestKey,
             payload: canReplayHitlAnswer(
-              detail.pendingHitl.kind,
-              detail.pendingHitl.schema,
+              pendingHitl.kind,
+              pendingHitl.schema,
             )
               ? (payload as NonNullable<
                   ScratchDetail["pendingHitl"]
@@ -634,7 +660,7 @@ export function ScratchConversation({
           );
       }
     },
-    [canAct, detail?.pendingHitl, loadDetail, runId],
+    [canAct, pendingHitl, loadDetail, runId],
   );
 
   const visiblePendingHitl =
@@ -657,7 +683,7 @@ export function ScratchConversation({
       (hitlError.terminal &&
         currentHitlRequestKey === null &&
         hitlError.requestKey.startsWith(`${runId}:`) &&
-        latestHitlRequestKey.current === hitlError.requestKey))
+        lastHitlRequestKey === hitlError.requestKey))
       ? hitlError
       : null;
 

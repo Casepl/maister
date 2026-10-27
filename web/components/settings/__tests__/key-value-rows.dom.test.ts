@@ -10,7 +10,7 @@
 import type { KeyValueRow } from "@/components/settings/key-value-rows";
 import type { Root } from "react-dom/client";
 
-import { act, createElement, useState } from "react";
+import { act, createElement, useLayoutEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -35,7 +35,9 @@ const LABELS = {
 };
 
 const roots: Root[] = [];
-let lastRows: KeyValueRow[] = [];
+// The host publishes its committed rows here; a holder, not a reassigned
+// binding, so the component never writes module state during render.
+const captured: { rows: KeyValueRow[] } = { rows: [] };
 
 afterEach(() => {
   for (const root of roots.splice(0)) act(() => root.unmount());
@@ -53,14 +55,15 @@ function Host(props: HostProps) {
     rowsFromRecord(props.initial),
   );
 
-  lastRows = rows;
+  useLayoutEffect(() => {
+    captured.rows = rows;
+  });
 
   return createElement(KeyValueRows, {
     ...props,
     labels: props.labels ?? LABELS,
     rows,
     onChange: (next: KeyValueRow[]) => {
-      lastRows = next;
       setRows(next);
     },
   });
@@ -122,9 +125,9 @@ describe("KeyValueRows", () => {
       )!,
     );
 
-    expect(lastRows).toHaveLength(2);
-    expect(lastRows[1]).toMatchObject({ key: "", value: "" });
-    expect(lastRows[0]).toMatchObject({ key: "A", value: "1" });
+    expect(captured.rows).toHaveLength(2);
+    expect(captured.rows[1]).toMatchObject({ key: "", value: "" });
+    expect(captured.rows[0]).toMatchObject({ key: "A", value: "1" });
   });
 
   it("remove deletes by row id, not by index", () => {
@@ -132,7 +135,7 @@ describe("KeyValueRows", () => {
 
     click(node.querySelectorAll(`[aria-label="${LABELS.remove}"]`)[1]!);
 
-    expect(lastRows.map((r) => r.key)).toEqual(["A", "C"]);
+    expect(captured.rows.map((r) => r.key)).toEqual(["A", "C"]);
   });
 
   it("an edit reports the FULL array, not a delta", () => {
@@ -140,9 +143,9 @@ describe("KeyValueRows", () => {
 
     type(inputs(node, LABELS.value)[0]!, "changed");
 
-    expect(lastRows).toHaveLength(2);
-    expect(lastRows[0]).toMatchObject({ key: "A", value: "changed" });
-    expect(lastRows[1]).toMatchObject({ key: "B", value: "2" });
+    expect(captured.rows).toHaveLength(2);
+    expect(captured.rows[0]).toMatchObject({ key: "A", value: "changed" });
+    expect(captured.rows[1]).toMatchObject({ key: "B", value: "2" });
   });
 
   it("renders a datalist only when keySuggestions are given", () => {

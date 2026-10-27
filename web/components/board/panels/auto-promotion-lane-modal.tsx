@@ -6,6 +6,7 @@ import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import clsx from "clsx";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 // ADR-126 / T18: the per-lane popup editor. Mirrors user-edit-modal.tsx focus-trap
 // convention (initial focus + focus restore + Escape + body-scroll lock + Tab
@@ -52,9 +53,7 @@ export function AutoPromotionLaneModal({
 
   const dialogRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
-  const onCloseRef = useRef(onClose);
-
-  onCloseRef.current = onClose;
+  const onCloseRef = useLatestRef(onClose);
 
   const delayNum = Number.parseInt(delay.trim(), 10);
   const delayValid =

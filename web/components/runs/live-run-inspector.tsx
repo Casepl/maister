@@ -133,10 +133,14 @@ export function LiveRunInspector({
   useEffect(() => {
     if (!live || !liveWallClock || liveWallClock.endedAtMs !== null) return;
 
-    setNowMs(Date.now());
-    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    const tick = (): void => setNowMs(Date.now());
+    const first = setTimeout(tick, 0);
+    const id = setInterval(tick, 1000);
 
-    return () => clearInterval(id);
+    return () => {
+      clearTimeout(first);
+      clearInterval(id);
+    };
   }, [live, liveWallClock]);
 
   const liveFacts = useMemo<RunInspectorFact[]>(() => {

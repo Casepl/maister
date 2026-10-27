@@ -10,7 +10,13 @@ import type {
 import type { QuickReply } from "@/lib/scratch-runs/transcript";
 import type { ReactElement } from "react";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslations } from "next-intl";
 import clsx from "clsx";
 
@@ -108,11 +114,13 @@ export function ScratchComposer({
     [composerFiles],
   );
 
-  draftRef.current = {
-    content,
-    attachments: composerAttachments,
-    files: composerFiles,
-  };
+  useLayoutEffect(() => {
+    draftRef.current = {
+      content,
+      attachments: composerAttachments,
+      files: composerFiles,
+    };
+  });
 
   const clearDraft = useCallback((): ComposerDraft => {
     const draft = draftRef.current;

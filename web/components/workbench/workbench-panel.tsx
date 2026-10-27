@@ -100,9 +100,12 @@ function WorkbenchDisclosure({
   const [open, setOpen] = useState(routeOpen);
   const Icon = open ? ChevronDownIcon : ChevronRightIcon;
 
-  useEffect(() => {
+  const [followedRoute, setFollowedRoute] = useState(routeOpen);
+
+  if (followedRoute !== routeOpen) {
+    setFollowedRoute(routeOpen);
     setOpen(routeOpen);
-  }, [routeOpen]);
+  }
 
   return (
     <details

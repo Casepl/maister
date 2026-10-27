@@ -75,24 +75,24 @@ export function NodeTranscriptPanel({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reqIdRef = useRef(0);
 
-  const load = useCallback(async (): Promise<void> => {
+  const load = useCallback((): Promise<void> => {
     const reqId = (reqIdRef.current += 1);
 
-    try {
-      const res = await fetch(
-        `/api/runs/${encodeURIComponent(runId)}/transcript?node=${encodeURIComponent(nodeId)}`,
-      );
+    return fetch(
+      `/api/runs/${encodeURIComponent(runId)}/transcript?node=${encodeURIComponent(nodeId)}`,
+    )
+      .then(async (res) => {
+        if (!res.ok) return;
+        const body = (await res.json()) as { messages: TranscriptMessage[] };
 
-      if (!res.ok) return;
-      const body = (await res.json()) as { messages: TranscriptMessage[] };
-
-      // Latest-wins: ignore a response superseded by a newer load() that was
-      // issued while this fetch was in flight (out-of-order arrival).
-      if (reqId !== reqIdRef.current) return;
-      setMessages(body.messages);
-    } catch {
-      /* transient fetch error — keep the prior transcript, retry on next tick */
-    }
+        // Latest-wins: ignore a response superseded by a newer load() that was
+        // issued while this fetch was in flight (out-of-order arrival).
+        if (reqId !== reqIdRef.current) return;
+        setMessages(body.messages);
+      })
+      .catch(() => {
+        /* transient fetch error — keep the prior transcript, retry on next tick */
+      });
   }, [runId, nodeId]);
 
   // Initial fetch when the panel is open and we have no preloaded messages.

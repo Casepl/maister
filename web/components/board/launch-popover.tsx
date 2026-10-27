@@ -591,8 +591,8 @@ export function LaunchPopover({
   const [launchStage, setLaunchStage] = useState<LaunchStage | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [options, setOptions] = useState<LaunchOptions | null>(null);
-  const [loadingOptions, setLoadingOptions] = useState(false);
   const [optionsError, setOptionsError] = useState(false);
+  const loadingOptions = open && options === null && !optionsError;
   const [previewSelection, setPreviewSelection] =
     useState<LaunchPreviewSelection | null>(null);
   const [previewRequestVersion, setPreviewRequestVersion] = useState(0);
@@ -637,10 +637,6 @@ export function LaunchPopover({
     if (!open || options) return;
 
     const controller = new AbortController();
-
-    setLoadingOptions(true);
-    setOptionsError(false);
-    setError(null);
 
     fetch(`/api/runs/launch-options?taskId=${encodeURIComponent(taskId)}`, {
       signal: controller.signal,
@@ -695,9 +691,6 @@ export function LaunchPopover({
       .catch(() => {
         if (controller.signal.aborted) return;
         setOptionsError(true);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoadingOptions(false);
       });
 
     return () => controller.abort();
@@ -720,7 +713,6 @@ export function LaunchPopover({
 
     if (flowId) query.set("flowId", flowId);
     if (hasRunnerOverride) query.set("runnerId", runnerId);
-    setOptionsError(false);
 
     fetch(`/api/runs/launch-options?${query}`, { signal: controller.signal })
       .then(async (response) => {
@@ -1239,7 +1231,10 @@ export function LaunchPopover({
           size="sm"
           type="button"
           variant="outline"
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            if (!options) setOptionsError(false);
+            setOpen(true);
+          }}
         >
           {forceRelaunch ? (
             <ArrowPathIcon aria-hidden="true" className="h-3.5 w-3.5" />

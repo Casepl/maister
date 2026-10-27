@@ -76,8 +76,11 @@ export function useRunStream(
     setReconnectKey((k) => k + 1);
   }, []);
 
+  // The effect owns the EventSource; status and liveness mirror the lifecycle of
+  // the connection it opens and closes.
   useEffect(() => {
     if (!runId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStatus("closed");
       lifecycleRef.current = advanceRunStreamLifecycle(
         lifecycleRef.current,

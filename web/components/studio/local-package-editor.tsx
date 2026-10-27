@@ -87,6 +87,7 @@ import {
   parsePackageFilesJson,
   planWorkingDirWrites,
 } from "@/lib/local-packages/working-dir-save";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 // Client-projected lock state (Date → ISO string for the RSC boundary).
 // One shape shared with the authored editor via the common hook.
@@ -363,16 +364,22 @@ export function LocalPackageEditor({
     };
   }, [packageId]);
 
-  useEffect(() => {
+  // A fresh server file set (or a save clearing the dirty flag) re-seeds the
+  // draft unless there are unsaved package-file edits.
+  const [draftSource, setDraftSource] = useState({ files, packageFilesDirty });
+
+  if (
+    draftSource.files !== files ||
+    draftSource.packageFilesDirty !== packageFilesDirty
+  ) {
+    setDraftSource({ files, packageFilesDirty });
     if (!packageFilesDirty) setDraftFiles(files);
-  }, [files, packageFilesDirty]);
+  }
 
   // The working-dir save action injected into FlowEditorTabs. It runs inside the
   // editor's own <form>, so it receives the submitted blob; it diffs against the
   // originals and emits the minimal PUT/DELETE set, each lock-guarded server-side.
-  const originalRef = useRef(files);
-
-  originalRef.current = files;
+  const originalRef = useLatestRef(files);
 
   // Mirrors the FlowEditorTabs flow-YAML buffer so `flushBeforeAssistant` can
   // persist unsaved flow edits without owning the buffer state.

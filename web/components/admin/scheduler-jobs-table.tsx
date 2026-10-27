@@ -70,10 +70,17 @@ export function SchedulerJobsTable({
   const [editing, setEditing] = useState<SchedulerJobRow | null>(null);
   const [creating, setCreating] = useState(false);
 
-  useEffect(() => {
+  // Back/forward re-derives the URL filters; re-seed the inputs from them.
+  const [seeded, setSeeded] = useState(filters);
+
+  if (
+    seeded.jobKind !== filters.jobKind ||
+    seeded.state !== filters.state
+  ) {
+    setSeeded(filters);
     setJobKind(filters.jobKind);
     setState(filters.state);
-  }, [filters.jobKind, filters.state]);
+  }
 
   function syncUrl(next: SchedulerJobsFilters): void {
     const params = new URLSearchParams();

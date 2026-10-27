@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import clsx from "clsx";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 export interface ProjectMemberSerialised {
   addedBy: string | null;
@@ -52,9 +53,7 @@ function useDialog(onClose: () => void): {
 } {
   const dialogRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
-  const onCloseRef = useRef(onClose);
-
-  onCloseRef.current = onClose;
+  const onCloseRef = useLatestRef(onClose);
 
   useEffect(() => {
     restoreFocusRef.current = document.activeElement as HTMLElement | null;
@@ -424,12 +423,11 @@ function AddDialog({ slug, onClose, onSaved }: AddDialogProps): ReactElement {
   const [error, setError] = useState<string | null>(null);
   const { dialogRef } = useDialog(onClose);
 
-  useEffect(() => {
-    if (q.trim().length < 2) {
-      setCandidates([]);
+  // A query too short to search shows no candidates.
+  if (q.trim().length < 2 && candidates.length > 0) setCandidates([]);
 
-      return;
-    }
+  useEffect(() => {
+    if (q.trim().length < 2) return;
 
     const handle = setTimeout(() => {
       setSearching(true);

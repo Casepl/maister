@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 // M8 T8: client-side keep-alive ping. Wired to a run-detail page (or
 // any UI surface that represents a single run). While the user is on
@@ -31,12 +32,10 @@ export type UseActivityPingOptions = {
 export function useActivityPing(opts: UseActivityPingOptions): void {
   const { runId, enabled = true } = opts;
   const keepaliveMs = opts.keepaliveMs ?? 30 * 60_000;
-  const fetcherRef = useRef(opts.fetcher ?? globalThis.fetch);
+  const fetcherRef = useLatestRef(opts.fetcher ?? globalThis.fetch);
   const lastPingRef = useRef<number>(0);
   const stoppedRef = useRef(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  fetcherRef.current = opts.fetcher ?? globalThis.fetch;
 
   useEffect(() => {
     if (!enabled || !runId) return;

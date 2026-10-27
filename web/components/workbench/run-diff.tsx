@@ -381,9 +381,12 @@ export default function RunDiff({
     : undefined;
   const hasReview = activeReview !== undefined;
 
-  useEffect(() => {
+  const [followedScope, setFollowedScope] = useState(requestedScope);
+
+  if (followedScope !== requestedScope) {
+    setFollowedScope(requestedScope);
     setScope(requestedScope);
-  }, [requestedScope]);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -430,19 +433,20 @@ export default function RunDiff({
 
   // Sibling effect → the threads GET runs in parallel with the diff GET and
   // never blocks the diff render; review mode appears when threads land.
-  useEffect(() => {
-    let cancelled = false;
+  // Threads are unknown until they load for the current run, scope and refresh.
+  const threadsKey = `${runId}|${hasReview}|${reviewScope}|${refreshNonce}`;
+  const [threadsFor, setThreadsFor] = useState(threadsKey);
 
-    if (!hasReview || reviewScope === null) {
-      setThreads(null);
-      setReviewError(null);
-
-      return () => {
-        cancelled = true;
-      };
-    }
-
+  if (threadsFor !== threadsKey) {
+    setThreadsFor(threadsKey);
     setThreads(null);
+    if (!hasReview || reviewScope === null) setReviewError(null);
+  }
+
+  useEffect(() => {
+    if (!hasReview || reviewScope === null) return;
+
+    let cancelled = false;
 
     void loadReviewThreads(
       runId,

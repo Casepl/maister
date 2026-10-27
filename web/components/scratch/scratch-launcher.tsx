@@ -376,14 +376,20 @@ export function ScratchLauncher({
   const formRef = useRef<HTMLFormElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // The mount, and every project switch, reloads the launch options.
+  const [optionsProjectId, setOptionsProjectId] = useState(projectId);
+
+  if (optionsProjectId !== projectId) {
+    setOptionsProjectId(projectId);
+    setLoading(true);
+    setError(null);
+  }
+
   useEffect(() => {
     const controller = new AbortController();
     const query = projectId
       ? `?projectId=${encodeURIComponent(projectId)}`
       : "";
-
-    setLoading(true);
-    setError(null);
 
     fetch(`/api/scratch-runs/launch-options${query}`, {
       signal: controller.signal,
@@ -433,6 +439,8 @@ export function ScratchLauncher({
     return () => controller.abort();
   }, [projectId]);
 
+  // Object URLs are an external resource this effect creates and revokes; the
+  // state only publishes the live set.
   useEffect(() => {
     const previews = new Map<string, string>();
 
@@ -442,6 +450,7 @@ export function ScratchLauncher({
       previews.set(file.name, URL.createObjectURL(file));
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFilePreviews(previews);
 
     return () => {
@@ -464,14 +473,15 @@ export function ScratchLauncher({
     ProjectCapabilityCatalogEntry[]
   >([]);
 
+  // No project, no catalog.
+  if (!selectedProject?.slug && capabilityCatalog.length > 0) {
+    setCapabilityCatalog([]);
+  }
+
   useEffect(() => {
     const slug = selectedProject?.slug;
 
-    if (!slug) {
-      setCapabilityCatalog([]);
-
-      return;
-    }
+    if (!slug) return;
     const ctrl = new AbortController();
 
     fetch(
@@ -504,9 +514,12 @@ export function ScratchLauncher({
     Boolean(selectedRunner?.enabled && selectedRunner.ready) &&
     !pending;
 
-  useEffect(() => {
+  const [adoptedProjectId, setAdoptedProjectId] = useState(requestedProjectId);
+
+  if (adoptedProjectId !== requestedProjectId) {
+    setAdoptedProjectId(requestedProjectId);
     setProjectId(requestedProjectId);
-  }, [requestedProjectId]);
+  }
 
   function addAttachment(kind: AttachmentKind): void {
     setAttachments((current) => [...current, { kind, label: "", value: "" }]);
