@@ -781,7 +781,7 @@ describe("S5.2 invocation process ownership", () => {
       observation: "SyntaxError",
     },
   ])(
-    "O-exit: $name retains the exact outcome and finishes cleanup",
+    "O-exit: '$name' retains the exact outcome and finishes cleanup",
     async ({ fixture, reportFault, code, observation }) => {
       const directory = await mkdtemp(
         path.join(
