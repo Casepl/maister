@@ -19,7 +19,7 @@ type LibrarianContextValue = {
   ownerId: string;
   open: boolean;
   indicator: LibrarianIndicatorState;
-  /** Bumped on every durable change frame; the open panel refetches on it. */
+  /** Bumped on conversation or settings changes; the open panel refetches. */
   changeTick: number;
   hostComposerVisible: boolean;
   openPanel: (opener: HTMLElement | null) => void;
@@ -53,6 +53,7 @@ const CHANGE_FRAMES = new Set([
   "librarian.message",
   "librarian.turn",
   "librarian.reset",
+  "librarian.settings",
 ]);
 
 function isIndicator(value: unknown): value is LibrarianIndicatorState {

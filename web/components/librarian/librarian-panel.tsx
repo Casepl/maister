@@ -178,6 +178,7 @@ function LibrarianPanelBody(): ReactElement {
   const stickRef = useRef(true);
   const savedScrollRef = useRef<number | null>(null);
   const pendingClientIdRef = useRef<string | null>(null);
+  const refreshIdRef = useRef(0);
   const wasOpenRef = useRef(false);
   const [viewportWidth, setViewportWidth] = useState<number | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -234,34 +235,39 @@ function LibrarianPanelBody(): ReactElement {
     if (draftLoaded) writeDraft(ownerId, draft);
   }, [ownerId, draft, draftLoaded]);
 
-  const refresh = useCallback(
-    (): Promise<void> =>
-      Promise.all([
-        fetch("/api/librarian/conversation", { cache: "no-store" }),
-        fetch(`/api/librarian/messages?limit=${PAGE_LIMIT}`, {
-          cache: "no-store",
-        }),
-      ])
-        .then(async ([conversationRes, messagesRes]) => {
-          if (!conversationRes.ok || !messagesRes.ok) {
-            setLoadFailed(true);
+  const refresh = useCallback((): Promise<void> => {
+    const refreshId = ++refreshIdRef.current;
 
-            return;
-          }
-          const nextView =
-            (await conversationRes.json()) as LibrarianConversationView;
-          const page = (await messagesRes.json()) as {
-            messages: LibrarianMessageDto[];
-          };
+    return Promise.all([
+      fetch("/api/librarian/conversation", { cache: "no-store" }),
+      fetch(`/api/librarian/messages?limit=${PAGE_LIMIT}`, {
+        cache: "no-store",
+      }),
+    ])
+      .then(async ([conversationRes, messagesRes]) => {
+        if (!conversationRes.ok || !messagesRes.ok) {
+          if (refreshId === refreshIdRef.current) setLoadFailed(true);
 
-          setView(nextView);
-          setIndicator(nextView.indicator.state);
-          setMessages((current) => mergeMessages(current, page.messages));
-          setLoadFailed(false);
-        })
-        .catch(() => setLoadFailed(true)),
-    [setIndicator],
-  );
+          return;
+        }
+        const nextView =
+          (await conversationRes.json()) as LibrarianConversationView;
+        const page = (await messagesRes.json()) as {
+          messages: LibrarianMessageDto[];
+        };
+
+        // A slower read from before a settings change must not restore
+        // stale availability after the live update has been applied.
+        if (refreshId !== refreshIdRef.current) return;
+        setView(nextView);
+        setIndicator(nextView.indicator.state);
+        setMessages((current) => mergeMessages(current, page.messages));
+        setLoadFailed(false);
+      })
+      .catch(() => {
+        if (refreshId === refreshIdRef.current) setLoadFailed(true);
+      });
+  }, [setIndicator]);
 
   useEffect(() => {
     if (open) void refresh();

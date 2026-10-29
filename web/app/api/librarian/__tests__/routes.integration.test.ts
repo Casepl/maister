@@ -10,6 +10,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { MaisterError } from "@/lib/errors";
 import { submitOwnerMessage } from "@/lib/librarian/admission";
 import { librarianStreamFrames } from "@/lib/librarian/stream";
+import { updateLibrarianSettings } from "@/lib/librarian/settings";
 import { fakeExecutionHosts } from "@/test-support/fake-execution-host";
 import {
   seedActiveUser,
@@ -175,6 +176,64 @@ describe("IT-LAU-09 IT-EDGE-LAU-02: a global admin reaches only their own conver
 });
 
 describe("IT-LCV-12: the stream replays by seq and carries no foreign frame", () => {
+  it("reports saved runner, readiness and same-id config changes without a message cursor", async () => {
+    const owner = await seedActiveUser(db);
+    const original = await seedLibrarianPlatform(db);
+    const next = await seedLibrarianPlatform(db, { ready: false });
+
+    await updateLibrarianSettings(
+      { enabled: true, runnerId: original.runnerId },
+      admin,
+      db,
+    );
+    const abort = new AbortController();
+    const frames: string[] = [];
+    let iteration = 0;
+
+    for await (const frame of librarianStreamFrames({
+      db: db as unknown as Db,
+      ownerId: owner,
+      cursor: 7n,
+      signal: abort.signal,
+      sleep: async () => {
+        iteration += 1;
+        if (iteration === 1)
+          await updateLibrarianSettings(
+            { enabled: true, runnerId: next.runnerId },
+            admin,
+            db,
+          );
+        else if (iteration === 2)
+          await db.execute(
+            sql`UPDATE platform_acp_runners SET readiness_status = 'Ready' WHERE id = ${next.runnerId}`,
+          );
+        else if (iteration === 3)
+          await db.execute(
+            sql`UPDATE platform_acp_runners SET model = 'claude-opus-4-6', env = '{"TEST_SECRET_REF":"env:PRIVATE"}'::jsonb WHERE id = ${next.runnerId}`,
+          );
+        else abort.abort();
+      },
+    }))
+      frames.push(frame);
+
+    expect(frames).toHaveLength(4);
+    for (const frame of frames) {
+      expect(frame).toBe('data: {"type":"librarian.settings"}\n\n');
+    }
+    const reconnect = librarianStreamFrames({
+      db: db as unknown as Db,
+      ownerId: owner,
+      cursor: 7n,
+      signal: new AbortController().signal,
+    });
+
+    try {
+      expect((await reconnect.next()).value).toBe(frames[0]);
+    } finally {
+      await reconnect.return(undefined);
+    }
+  });
+
   it("uses the quiet poll interval while the librarian is disabled", async () => {
     const owner = await seedActiveUser(db);
     const abort = new AbortController();
@@ -196,6 +255,7 @@ describe("IT-LCV-12: the stream replays by seq and carries no foreign frame", ()
         },
       });
 
+      expect((await frames.next()).value).toContain('"librarian.settings"');
       expect((await frames.next()).done).toBe(true);
       expect(delays).toEqual([30_000]);
     } finally {
@@ -241,6 +301,7 @@ describe("IT-LCV-12: the stream replays by seq and carries no foreign frame", ()
       "librarian.message",
       "librarian.turn",
       "librarian.indicator",
+      "librarian.settings",
     ]);
     expect(JSON.stringify(parsed)).not.toContain("other user");
   });

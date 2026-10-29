@@ -26,8 +26,13 @@ import {
   previewLibrarianClear,
 } from "@/lib/librarian/clear-history";
 import { lockOwnerConversation } from "@/lib/librarian/conversation";
+import {
+  listPersonalMemory,
+  rememberPersonalMemory,
+} from "@/lib/librarian/memory";
 import { admitLibrarianOperation } from "@/lib/librarian/operations";
 import { startLibrarianTurn } from "@/lib/librarian/runtime";
+import { updateLibrarianSettings } from "@/lib/librarian/settings";
 import { queueLibrarianSummary } from "@/lib/librarian/summary";
 import {
   runLibrarianTurnSweep,
@@ -425,6 +430,28 @@ describe("IT-LAU-11 part 2: a guard halt fails the turn without a HITL row", () 
 });
 
 describe("IT-LCV-06: session/resume only under the same epoch and runner", () => {
+  async function runner(model: string): Promise<string> {
+    const id = `lib-switch-${randomUUID()}`;
+
+    await db.execute(sql`
+      INSERT INTO platform_acp_runners
+        (id, adapter, capability_agent, model, provider, permission_policy,
+         readiness_status, readiness_reasons, enabled)
+      VALUES (${id}, 'claude', 'claude', ${model}, '{"kind":"anthropic"}'::jsonb,
+        'default', 'Ready', '[]'::jsonb, true)
+    `);
+
+    return id;
+  }
+
+  async function saveRunner(actorId: string, runnerId: string): Promise<void> {
+    await updateLibrarianSettings(
+      { enabled: true, runnerId },
+      actorId,
+      db as unknown as Db,
+    );
+  }
+
   it("resumes a matching session, starts new after an epoch or runner change", async () => {
     const ownerId = await seedActiveUser(db);
 
@@ -446,10 +473,173 @@ describe("IT-LCV-06: session/resume only under the same epoch and runner", () =>
     expect(creates().at(-1)).not.toHaveProperty("resumeSessionId");
     expect(prompts.at(-1)).toContain("Conversation so far");
 
-    await seedLibrarianPlatform(db, { runnerId: `lib-other-${randomUUID()}` });
+    const actorId = await seedActiveUser(db, { role: "admin" });
+    const nextRunnerId = await runner("claude-opus-4-6");
+    const memoryId = await rememberPersonalMemory(
+      ownerId,
+      {
+        kind: "preference",
+        content: "Keep the switch context",
+        scope: "general",
+      },
+      db as unknown as Db,
+    );
+
+    await saveRunner(actorId, nextRunnerId);
     await send(ownerId, "four");
     await settle();
     expect(creates().at(-1)).not.toHaveProperty("resumeSessionId");
+    expect(creates().at(-1)).toMatchObject({
+      executor: { agent: "claude", model: "claude-opus-4-6" },
+      runner: {
+        runnerId: nextRunnerId,
+        adapter: "claude",
+        model: "claude-opus-4-6",
+        provider: { kind: "anthropic" },
+      },
+    });
+    expect(prompts.at(-1)).toContain("Conversation so far");
+    expect(prompts.at(-1)).toContain("one");
+    expect(prompts.at(-1)).toContain("Keep the switch context");
+    expect(
+      (await listPersonalMemory(ownerId, db as unknown as Db)).items,
+    ).toMatchObject([
+      { id: memoryId, content: "Keep the switch context", revision: 1 },
+    ]);
+  });
+
+  it("keeps the active response on A and starts its queued successor on saved B exactly once", async () => {
+    const actorId = await seedActiveUser(db, { role: "admin" });
+    const ownerId = await seedActiveUser(db);
+    const runnerA = await runner("claude-sonnet-4-6");
+    const runnerB = await runner("claude-opus-4-6");
+
+    await saveRunner(actorId, runnerA);
+    const createCount = creates().length;
+    const gate = gatedPrompt();
+    const first = await send(ownerId, "first switch request");
+
+    await gate.entered;
+    let queuedTurnId: string | null = null;
+
+    try {
+      const queued = await send(ownerId, "queued switch request");
+
+      queuedTurnId = queued.turn!.id;
+      expect(queued.turn).toMatchObject({ status: "queued", queuePosition: 1 });
+      await saveRunner(actorId, runnerB);
+      expect((await turnRow(first.turn!.id)).status).toBe("running");
+      expect(creates()).toHaveLength(createCount + 1);
+      expect(creates().at(-1)).toMatchObject({
+        runner: { runnerId: runnerA, model: "claude-sonnet-4-6" },
+        executor: { agent: "claude", model: "claude-sonnet-4-6" },
+      });
+    } finally {
+      gate.release();
+    }
+    await settle();
+    // The after-commit successor dispatch is outside this suite's start wrapper.
+    await expect
+      .poll(async () => (await turnRow(queuedTurnId!)).status)
+      .toBe("completed");
+    expect(creates()).toHaveLength(createCount + 2);
+    expect(creates().at(-1)).toMatchObject({
+      runner: { runnerId: runnerB, model: "claude-opus-4-6" },
+      executor: { agent: "claude", model: "claude-opus-4-6" },
+    });
+    expect(creates().at(-1)).not.toHaveProperty("resumeSessionId");
+    expect(prompts).toHaveLength(2);
+    expect(prompts[1]).toContain("Conversation so far");
+    expect(prompts[1]).toContain("first switch request");
+    expect(prompts[1]).toContain("queued switch request");
+    const messages = rows<{
+      author_kind: string;
+      body: string;
+      delivery_state: string;
+    }>(
+      await db.execute(sql`
+        SELECT m.author_kind, m.body, m.delivery_state FROM librarian_messages m
+        JOIN librarian_conversations c ON c.id = m.conversation_id
+        WHERE c.user_id = ${ownerId} ORDER BY m.seq
+      `),
+    );
+
+    expect(
+      messages.filter((message) => message.author_kind === "owner"),
+    ).toEqual([
+      {
+        author_kind: "owner",
+        body: "first switch request",
+        delivery_state: "processed",
+      },
+      {
+        author_kind: "owner",
+        body: "queued switch request",
+        delivery_state: "processed",
+      },
+    ]);
+    expect(
+      messages.filter((message) => message.author_kind === "librarian"),
+    ).toHaveLength(2);
+    expect((await turnRow(first.turn!.id)).status).toBe("completed");
+  });
+
+  it("uses the updated model and configuration for the same runner id without resuming", async () => {
+    const actorId = await seedActiveUser(db, { role: "admin" });
+    const ownerId = await seedActiveUser(db);
+    const runnerId = await runner("claude-sonnet-4-6");
+
+    await saveRunner(actorId, runnerId);
+    await send(ownerId, "retain this conversation");
+    await settle();
+    await db.execute(sql`
+      UPDATE platform_acp_runners
+      SET model = 'claude-opus-4-6', env = '{"LIBRARIAN_SWITCH_CONFIG":"updated"}'::jsonb
+      WHERE id = ${runnerId}
+    `);
+    await saveRunner(actorId, runnerId);
+    await send(ownerId, "use the updated configuration");
+    await settle();
+    expect(creates().at(-1)).toMatchObject({
+      runner: {
+        runnerId,
+        model: "claude-opus-4-6",
+        env: { LIBRARIAN_SWITCH_CONFIG: "updated" },
+      },
+      executor: { agent: "claude", model: "claude-opus-4-6" },
+    });
+    expect(creates().at(-1)).not.toHaveProperty("resumeSessionId");
+    expect(prompts).toHaveLength(2);
+    expect(prompts.at(-1)).toContain("retain this conversation");
+  });
+
+  it("reads saved settings when an already admitted message actually starts", async () => {
+    const actorId = await seedActiveUser(db, { role: "admin" });
+    const ownerId = await seedActiveUser(db);
+    const runnerA = await runner("claude-sonnet-4-6");
+    const runnerB = await runner("claude-opus-4-6");
+
+    await saveRunner(actorId, runnerA);
+    const admitted = await submitOwnerMessage(
+      ownerId,
+      {
+        clientMessageId: randomUUID(),
+        body: "admitted before the switch",
+        subject: null,
+      },
+      { db: db as unknown as Db, start: async () => {} },
+    );
+
+    expect(admitted.turn).not.toBeNull();
+    await saveRunner(actorId, runnerB);
+    await start(admitted.turn!.id);
+    await settle();
+    expect(creates().at(-1)).toMatchObject({
+      runner: { runnerId: runnerB, model: "claude-opus-4-6" },
+      executor: { agent: "claude", model: "claude-opus-4-6" },
+    });
+    expect(prompts).toHaveLength(1);
+    expect((await turnRow(admitted.turn!.id)).status).toBe("completed");
   });
 });
 
