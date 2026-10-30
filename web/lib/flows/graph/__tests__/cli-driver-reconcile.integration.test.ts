@@ -411,8 +411,7 @@ describe("C1 real CLI driver ownership", () => {
     const blocker = await database.pool.connect();
     let second: Awaited<ReturnType<typeof claimFlowDriver>> = null;
     let replacement:
-      | Promise<Awaited<ReturnType<typeof claimFlowDriver>>>
-      | undefined;
+      Promise<Awaited<ReturnType<typeof claimFlowDriver>>> | undefined;
     let sweepResult: Promise<unknown> | undefined;
 
     try {

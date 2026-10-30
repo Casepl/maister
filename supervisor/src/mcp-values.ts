@@ -1,4 +1,4 @@
-import type * as acp from "@agentclientprotocol/sdk";
+import type * as acp from "@agentclientprotocol/sdk/unstable";
 
 // ADR-179: the execution host is the ONLY place an `env:NAME` reference becomes
 // a value. A value is whole-value — `literal | env:NAME` — with no

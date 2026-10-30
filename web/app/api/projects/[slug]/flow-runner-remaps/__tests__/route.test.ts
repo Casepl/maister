@@ -12,10 +12,7 @@ const mocks = vi.hoisted(() => ({
 
 type Row = Record<string, unknown>;
 type TableName =
-  | "flow_runner_remaps"
-  | "flows"
-  | "platform_acp_runners"
-  | "projects";
+  "flow_runner_remaps" | "flows" | "platform_acp_runners" | "projects";
 
 const state: {
   tables: Record<TableName, Row[]>;

@@ -30,8 +30,7 @@ export interface PreserveWorktreeArgs {
 export interface PreserveResult {
   ok: boolean;
   failureReason?:
-    | "workspace_git_identity_invalid"
-    | "workspace_preservation_failed";
+    "workspace_git_identity_invalid" | "workspace_preservation_failed";
   archivedCommit?: string;
   archivedBranch?: string;
   archivedAt?: Date;

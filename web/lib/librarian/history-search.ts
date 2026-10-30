@@ -54,7 +54,9 @@ export async function searchLibrarianHistory(
     .select({ role: users.role })
     .from(users)
     .where(eq(users.id, ownerId));
-  const visible = owner ? await getVisibleProjectIds(ownerId, owner.role, db) : [];
+  const visible = owner
+    ? await getVisibleProjectIds(ownerId, owner.role, db)
+    : [];
   const candidates = await db
     .select({
       id: librarianMessages.id,
@@ -76,19 +78,17 @@ export async function searchLibrarianHistory(
     )
     .orderBy(desc(librarianMessages.seq))
     .limit(21);
-  const hits = candidates
-    .slice(0, 20)
-    .map((row) => ({
-      messageId: row.id,
-      seq: row.seq.toString(),
-      authorKind: row.authorKind as "owner" | "librarian" | "update",
-      excerpt: row.body.slice(0, 500),
-      label:
-        row.segmentId === conversation.currentSegmentId
-          ? "current_segment" as const
-          : "earlier_conversation" as const,
-      createdAt: row.createdAt.toISOString(),
-    }));
+  const hits = candidates.slice(0, 20).map((row) => ({
+    messageId: row.id,
+    seq: row.seq.toString(),
+    authorKind: row.authorKind as "owner" | "librarian" | "update",
+    excerpt: row.body.slice(0, 500),
+    label:
+      row.segmentId === conversation.currentSegmentId
+        ? ("current_segment" as const)
+        : ("earlier_conversation" as const),
+    createdAt: row.createdAt.toISOString(),
+  }));
 
   log.debug({ hits: hits.length }, "librarian history searched");
 

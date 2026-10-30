@@ -78,10 +78,7 @@ export type StateTransitionResult =
   | {
       ok: false;
       reason:
-        | "status-guard-mismatch"
-        | "not-found"
-        | "capacity"
-        | "pending-evidence";
+        "status-guard-mismatch" | "not-found" | "capacity" | "pending-evidence";
     };
 
 // ADR-141: a run that terminalizes MUST NOT strand a live branch-sync claim.
@@ -1320,9 +1317,8 @@ export async function markAbandoned(
   // the launch snapshot on `runs.context_mounts`. Lazy import mirrors the
   // ledger import above — keeps this leaf module out of the agent/social graph.
   try {
-    const { releaseRunContextMounts } = await import(
-      "@/lib/context-mounts/terminal"
-    );
+    const { releaseRunContextMounts } =
+      await import("@/lib/context-mounts/terminal");
 
     await releaseRunContextMounts({ runId, db });
   } catch (err) {

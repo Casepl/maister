@@ -140,30 +140,37 @@ export function HitlPanel({
   // the reader's explicit decision below.
   const [requested, setRequested] = useState(false);
 
-  const loadContext = useCallback(async (): Promise<void> => {
+  const fetchContext = useCallback(
+    (): Promise<void> =>
+      fetch(`/api/runs/${item.runId}/inbox-context`)
+        .then(async (res) => {
+          if (!res.ok) throw new Error("inbox-context");
+          setContext((await res.json()) as InboxCardContext);
+        })
+        .catch(() => setError(true))
+        .finally(() => setLoading(false)),
+    [item.runId],
+  );
+
+  const loadContext = (): Promise<void> => {
     setLoading(true);
     setError(false);
 
-    try {
-      const res = await fetch(`/api/runs/${item.runId}/inbox-context`);
-
-      if (!res.ok) throw new Error("inbox-context");
-      setContext((await res.json()) as InboxCardContext);
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [item.runId]);
+    return fetchContext();
+  };
 
   // `REQ-D16`: on FIRST EXPAND, never on mount. The Desk may hold many
   // `WaitingOnHuman` rows, and a mount-time fetch would fire one request per row
   // on page load — invisible in review, obvious in production.
-  useEffect(() => {
-    if (!expanded || requested) return;
+  if (expanded && !requested) {
     setRequested(true);
-    void loadContext();
-  }, [expanded, requested, loadContext]);
+    setLoading(true);
+    setError(false);
+  }
+
+  useEffect(() => {
+    if (requested) void fetchContext();
+  }, [requested]);
 
   const stale = staleCount(item.assignmentStaleEvidenceSummary);
   const isPermission = item.kind === "permission";

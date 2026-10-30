@@ -12,6 +12,7 @@ import { getDb } from "@/lib/db/client";
 import * as schema from "@/lib/db/schema";
 import { MaisterError } from "@/lib/errors";
 import { cancelClarificationsForRecipientWithoutProjectAccess } from "@/lib/tasks/clarification-requests";
+import { isUniqueViolation } from "@/lib/db/pg-error";
 
 const log = pino({
   name: "project-members",
@@ -22,15 +23,6 @@ const { projectMembers, users } = schema;
 
 function db(): NodePgDatabase<typeof schema> {
   return getDb();
-}
-
-function isUniqueViolation(err: unknown): boolean {
-  return (
-    typeof err === "object" &&
-    err !== null &&
-    "code" in err &&
-    (err as { code: unknown }).code === "23505"
-  );
 }
 
 export interface ProjectMemberRow {

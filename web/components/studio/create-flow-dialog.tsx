@@ -110,7 +110,11 @@ export function CreateFlowDialog({
 
     if (!flow.success) {
       setValidationError(
-        t(createFlowValidationErrorKey(flow.error.issues[0]?.path ?? [])),
+        t(
+          createFlowValidationErrorKey(
+            (flow.error.issues[0]?.path ?? []).map(String),
+          ),
+        ),
       );
 
       return;

@@ -84,9 +84,8 @@ afterAll(async () => {
 });
 
 beforeAll(async () => {
-  const routeModule = await import(
-    "@/app/api/v1/ext/runs/[runId]/gates/[gateId]/report/route"
-  );
+  const routeModule =
+    await import("@/app/api/v1/ext/runs/[runId]/gates/[gateId]/report/route");
 
   POST = routeModule.POST;
 });

@@ -84,9 +84,8 @@ beforeAll(async () => {
   await fakeExecutionHosts(db);
 
   ({ issueOrchestratorRunToken } = await import("@/lib/agents/tokens"));
-  ({ POST: delegatePost } = await import(
-    "@/app/api/v1/ext/runs/delegate/route"
-  ));
+  ({ POST: delegatePost } =
+    await import("@/app/api/v1/ext/runs/delegate/route"));
   ({ POST: collectPost } = await import("@/app/api/v1/ext/runs/collect/route"));
   ({ POST: cancelPost } = await import("@/app/api/v1/ext/runs/cancel/route"));
 }, 180_000);

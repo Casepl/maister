@@ -7,11 +7,7 @@ export type BudgetBreachScope = "run" | "task" | "tree";
 export type BudgetBreachDecisionId = "raise" | "restart" | "park" | "abandon";
 export type BudgetBreachParkMode = "snapshot" | "export";
 export type BudgetBreachClaimStage =
-  | "claimed"
-  | "preserving"
-  | "terminalized"
-  | "failed"
-  | "relaunch_failed";
+  "claimed" | "preserving" | "terminalized" | "failed" | "relaunch_failed";
 
 export type BudgetBreachRunKind = "flow" | "agent" | "scratch";
 export type BudgetBreachRunStatus =
@@ -27,10 +23,7 @@ export type BudgetBreachRunStatus =
   | "Abandoned"
   | "Failed";
 export type BudgetBreachAgentWorkspace =
-  | "none"
-  | "repo_read"
-  | "worktree"
-  | null;
+  "none" | "repo_read" | "worktree" | null;
 
 export type BudgetBreachRaiseDecision = {
   optionId: "raise";
@@ -166,9 +159,7 @@ export type BudgetBreachClaimVerdict =
   | { kind: "conflict" };
 
 export type BudgetBreachPolicyField =
-  | "maxTokens"
-  | "consecutiveFailures"
-  | "wallClockMinutes";
+  "maxTokens" | "consecutiveFailures" | "wallClockMinutes";
 
 const BUDGET_METER_FIELD: Record<BudgetBreachMeter, BudgetBreachPolicyField> = {
   tokens: "maxTokens",

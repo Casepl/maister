@@ -32,19 +32,13 @@ export function isHitlRespondReason(
 
 export type HitlPermissionResponse = { optionId: string };
 export type JsonValue =
-  | null
-  | boolean
-  | number
-  | string
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+  null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 export type HitlStructuredResponse = {
   response: JsonValue;
   confidence?: number;
 };
 export type HitlStoredResponse =
-  | HitlPermissionResponse
-  | HitlStructuredResponse;
+  HitlPermissionResponse | HitlStructuredResponse;
 
 export type HitlAnswerState = "open" | "answer_stored";
 

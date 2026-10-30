@@ -95,7 +95,7 @@ export async function GET(
   try {
     const sessionUser = await requireActiveSession();
 
-    if (!z.string().uuid().safeParse(objectId).success) {
+    if (!z.string().guid().safeParse(objectId).success) {
       return NextResponse.json({ message: "not found" }, { status: 404 });
     }
     const db = getDb();

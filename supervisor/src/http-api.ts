@@ -1,7 +1,7 @@
 import type { ImmutableObjectReference } from "../../runtime/command-evidence";
 import type { ReceiptAdmission } from "./outbox-budget";
 import type { FastifyInstance, FastifyReply } from "fastify";
-import type * as acp from "@agentclientprotocol/sdk";
+import type * as acp from "@agentclientprotocol/sdk/unstable";
 import type { Logger } from "pino";
 import type {
   AppendRuntimeEventInput,
@@ -14,6 +14,7 @@ import type {
   RegistryEntry,
 } from "./registry";
 import type { WorkspaceResolution } from "./workspace-registry";
+import type { AcpConnection } from "./acp-connection";
 
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -21,7 +22,7 @@ import { constants as fsConstants } from "node:fs";
 import { access } from "node:fs/promises";
 import { delimiter, dirname, join } from "node:path";
 
-import { z, ZodError, type ZodType, type ZodTypeDef } from "zod";
+import { z, ZodError, type ZodType } from "zod";
 
 import { safeDownloadHeaders } from "../../runtime/safe-download";
 import { objectDigest, objectEtag } from "../../runtime/object-integrity";
@@ -143,7 +144,7 @@ const InputBodySchema = z
   .object({
     kind: z.literal("permission"),
     action: z.enum(["select", "cancel"]),
-    requestId: z.string().uuid(),
+    requestId: z.string().guid(),
     optionId: z.string().min(1).optional(),
     reason: z.string().min(1).max(256).optional(),
   })
@@ -696,8 +697,13 @@ export function registerRoutes(opts: RegisterRoutesOptions): void {
     roots: opts.workspaceRoots,
     runtimeRoot,
     logger,
-    isWorkspaceLive: (id) => registry.list().some((record) =>
-      record.executionWorkspaceId === id && record.status === "live"),
+    isWorkspaceLive: (id) =>
+      registry
+        .list()
+        .some(
+          (record) =>
+            record.executionWorkspaceId === id && record.status === "live",
+        ),
   });
   const fenceLog = logger.child({ component: "execution-fence" });
 
@@ -708,7 +714,7 @@ export function registerRoutes(opts: RegisterRoutesOptions): void {
   function parseCommandBody<T>(
     body: unknown,
     kind: CommandKind,
-    payloadSchema: ZodType<T, ZodTypeDef, unknown>,
+    payloadSchema: ZodType<T, unknown>,
     options: { route: string; guard?: (payload: unknown) => void },
   ): ParsedCommand<T> {
     if (!isEnvelopedBody(body)) {
@@ -1346,7 +1352,7 @@ export function registerRoutes(opts: RegisterRoutesOptions): void {
     })) as acp.ContentBlock[];
 
     assertSteerable(entry, sessionId, commandId, parentCommandId);
-    const connection = entry.connection as acp.ClientSideConnection;
+    const connection = entry.connection as AcpConnection;
     const acpSessionId = entry.acpSessionId as string;
     let release: () => void = () => undefined;
     const current = new Promise<void>((resolve) => {
@@ -1506,6 +1512,19 @@ export function registerRoutes(opts: RegisterRoutesOptions): void {
     );
   }
 
+  function throwIfProducerOutputFailed(
+    entry: RegistryEntry,
+    cause?: unknown,
+  ): void {
+    const failure = entry.record.outputFailure;
+
+    if (failure)
+      throw new SupervisorError(failure.code, failure.message, {
+        details: failure.details,
+        cause,
+      });
+  }
+
   async function executePromptTurn(input: {
     entry: RegistryEntry;
     sessionId: string;
@@ -1625,13 +1644,7 @@ export function registerRoutes(opts: RegisterRoutesOptions): void {
       chatBudget.release();
       throwIfFenced(entry, parsed.envelope);
       throwIfParkedByPressure(entry);
-      if (entry.record.outputFailure) {
-        throw new SupervisorError(
-          entry.record.outputFailure.code,
-          entry.record.outputFailure.message,
-          { details: entry.record.outputFailure.details },
-        );
-      }
+      throwIfProducerOutputFailed(entry, error);
       // A closed ACP transport cannot carry another turn. Its method rejection
       // may arrive before Node publishes the child's exit; let the heartbeat
       // durably publish the crashed incarnation before this command's failed
@@ -1644,12 +1657,20 @@ export function registerRoutes(opts: RegisterRoutesOptions): void {
       ) {
         if (entry.child.exitCode === null && entry.child.signalCode === null)
           entry.child.kill("SIGKILL");
-        if (!(await waitForChildExit(entry, killGraceMs))) {
+        const terminalSettled = await waitForChildExit(entry, killGraceMs);
+
+        // A terminal purge settles the bounded permission callbacks. Derive
+        // the same precedence again from this causal barrier, not a timed tick.
+        throwIfFenced(entry, parsed.envelope);
+        throwIfParkedByPressure(entry);
+        throwIfProducerOutputFailed(entry, error);
+        if (!terminalSettled) {
           throw new SupervisorError(
             "EXECUTOR_UNAVAILABLE",
             "closed ACP transport has no durable session terminal",
             {
               details: { reason: "required_output_incomplete" },
+              cause: error,
             },
           );
         }
@@ -1673,13 +1694,7 @@ export function registerRoutes(opts: RegisterRoutesOptions): void {
       // ADR-183: a turn the outbox-pressure bound parked was cut short, even
       // when the adapter answered before it died — it is never a success.
       throwIfParkedByPressure(entry);
-      if (entry.record.outputFailure) {
-        throw new SupervisorError(
-          entry.record.outputFailure.code,
-          entry.record.outputFailure.message,
-          { details: entry.record.outputFailure.details },
-        );
-      }
+      throwIfProducerOutputFailed(entry);
       if (chatHitlId) {
         entry.record.monotonicId += 1;
         entry.emitter.emit(SESSION_EVENT_CHANNEL, {
@@ -1930,7 +1945,7 @@ export function registerRoutes(opts: RegisterRoutesOptions): void {
   app.get("/runtime-objects/:id", async (req, reply) => {
     const parsed = z
       .string()
-      .uuid()
+      .guid()
       .safeParse((req.params as { id?: unknown }).id);
 
     if (!parsed.success) {
@@ -1953,7 +1968,7 @@ export function registerRoutes(opts: RegisterRoutesOptions): void {
   app.put("/runtime-objects/:id/content", async (req, reply) => {
     const objectId = z
       .string()
-      .uuid()
+      .guid()
       .safeParse((req.params as { id?: unknown }).id);
 
     if (!objectId.success) {
@@ -2078,7 +2093,7 @@ export function registerRoutes(opts: RegisterRoutesOptions): void {
   app.get("/runtime-objects/:id/content", async (req, reply) => {
     const objectId = z
       .string()
-      .uuid()
+      .guid()
       .safeParse((req.params as { id?: unknown }).id);
 
     if (!objectId.success) {
@@ -2133,7 +2148,7 @@ export function registerRoutes(opts: RegisterRoutesOptions): void {
   app.delete("/runtime-objects/:id", async (req, reply) => {
     const objectId = z
       .string()
-      .uuid()
+      .guid()
       .safeParse((req.params as { id?: unknown }).id);
 
     if (!objectId.success) {
@@ -2717,7 +2732,7 @@ export function registerRoutes(opts: RegisterRoutesOptions): void {
           throw new SupervisorError("SPAWN", "child has no stdin for ACP");
         }
 
-        let connection: acp.ClientSideConnection;
+        let connection: AcpConnection;
         let acpSessionId: string;
         let capabilities: Awaited<
           ReturnType<typeof createAcpConnection>
@@ -2727,6 +2742,16 @@ export function registerRoutes(opts: RegisterRoutesOptions): void {
           const result = await createAcpConnection({
             stdin: child.stdin,
             stdoutSource: acpStdoutTap,
+            publishTextFrame(events) {
+              runtimeEvents.publishTextFrame(record, events);
+              for (const event of events) {
+                if (!registry.emitCanonicallyPersisted(sessionId, event))
+                  throw new SupervisorError(
+                    "ACP_PROTOCOL",
+                    "committed text frame lost its registered session",
+                  );
+              }
+            },
             sessionId,
             worktreePath: workspace.cwd,
             record,

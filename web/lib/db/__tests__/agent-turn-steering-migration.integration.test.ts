@@ -229,8 +229,10 @@ describe("migration 0180 agent turn steering (ADR-182)", () => {
         })
         .where(eq(agentTurns.id, second.id)),
     ).rejects.toMatchObject({
-      code: "23505",
-      constraint: "agent_turns_active_run_uq",
+      cause: {
+        code: "23505",
+        constraint: "agent_turns_active_run_uq",
+      },
     });
 
     await db
@@ -248,8 +250,10 @@ describe("migration 0180 agent turn steering (ADR-182)", () => {
         .insert(agentTurns)
         .values({ ...steerRow(parent, commandId), parentTurnId: null }),
     ).rejects.toMatchObject({
-      code: "23514",
-      constraint: "agent_turns_steer_parent_check",
+      cause: {
+        code: "23514",
+        constraint: "agent_turns_steer_parent_check",
+      },
     });
     await expect(
       db.insert(agentTurns).values({
@@ -262,8 +266,10 @@ describe("migration 0180 agent turn steering (ADR-182)", () => {
         parentTurnId: parent.parentTurnId,
       }),
     ).rejects.toMatchObject({
-      code: "23514",
-      constraint: "agent_turns_steer_parent_check",
+      cause: {
+        code: "23514",
+        constraint: "agent_turns_steer_parent_check",
+      },
     });
 
     const other = await seedDispatchedParent();
@@ -274,8 +280,10 @@ describe("migration 0180 agent turn steering (ADR-182)", () => {
         parentTurnId: other.parentTurnId,
       }),
     ).rejects.toMatchObject({
-      code: "23514",
-      constraint: "agent_turns_steer_parent_scope",
+      cause: {
+        code: "23514",
+        constraint: "agent_turns_steer_parent_scope",
+      },
     });
   });
 
@@ -285,8 +293,10 @@ describe("migration 0180 agent turn steering (ADR-182)", () => {
     await expect(
       db.insert(agentTurns).values(steerRow(parent, parent.parentCommandId, 3)),
     ).rejects.toMatchObject({
-      code: "23514",
-      constraint: "agent_turns_command_scope",
+      cause: {
+        code: "23514",
+        constraint: "agent_turns_command_scope",
+      },
     });
 
     // A steer command that names some other prompt is not this parent's.
@@ -305,8 +315,10 @@ describe("migration 0180 agent turn steering (ADR-182)", () => {
     await expect(
       db.insert(agentTurns).values(steerRow(parent, strayCommand.row.id, 5)),
     ).rejects.toMatchObject({
-      code: "23514",
-      constraint: "agent_turns_command_scope",
+      cause: {
+        code: "23514",
+        constraint: "agent_turns_command_scope",
+      },
     });
 
     // The steer rides the parent's own incarnation, not a sibling one.
@@ -330,8 +342,10 @@ describe("migration 0180 agent turn steering (ADR-182)", () => {
         incarnationId: siblingIncarnation,
       }),
     ).rejects.toMatchObject({
-      code: "23514",
-      constraint: "agent_turns_steer_parent_scope",
+      cause: {
+        code: "23514",
+        constraint: "agent_turns_steer_parent_scope",
+      },
     });
 
     const steerCommand = await issueSteer(parent);
@@ -343,8 +357,10 @@ describe("migration 0180 agent turn steering (ADR-182)", () => {
         parentTurnId: null,
       }),
     ).rejects.toMatchObject({
-      code: "23514",
-      constraint: "agent_turns_command_scope",
+      cause: {
+        code: "23514",
+        constraint: "agent_turns_command_scope",
+      },
     });
   });
 

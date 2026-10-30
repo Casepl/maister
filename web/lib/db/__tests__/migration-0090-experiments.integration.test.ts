@@ -259,7 +259,10 @@ describe("migration 0090 — experiment comparison tables (ADR-124)", () => {
         variantKey: "b",
         replicateOrdinal: 1,
       }),
-    ).rejects.toThrow(/experiment_runs_run_uq/);
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringMatching(/experiment_runs_run_uq/),
+    );
 
     await expect(
       insertExperimentRun({
@@ -269,7 +272,10 @@ describe("migration 0090 — experiment comparison tables (ADR-124)", () => {
         variantKey: "a",
         replicateOrdinal: 1,
       }),
-    ).rejects.toThrow(/experiment_runs_variant_replicate_uq/);
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringMatching(/experiment_runs_variant_replicate_uq/),
+    );
 
     await expect(
       insertExperimentRun({
@@ -280,7 +286,10 @@ describe("migration 0090 — experiment comparison tables (ADR-124)", () => {
         replicateOrdinal: 2,
         launchReason: "unknown",
       }),
-    ).rejects.toThrow(/experiment_runs_launch_reason_check/);
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringMatching(/experiment_runs_launch_reason_check/),
+    );
 
     await expect(
       insertExperiment({
@@ -290,7 +299,10 @@ describe("migration 0090 — experiment comparison tables (ADR-124)", () => {
         userId,
         status: "paused",
       }),
-    ).rejects.toThrow(/experiments_status_check/);
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringMatching(/experiments_status_check/),
+    );
 
     await db.execute(sql`DELETE FROM experiments WHERE id = ${experimentId}`);
 

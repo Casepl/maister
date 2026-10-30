@@ -155,8 +155,7 @@ const fakeDb: FakeDb = {
                 ) => TResult1 | PromiseLike<TResult1>)
               | null,
             onrejected?:
-              | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
-              | null,
+              ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
           ) => nextRows().then(onfulfilled, onrejected),
         }),
         then: <TResult1 = Record<string, unknown>[], TResult2 = never>(
@@ -166,8 +165,7 @@ const fakeDb: FakeDb = {
               ) => TResult1 | PromiseLike<TResult1>)
             | null,
           onrejected?:
-            | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
-            | null,
+            ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
         ) => nextRows().then(onfulfilled, onrejected),
       };
     },
@@ -211,9 +209,8 @@ vi.mock("@/lib/authz", () => ({
 vi.mock("@/lib/scratch-runs/prompt-intent", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("@/lib/scratch-runs/prompt-intent")>();
-  const { scratchPromptIntentFixture } = await import(
-    "@/test-support/scratch-prompt-intent-fixture"
-  );
+  const { scratchPromptIntentFixture } =
+    await import("@/test-support/scratch-prompt-intent-fixture");
 
   return {
     ...actual,
@@ -273,9 +270,8 @@ const hostCatalogue = vi.hoisted(() => ({
 
 vi.mock("@/lib/execution-host", async () => {
   const sup = await import("@/lib/supervisor-client");
-  const { executionHostModuleMock } = await import(
-    "@/test-support/execution-host-module-mock"
-  );
+  const { executionHostModuleMock } =
+    await import("@/test-support/execution-host-module-mock");
   const mock = executionHostModuleMock(sup as never);
 
   hostCatalogue.objects = mock.runtimeObjects;
@@ -524,8 +520,7 @@ describe("POST /api/scratch-runs", () => {
       "capabilityProfilePath",
     );
     const createArg = mocks.createSession.mock.calls[0]?.[0] as
-      | { readOnlySession?: boolean }
-      | undefined;
+      { readOnlySession?: boolean } | undefined;
 
     expect(createArg?.readOnlySession).not.toBe(true);
     expect(mocks.sendScratchPromptAndProjectEvents).toHaveBeenCalledWith(
@@ -604,8 +599,7 @@ describe("POST /api/scratch-runs", () => {
     const body = (frames.find((f) => f.type === "scratch.launch_result")
       ?.result ?? {}) as { runId?: string };
     const addArgs = mocks.addWorktree.mock.calls[0]?.[0] as
-      | { branch?: string }
-      | undefined;
+      { branch?: string } | undefined;
 
     expect(res.headers.get("content-type")).toContain("text/event-stream");
     expect(body.runId).toBeTruthy();

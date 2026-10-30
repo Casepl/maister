@@ -69,8 +69,7 @@ export async function GET(
     const db = getDb() as unknown as { select: any };
     const runRows = await db.select().from(runs).where(eq(runs.id, runId));
     const run = runRows[0] as
-      | { projectId: string; runKind: string }
-      | undefined;
+      { projectId: string; runKind: string } | undefined;
 
     if (!run) {
       throw new MaisterError("PRECONDITION", `run not found: ${runId}`);

@@ -101,12 +101,21 @@ export function AdminUsersTable({
 
   const totalPages = Math.max(1, Math.ceil(total / perPage));
 
-  useEffect(() => {
+  // Back/forward re-derives the URL filters; re-seed the inputs from them.
+  const [seeded, setSeeded] = useState(filters);
+
+  if (
+    seeded.q !== filters.q ||
+    seeded.role !== filters.role ||
+    seeded.status !== filters.status ||
+    seeded.projectId !== filters.projectId
+  ) {
+    setSeeded(filters);
     setQ(filters.q);
     setRole(filters.role);
     setStatus(filters.status);
     setProjectId(filters.projectId);
-  }, [filters.q, filters.role, filters.status, filters.projectId]);
+  }
 
   // Write the COMPLETE filter set (these 4 are the only params) so a rapid
   // dropdown-then-type can never drop a just-changed filter via a stale URL.

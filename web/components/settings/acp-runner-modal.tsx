@@ -29,6 +29,7 @@ import {
 import { adapterSetupHint } from "@/lib/acp-runners/setup-hints";
 import { ModelAutocomplete } from "@/components/settings/model-autocomplete";
 import { useModelSuggestions } from "@/components/settings/use-model-suggestions";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 type Provider = {
   kind: string;
@@ -210,9 +211,7 @@ export function AcpRunnerModal({
   const originalDraft = useRef<RunnerDraft>(seedDraft(mode, runner));
   const dialogRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
-  const onCloseRef = useRef(onClose);
-
-  onCloseRef.current = onClose;
+  const onCloseRef = useLatestRef(onClose);
 
   useEffect(() => {
     restoreFocusRef.current = document.activeElement as HTMLElement | null;

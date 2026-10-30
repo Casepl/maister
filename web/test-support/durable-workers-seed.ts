@@ -27,23 +27,24 @@ export const WORKER_ADMIN = {
   password: "DurableWorkers!pass1",
 };
 
-/**
- * A prompt the mock ACP adapter answers with `text` after holding the terminal
- * response for `terminalDelayMs`. The delay is the deterministic kill window:
- * the command is `accepted` and its live waiter is in-process, so SIGKILLing
- * the web during it leaves terminal evidence that only a durable owner can
- * apply.
- */
-export function fixturePrompt(spec: {
-  terminalDelayMs: number;
+export type FixtureTerminal =
+  | { terminalDelayMs: number; terminalBarrier?: never }
+  | { terminalBarrier: string; terminalDelayMs?: never };
+
+export type FixturePromptSpec = FixtureTerminal & {
   text?: string;
   bytes?: number;
-}): string {
+};
+
+/** A real ACP output turn with either pacing or an explicitly released terminal. */
+export function fixturePrompt(spec: FixturePromptSpec): string {
   return `fixture-output:${JSON.stringify({
     bytes: spec.bytes ?? 0,
     chunkSize: 400_000,
     text: spec.text ?? "",
-    terminalDelayMs: spec.terminalDelayMs,
+    ...(spec.terminalBarrier === undefined
+      ? { terminalDelayMs: spec.terminalDelayMs }
+      : { terminalBarrier: spec.terminalBarrier }),
   })}`;
 }
 
@@ -139,10 +140,9 @@ export async function seedProjectRepo(
  */
 export async function seedFlowTask(
   db: NodePgDatabase,
-  input: {
+  input: FixtureTerminal & {
     projectId: string;
     installedPath: string;
-    terminalDelayMs: number;
   },
 ): Promise<{ flowId: string; taskId: string; flowRevisionId: string }> {
   const flowId = randomUUID();
@@ -159,7 +159,7 @@ export async function seedFlowTask(
         type: "ai_coding",
         action: {
           prompt: fixturePrompt({
-            terminalDelayMs: input.terminalDelayMs,
+            ...input,
             text: "\nwork node answered\n",
           }),
         },
@@ -214,10 +214,9 @@ export async function seedFlowTask(
  */
 export async function seedAgentDefinition(
   db: NodePgDatabase,
-  input: {
+  input: FixtureTerminal & {
     projectId: string;
     installedPath: string;
-    terminalDelayMs: number;
   },
 ): Promise<{ agentId: string; packageName: string }> {
   const packageId = randomUUID();
@@ -229,7 +228,7 @@ export async function seedAgentDefinition(
     "researcher.md",
   );
   const prompt = fixturePrompt({
-    terminalDelayMs: input.terminalDelayMs,
+    ...input,
     text: '\n```json maister:output\n{"summary":"durable worker answer"}\n```',
   });
 

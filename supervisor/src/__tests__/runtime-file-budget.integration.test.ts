@@ -1,18 +1,25 @@
 import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
+  appendFileSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { DatabaseSync, type StatementSync } from "node:sqlite";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { openHostState } from "../host-state";
+import {
+  HOST_STATE_FILE,
+  openHostState,
+  type CommandReceiptRow,
+} from "../host-state";
+import { prepareProducerFiles } from "../producer-files";
 import { RuntimeObjectRegistry } from "../runtime-objects";
 import {
   DEFAULT_RUNTIME_LIMITS,
@@ -36,6 +43,104 @@ const LIMITS = validateRuntimeLimits({
 });
 
 describe("AT-02 aggregate runtime file capacity", () => {
+  it("keeps funded producer progress exact without durable writes and inventories interrupted capture", () => {
+    const root = mkdtempSync(join(tmpdir(), "maister-producer-progress-"));
+    const stateDir = join(root, "state");
+    let state = openHostState({ stateDir });
+    const receipt: CommandReceiptRow = {
+      commandId: randomUUID(),
+      runId: "producer-progress",
+      kind: "session.create",
+      assignmentId: randomUUID(),
+      epoch: 1,
+      hostSessionId: null,
+      requestDigest: "producer-progress",
+      eventId: null,
+      phase: "accepted",
+      httpStatus: 202,
+      body: {},
+      receivedAt: new Date().toISOString(),
+      completedAt: null,
+    };
+    const sessionId = randomUUID();
+    const logPath = join(root, "capture.log");
+    const observer = new DatabaseSync(join(stateDir, HOST_STATE_FILE));
+
+    try {
+      state.reserveProducerReceipt(receipt, 0);
+      const files = prepareProducerFiles({
+        state,
+        walletId: receipt.commandId,
+        sessionId,
+        logPath,
+      });
+      const baseline = state.runtimeFileBudget().chargedBytes;
+      const bytes = Buffer.alloc(128, 120);
+
+      expect(files.tryReserveLogBytes(bytes.length)).toBe(true);
+      const version = observer.prepare("PRAGMA data_version").get();
+      let capacityWakes = 0;
+      const unsubscribe = state.subscribeRuntimeCapacity(() => {
+        capacityWakes += 1;
+      });
+
+      const progressReads = vi.spyOn(
+        Object.getPrototypeOf(observer.prepare("SELECT 1")) as StatementSync,
+        "get",
+      );
+
+      for (let index = 0; index < 32; index += 1) {
+        if (index > 0)
+          expect(files.tryReserveLogBytes(bytes.length)).toBe(true);
+        writeFileSync(files.spoolPath, bytes);
+        files.recordSpoolBytes(bytes.length);
+        appendFileSync(logPath, bytes);
+        files.recordLogBytes(bytes.length);
+        writeFileSync(files.spoolPath, Buffer.alloc(0));
+        files.recordSpoolBytes(0);
+        expect(state.getRuntimeFile(`log:${sessionId}`)?.writtenBytes).toBe(
+          (index + 1) * bytes.length,
+        );
+        expect(state.runtimeFileBudget().writtenBytes).toBe(
+          (index + 1) * bytes.length,
+        );
+      }
+      const readsDuringCapture = progressReads.mock.calls.length;
+
+      progressReads.mockRestore();
+      const captureVersion = observer.prepare("PRAGMA data_version").get();
+      const capacity = state.runtimeFileBudget().chargedBytes;
+
+      unsubscribe();
+      state.reportRuntimeStorageFailure(
+        Object.assign(new Error("capture failed"), { code: "EIO" }),
+      );
+      expect(() => files.recordLogBytes(0)).toThrow(/repair/);
+
+      state.close();
+      state = openHostState({ stateDir });
+      expect(state.getRuntimeFile(`log:${sessionId}`)?.writtenBytes).toBe(4096);
+      expect(state.runtimeFileBudget().writtenBytes).toBe(4096);
+      state.sealRuntimeFile(`log:${sessionId}`, 4096);
+      expect(state.getRuntimeFile(`log:${sessionId}`)).toMatchObject({
+        capacityBytes: 4096,
+        writtenBytes: 4096,
+        sealed: true,
+      });
+      expect(state.runtimeFileBudget().chargedBytes).toBe(baseline + 4096);
+      expect(captureVersion).toEqual(version);
+      expect(capacity).toBe(baseline + 65536);
+      expect(capacityWakes).toBe(0);
+      // Only the two explicit live-accounting reads per iteration above.
+      expect(readsDuringCapture).toBe(64);
+    } finally {
+      vi.restoreAllMocks();
+      observer.close();
+      state.close();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("refuses restart without deleting retained bytes that exceed their reservation", () => {
     const root = mkdtempSync(join(tmpdir(), "maister-file-overrun-"));
     const stateDir = join(root, "state");

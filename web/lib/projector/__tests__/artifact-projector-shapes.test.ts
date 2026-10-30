@@ -27,12 +27,10 @@ vi.mock("pino", () => ({
   }),
 }));
 
-const { ExecutionEventProjectionError } = await import(
-  "@/lib/execution-host/events/projector"
-);
-const { canonicalArtifactProjector } = await import(
-  "@/lib/projector/artifact-projector"
-);
+const { ExecutionEventProjectionError } =
+  await import("@/lib/execution-host/events/projector");
+const { canonicalArtifactProjector } =
+  await import("@/lib/projector/artifact-projector");
 
 const tx = {} as never;
 

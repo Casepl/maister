@@ -6,10 +6,7 @@ import { promisify } from "node:util";
 const execFile = promisify(execFileCb);
 
 export type FlowFixtureKind =
-  | "valid"
-  | "invalid-manifest"
-  | "with-setup-ok"
-  | "with-setup-fail";
+  "valid" | "invalid-manifest" | "with-setup-ok" | "with-setup-fail";
 
 const VALID_FLOW_YAML_V1 = `schemaVersion: 1
 name: Test Flow

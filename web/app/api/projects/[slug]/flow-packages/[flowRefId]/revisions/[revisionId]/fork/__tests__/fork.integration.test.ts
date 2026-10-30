@@ -271,9 +271,8 @@ beforeAll(async () => {
     installedPath: bundleDir,
   });
 
-  ({ POST } = await import(
-    "@/app/api/projects/[slug]/flow-packages/[flowRefId]/revisions/[revisionId]/fork/route"
-  ));
+  ({ POST } =
+    await import("@/app/api/projects/[slug]/flow-packages/[flowRefId]/revisions/[revisionId]/fork/route"));
 }, 180_000);
 
 afterAll(async () => {
@@ -322,8 +321,7 @@ describe("POST .../revisions/[revisionId]/fork (integration)", () => {
       LIMIT 1
     `);
     const rev = (revRows.rows ?? [])[0] as
-      | { body?: { flowYaml?: string } }
-      | undefined;
+      { body?: { flowYaml?: string } } | undefined;
 
     expect(rev?.body?.flowYaml).toContain("presentation:");
     expect(rev?.body?.flowYaml).toContain("x: 120");

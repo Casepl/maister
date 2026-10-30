@@ -51,9 +51,8 @@ vi.mock("@/lib/authz", () => ({
   requireProjectAction: vi.fn(async () => undefined),
 }));
 
-const { exportWorkbenchBranch, snapshotWorkbenchCommit } = await import(
-  "@/lib/workbench-lifecycle/service"
-);
+const { exportWorkbenchBranch, snapshotWorkbenchCommit } =
+  await import("@/lib/workbench-lifecycle/service");
 const { loadGitState } = await import("@/lib/workbench-git/read-model");
 
 let testDatabase: StartedPostgresTestDb;

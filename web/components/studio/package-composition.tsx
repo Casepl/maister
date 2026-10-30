@@ -7,7 +7,7 @@ import type { PackageBom } from "@/lib/queries/package-bom";
 import type { CompositionKind } from "@/lib/local-packages/composition";
 import type { ReactElement, ReactNode } from "react";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
@@ -140,9 +140,12 @@ export function PackageComposition({
   const [filter, setFilter] = useState("");
   const filterable = activeTab === "skills" || isInlineKind(activeTab);
 
-  useEffect(() => {
+  const [filterTab, setFilterTab] = useState(activeTab);
+
+  if (filterTab !== activeTab) {
+    setFilterTab(activeTab);
     setFilter("");
-  }, [activeTab]);
+  }
 
   const tabs: PackageTabDescriptor[] = COMPOSITION_TAB_IDS.map((id) => ({
     id,

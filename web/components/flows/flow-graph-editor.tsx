@@ -321,8 +321,7 @@ function editorCanvasNode(
 function toEditorEdges(edges: Edge[]): Edge[] {
   return edges.map((e) => {
     const data = e.data as
-      | { displayLabel?: string; outcome?: string }
-      | undefined;
+      { displayLabel?: string; outcome?: string } | undefined;
     const outcome = data?.outcome ?? "";
     const { animated, style } = edgeOutcomeStyle(outcome);
 

@@ -666,8 +666,7 @@ async function runVerifier(
           agent: verifierRuntime.executor.agent,
           model: verifierRuntime.executor.model,
           env: (verifierRuntime.executor.env ?? undefined) as
-            | Record<string, string>
-            | undefined,
+            Record<string, string> | undefined,
         },
         ...(verifierRuntime.runner ? { runner: verifierRuntime.runner } : {}),
         ...(verifierRuntime.adapterLaunch
@@ -1196,8 +1195,7 @@ async function synthesizeConsensus(
           agent: synthesizer.executor.agent,
           model: synthesizer.executor.model,
           env: (synthesizer.executor.env ?? undefined) as
-            | Record<string, string>
-            | undefined,
+            Record<string, string> | undefined,
         },
         ...(synthesizer.runner ? { runner: synthesizer.runner } : {}),
         ...(synthesizer.adapterLaunch

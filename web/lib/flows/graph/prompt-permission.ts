@@ -426,8 +426,7 @@ export async function completeFlowPermissionDelivery(
   if (!hitl || !schema) return;
   const priorResponse = hitl.response as Record<string, unknown> | null;
   const priorAudit = priorResponse?._audit as
-    | Record<string, unknown>
-    | undefined;
+    Record<string, unknown> | undefined;
 
   if (
     hitl.respondedAt &&

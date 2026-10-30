@@ -161,7 +161,10 @@ async function refuseCrossProjectTarget(
     );
   }
 
-  if ((ctx.actor.tokenKind === "user" || ctx.actor.tokenKind === "librarian") && ctx.actor.ownerUserId !== null) {
+  if (
+    (ctx.actor.tokenKind === "user" || ctx.actor.tokenKind === "librarian") &&
+    ctx.actor.ownerUserId !== null
+  ) {
     try {
       await requireProjectActionForUser(
         ctx.actor.ownerUserId,
@@ -240,7 +243,11 @@ function makeCounterpartAuthorizer(
       // project, so a foreign counterpart is always redacted for it.
       if (ctx.actor.projectId !== null) return false;
 
-      if ((ctx.actor.tokenKind === "user" || ctx.actor.tokenKind === "librarian") && ctx.actor.ownerUserId) {
+      if (
+        (ctx.actor.tokenKind === "user" ||
+          ctx.actor.tokenKind === "librarian") &&
+        ctx.actor.ownerUserId
+      ) {
         try {
           await requireProjectActionForUser(
             ctx.actor.ownerUserId,
@@ -447,9 +454,10 @@ async function handleMutation(
               ? await addTaskRelation(input, tx)
               : await removeTaskRelation(input, tx);
 
-          const response = mode === "add"
-            ? { ok: true, created: "created" in outcome && outcome.created }
-            : { ok: true, removed: "removed" in outcome && outcome.removed };
+          const response =
+            mode === "add"
+              ? { ok: true, created: "created" in outcome && outcome.created }
+              : { ok: true, removed: "removed" in outcome && outcome.removed };
 
           await recordRequiredTokenAudit(
             {
@@ -462,7 +470,13 @@ async function handleMutation(
               statusCode: mode === "add" ? 201 : 200,
               operationId: ctx.operationId,
               operation: ctx.operationId
-                ? { id: ctx.operationId, result: { statusCode: mode === "add" ? 201 : 200, body: response } }
+                ? {
+                    id: ctx.operationId,
+                    result: {
+                      statusCode: mode === "add" ? 201 : 200,
+                      body: response,
+                    },
+                  }
                 : undefined,
             },
             tx,
@@ -472,16 +486,10 @@ async function handleMutation(
         });
 
         if (mode === "add") {
-          return NextResponse.json(
-            result,
-            { status: 201 },
-          );
+          return NextResponse.json(result, { status: 201 });
         }
 
-        return NextResponse.json(
-          result,
-          { status: 200 },
-        );
+        return NextResponse.json(result, { status: 200 });
       } catch (err) {
         if (isMaisterError(err)) {
           return NextResponse.json(

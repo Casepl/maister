@@ -420,6 +420,7 @@ export async function reconcileAdmittedLibrarianOperations(
       "run_reopen",
       "card_decide",
     ]).has(operation.kind);
+
     // These services cross Git/supervisor boundaries and do not have a
     // via-operation result row. An absent row cannot prove non-application.
     if (!result && externalEffect && operation.status === "unknown") continue;

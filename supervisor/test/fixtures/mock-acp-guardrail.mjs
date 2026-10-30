@@ -22,7 +22,9 @@
 import { randomUUID } from "node:crypto";
 import { Readable, Writable } from "node:stream";
 
-import * as acp from "@agentclientprotocol/sdk";
+import * as acp from "@agentclientprotocol/sdk/unstable";
+
+import { serveAgent } from "./acp-agent-app.mjs";
 
 const args = process.argv.slice(2);
 let scenario = "none";
@@ -332,7 +334,7 @@ const stream = acp.ndJsonStream(
   Readable.toWeb(process.stdin),
 );
 
-new acp.AgentSideConnection((conn) => new GuardrailAgent(conn), stream);
+serveAgent((conn) => new GuardrailAgent(conn), stream);
 
 process.on("SIGTERM", () => process.exit(143));
 process.on("SIGINT", () => process.exit(130));

@@ -37,7 +37,7 @@ const optionalNonEmptyString = z.preprocess(
 
 export const scratchLaunchInputSchema = z
   .object({
-    projectId: z.string().uuid(),
+    projectId: z.string().guid(),
     baseBranch: z.string().min(1).max(255),
     branchName: optionalNonEmptyString,
     name: z.string().max(200).optional(),
@@ -46,7 +46,7 @@ export const scratchLaunchInputSchema = z
     reasoningEffort: scratchReasoningEffortSchema.default("high"),
     planMode: scratchPlanModeSchema.optional(),
     prompt: z.string().max(60_000).default(""),
-    linkedTaskId: z.string().uuid().optional(),
+    linkedTaskId: z.string().guid().optional(),
     linkedIssueUrl: z.string().url().max(2048).optional(),
     attachments: z.array(scratchAttachmentInputSchema).max(20).default([]),
     capabilities: z

@@ -216,10 +216,11 @@ sequenceDiagram
 
     U->>W: POST /api/runs/[id]/promote (mode=local_merge, reviewedTargetCommit)
     Note over W,DB: Claim tx (short, commits BEFORE side-effect)
-    W->>DB: SELECT workspace FOR UPDATE
-    W->>DB: assert status=Review and readiness ready/overridden
-    W->>DB: assert reviewedTargetCommit == live target HEAD (unless allowTargetDrift)
-    W->>DB: assert promotion_state in none/failed (or stale claiming)
+    W->>DB: Read run, SELECT workspace FOR UPDATE
+    W->>W: assert initial status=Review, authorize project
+    W->>DB: assert no active workbench claim and promotion claim is reclaimable
+    W->>DB: re-read nonshared status=Review, assert readiness ready/overridden
+    W->>FS: assert reviewedTargetCommit == live target HEAD (unless allowTargetDrift)
     alt guard fails
         W->>DB: ROLLBACK
         W-->>U: 409 PRECONDITION or CONFLICT (run stays Review, no claim)
@@ -258,7 +259,8 @@ sequenceDiagram
 
     U->>W: POST /api/runs/[id]/promote (mode=pull_request, reviewedTargetCommit)
     Note over W,DB: Claim tx (mints attempt token, commits BEFORE side-effect)
-    W->>DB: SELECT workspace FOR UPDATE, assert status/readiness/drift/no-active-claim
+    W->>DB: SELECT workspace FOR UPDATE, assert initial Review/authorization/no-active-claim
+    W->>DB: re-check nonshared status, readiness and target drift
     W->>DB: mint promotion_attempt_id, CAS promotion_state=claiming, COMMIT
     opt a PR is recorded (ADR-181)
         W->>PA: getPrState(pr_number)
@@ -355,6 +357,16 @@ attempt-token CAS prevents a **double finalize**; the stored `pr_url` (+ a
 provider query) prevents a **double side-effect** for PR mode
 (**Implemented**). A `local_merge` re-merge of an already-merged
 source is a no-op (`Already up to date`).
+
+For workspace-backed promotion, a contender that observed `Review` checks the
+locked workspace's ownership before reading a potentially changed target or
+re-reading the run's status. An active claim, or a winner that completed while
+the contender waited, yields `CONFLICT`; the winner's own merge is not reported
+as independent target drift. A new request that initially observes a terminal
+run remains `PRECONDITION`. Authorization precedes the ownership refusal. A
+claimable nonshared run still re-reads status under the workspace lock before
+minting a claim, preserving the concurrent-rework fence. Readiness and genuine
+target drift retain their existing refusals for claimable requests.
 
 ```mermaid
 flowchart TD

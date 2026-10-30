@@ -452,9 +452,8 @@ describe("T-B6 — loadPendingOperatorCorrection (consume-once retrieval)", () =
   }
 
   it("returns the correction to the FIRST attempt started after the response", async () => {
-    const { loadPendingOperatorCorrection } = await import(
-      "@/lib/runs/node-interrupt"
-    );
+    const { loadPendingOperatorCorrection } =
+      await import("@/lib/runs/node-interrupt");
     const { runId, respondedAt } = await seedAnsweredInterrupt("ni-corr-first");
 
     // The restarted attempt, appended by runGraph after the Reworked close.
@@ -468,9 +467,8 @@ describe("T-B6 — loadPendingOperatorCorrection (consume-once retrieval)", () =
   // Consume-once: once a LATER attempt exists, the correction has been spent and
   // must not leak forward into an unrelated visit.
   it("returns null once a second attempt has started (consumed)", async () => {
-    const { loadPendingOperatorCorrection } = await import(
-      "@/lib/runs/node-interrupt"
-    );
+    const { loadPendingOperatorCorrection } =
+      await import("@/lib/runs/node-interrupt");
     const { runId, respondedAt } = await seedAnsweredInterrupt("ni-corr-spent");
 
     await appendAttempt(runId, new Date(respondedAt.getTime() + 5_000), 2);
@@ -482,9 +480,8 @@ describe("T-B6 — loadPendingOperatorCorrection (consume-once retrieval)", () =
   // A correction is owed to its TARGET node only — a restart_from correction
   // must not be picked up by the node the operator interrupted.
   it("returns null for a node the correction does not target", async () => {
-    const { loadPendingOperatorCorrection } = await import(
-      "@/lib/runs/node-interrupt"
-    );
+    const { loadPendingOperatorCorrection } =
+      await import("@/lib/runs/node-interrupt");
     const { runId, respondedAt } = await seedAnsweredInterrupt(
       "ni-corr-other",
       {
@@ -500,9 +497,8 @@ describe("T-B6 — loadPendingOperatorCorrection (consume-once retrieval)", () =
   // The overwhelmingly common path: a run that was never interrupted pays
   // nothing and gets nothing appended.
   it("returns null when the run was never interrupted", async () => {
-    const { loadPendingOperatorCorrection } = await import(
-      "@/lib/runs/node-interrupt"
-    );
+    const { loadPendingOperatorCorrection } =
+      await import("@/lib/runs/node-interrupt");
     const { runId } = await seedRunningRun("ni-corr-none");
 
     expect(await loadPendingOperatorCorrection(db, runId, NODE)).toBeNull();

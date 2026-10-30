@@ -4,7 +4,9 @@ import { existsSync } from "node:fs";
 import { appendFile, open, writeFile } from "node:fs/promises";
 import { Readable, Writable } from "node:stream";
 
-import * as acp from "@agentclientprotocol/sdk";
+import * as acp from "@agentclientprotocol/sdk/unstable";
+
+import { serveAgent } from "./acp-agent-app.mjs";
 
 const args = process.argv.slice(2);
 let lines = 3;
@@ -24,6 +26,7 @@ let emitUsage = false;
 let supportsResume = false;
 let invocationLog;
 let controlledPrompt = false;
+let controlledTerminal = false;
 let releasePrompt;
 // ADR-182 steering fixture: advertise `_meta.steering.supported`, register the
 // `_session/steering` extension request and script its answer. `auto` behaves
@@ -82,6 +85,8 @@ for (let i = 0; i < args.length; i += 1) {
     if (!invocationLog) throw new Error("--invocation-log requires a path");
   } else if (arg === "--controlled-prompt") {
     controlledPrompt = true;
+  } else if (arg === "--controlled-terminal") {
+    controlledTerminal = true;
   } else if (arg === "--write-env") {
     outputWrites.push({ envName: args[++i], content: args[++i] });
   } else if (arg === "--write-env-bytes") {
@@ -104,6 +109,11 @@ for (let i = 0; i < args.length; i += 1) {
   }
 }
 
+if (controlledPrompt && controlledTerminal)
+  throw new Error("controlled prompt and controlled terminal require separate adapters");
+if (controlledTerminal && !invocationLog)
+  throw new Error("--controlled-terminal requires --invocation-log");
+
 async function logInvocation(entry) {
   if (!invocationLog) return;
   await appendFile(invocationLog, `${JSON.stringify({ pid: process.pid, ...entry })}\n`);
@@ -118,6 +128,12 @@ function steerText(prompt) {
 
 function never() {
   return new Promise(() => {});
+}
+
+function fixtureOutputLine(params) {
+  const text = params.prompt.find((block) => block.type === "text")?.text;
+
+  return text?.split("\n").find((line) => line.startsWith("fixture-output:"));
 }
 
 class LifecycleAgent {
@@ -275,7 +291,9 @@ class LifecycleAgent {
         return;
       }
     }
-    if (controlledPrompt && releasePrompt) releasePrompt("cancelled");
+    if ((controlledPrompt || controlledTerminal) && releasePrompt) releasePrompt("cancelled");
+    if (controlledTerminal)
+      await logInvocation({ sessionId: params?.sessionId, method: "session/cancel/processed" });
   }
 
   async prompt(params) {
@@ -301,17 +319,37 @@ class LifecycleAgent {
   }
 
   async runPrompt(params) {
-    // Install the release before publishing the reached witness to the test.
-    const held = controlledPrompt ? new Promise((resolve) => {
-      if (releasePrompt) throw new Error("controlled prompt already owns the adapter");
+    const terminalLine = controlledTerminal ? fixtureOutputLine(params) : undefined;
+    const terminalBarrier = terminalLine
+      ? JSON.parse(terminalLine.slice("fixture-output:".length))?.terminalBarrier
+      : undefined;
+    if (terminalBarrier !== undefined &&
+        (typeof terminalBarrier !== "string" || !/^[a-zA-Z0-9_-]{1,160}$/u.test(terminalBarrier)))
+      throw new Error("controlled terminal requires one safe nonempty barrier token");
+    if ((controlledPrompt || terminalBarrier !== undefined) && releasePrompt)
+      throw new Error("controlled prompt already owns the adapter");
+    // Latch cancellation during output before publishing the terminal witness.
+    const held = controlledPrompt || terminalBarrier !== undefined ? new Promise((resolve) => {
       releasePrompt = (value) => { releasePrompt = undefined; resolve(value); };
     }) : undefined;
+    const ownedRelease = releasePrompt;
+
+    try {
+      return await this.runPromptOutput(params, terminalBarrier, held);
+    } finally {
+      if (terminalBarrier !== undefined && releasePrompt === ownedRelease)
+        releasePrompt = undefined;
+    }
+  }
+
+  async runPromptOutput(params, terminalBarrier, held) {
     if (invocationLog) {
       await appendFile(invocationLog, `${JSON.stringify({
         pid: process.pid,
         sessionId: params.sessionId,
         method: "session/prompt",
         requestSha256: createHash("sha256").update(JSON.stringify(params)).digest("hex"),
+        ...(terminalBarrier !== undefined ? { terminalBarrier } : {}),
         ...(steerHoldFile ? { duringSteer: steersHeld > 0 } : {}),
       })}\n`);
     }
@@ -327,10 +365,7 @@ class LifecycleAgent {
     }
     await this.drainSteers(params.sessionId);
     // Exercise real ACP framing without putting megabyte arguments in argv.
-    const fixtureText = params.prompt.find(
-      (block) => block.type === "text",
-    )?.text;
-    const fixtureLine = fixtureText?.split("\n").find((line) => line.startsWith("fixture-output:"));
+    const fixtureLine = fixtureOutputLine(params);
     if (fixtureLine) {
       // Flow nodes may surround the fixture line with resume and run context.
       const spec = JSON.parse(fixtureLine.slice("fixture-output:".length));
@@ -382,6 +417,8 @@ class LifecycleAgent {
             ),
           );
         }
+        if (terminalBarrier !== undefined && await this.holdTerminal(params, terminalBarrier, held) === "cancelled")
+          return { stopReason: "cancelled" };
         return { stopReason: "end_turn" };
       }
       const glyph = spec.multibyte ? "é" : "x";
@@ -414,6 +451,8 @@ class LifecycleAgent {
               },
         });
       }
+      if (terminalBarrier !== undefined && await this.holdTerminal(params, terminalBarrier, held) === "cancelled")
+        return { stopReason: "cancelled" };
       if (spec.terminalDelayMs) await new Promise((resolve) => setTimeout(resolve, spec.terminalDelayMs));
       await this.drainSteers(params.sessionId);
       return {
@@ -515,6 +554,21 @@ class LifecycleAgent {
 
     return { stopReason: "end_turn" };
   }
+
+  async holdTerminal(params, terminalBarrier, held) {
+    const identity = {
+      sessionId: params.sessionId,
+      requestSha256: createHash("sha256").update(JSON.stringify(params)).digest("hex"),
+      terminalBarrier,
+    };
+
+    await logInvocation({ ...identity, method: "session/prompt/terminal-held", at: Date.now() });
+    const outcome = await held;
+
+    await logInvocation({ ...identity, method: "session/prompt/terminal-released", at: Date.now(), outcome });
+
+    return outcome;
+  }
 }
 
 const stream = acp.ndJsonStream(
@@ -522,7 +576,7 @@ const stream = acp.ndJsonStream(
   Readable.toWeb(process.stdin),
 );
 
-new acp.AgentSideConnection(
+serveAgent(
   (connToAgent) => new LifecycleAgent(connToAgent),
   stream,
 );
@@ -534,6 +588,6 @@ process.on("SIGINT", () => process.exit(130));
 // Lifecycle tests release this barrier only after prompt receipt completion.
 if (controlledExit) process.on("SIGUSR2", () => process.exit(exitCode));
 // A test-owned adapter barrier. No elapsed delay opens the completion window.
-if (controlledPrompt) process.on("SIGUSR1", () => releasePrompt?.("complete"));
+if (controlledPrompt || controlledTerminal) process.on("SIGUSR1", () => releasePrompt?.("complete"));
 
 setInterval(() => {}, 1 << 30);

@@ -55,8 +55,7 @@ async function loadInstallSource(
     .from(packageInstalls)
     .where(eq(packageInstalls.id, installId));
   const install = rows[0] as
-    | { installedPath?: string; name?: string }
-    | undefined;
+    { installedPath?: string; name?: string } | undefined;
 
   if (!install) {
     throw new MaisterError("CONFIG", `package install not found: ${installId}`);

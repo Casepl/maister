@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   openHostState,
@@ -19,6 +19,7 @@ import {
   validateRuntimeLimits,
 } from "../runtime-limits";
 import { createSqliteStorage } from "../sqlite-storage";
+import { reuseSqliteStatements } from "../sqlite-statements";
 
 import {
   bootHost,
@@ -26,6 +27,34 @@ import {
   createSession,
   waitFor,
 } from "./_fixtures/boot-host";
+
+it("keeps cached reads fresh and simultaneous SQLite cursors independent", () => {
+  const database = reuseSqliteStatements(new DatabaseSync(":memory:"));
+
+  try {
+    database.exec("CREATE TABLE samples (value INTEGER PRIMARY KEY)");
+    database.exec("INSERT INTO samples VALUES (1), (2), (3)");
+    const query = "SELECT value FROM samples WHERE value >= ? ORDER BY value";
+    const first = database.prepare(query).iterate(1);
+
+    expect(first.next().value).toEqual({ value: 1 });
+    expect(database.prepare(query).get(3)).toEqual({ value: 3 });
+    const second = database.prepare(query).iterate(2);
+
+    expect(second.next().value).toEqual({ value: 2 });
+    expect(Array.from(first)).toEqual([{ value: 2 }, { value: 3 }]);
+    expect(Array.from(second)).toEqual([{ value: 3 }]);
+    database.exec("BEGIN IMMEDIATE");
+    expect(database.isTransaction).toBe(true);
+    database.prepare("INSERT INTO samples VALUES (?)").run(4);
+    expect(database.prepare(query).get(4)).toEqual({ value: 4 });
+    database.exec("ROLLBACK");
+    expect(database.isTransaction).toBe(false);
+    expect(database.prepare(query).get(4)).toBeUndefined();
+  } finally {
+    database.close();
+  }
+});
 
 // ADR-183: the per-kind gate replaces the dead assertCanAcceptMutatingCommand;
 // a `new_work` receipt runs the physical, soft and hard admission checks.
@@ -51,6 +80,39 @@ function admitNewWork(state: HostState): void {
 }
 
 describe("AT-02 physical runtime storage", () => {
+  it("measures file-backed admission without reading diagnostic page statistics", () => {
+    const directory = mkdtempSync(join(tmpdir(), "maister-physical-reads-"));
+    const file = join(directory, "state.sqlite");
+    const db = new DatabaseSync(file);
+
+    try {
+      db.exec(
+        "PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; CREATE TABLE samples (value INTEGER)",
+      );
+      const storage = createSqliteStorage({
+        db,
+        file,
+        limits: DEFAULT_RUNTIME_LIMITS,
+      });
+      const prepare = vi.spyOn(db, "prepare");
+
+      expect(storage.canAdmit(0)).toBe(true);
+      storage.write(() => db.exec("INSERT INTO samples VALUES (1)"));
+      const queries = prepare.mock.calls.map(([sql]) => sql);
+
+      prepare.mockRestore();
+      expect(storage.snapshot().pageCount).toBeGreaterThan(0);
+      expect(db.prepare("SELECT value FROM samples").get()).toEqual({
+        value: 1,
+      });
+      expect(queries).toEqual([]);
+    } finally {
+      vi.restoreAllMocks();
+      db.close();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
   it("preserves default-scale retained capacity and terminal capacity across restart", () => {
     const stateDir = mkdtempSync(join(tmpdir(), "maister-default-capacity-"));
     let state = openHostState({ stateDir });
@@ -218,8 +280,27 @@ describe("AT-02 physical runtime storage", () => {
     });
     const state = openHostState({ stateDir, limits });
     const observer = new DatabaseSync(join(stateDir, "state.sqlite"));
+    const walletId = randomUUID();
 
     try {
+      state.reserveProducerReceipt(
+        {
+          commandId: walletId,
+          runId: "physical-frame",
+          kind: "session.create",
+          assignmentId: randomUUID(),
+          epoch: 1,
+          hostSessionId: null,
+          requestDigest: "physical-frame",
+          eventId: null,
+          phase: "accepted",
+          httpStatus: 202,
+          body: {},
+          receivedAt: new Date().toISOString(),
+          completedAt: null,
+        },
+        0,
+      );
       observer.exec("PRAGMA wal_checkpoint(TRUNCATE)");
       observer.exec("BEGIN");
       observer.prepare("SELECT COUNT(*) FROM runtime_event_outbox").get();
@@ -258,9 +339,14 @@ describe("AT-02 physical runtime storage", () => {
         limits.eventSoftBytes,
       );
       expect(() => admitNewWork(state)).toThrow(/physical/);
+      expect(state.tryReserveRuntimeFrame(walletId, 128)).toBeNull();
       observer.exec("ROLLBACK");
       observer.exec("PRAGMA wal_checkpoint(TRUNCATE)");
       expect(() => admitNewWork(state)).not.toThrow();
+      const frame = state.tryReserveRuntimeFrame(walletId, 128);
+
+      expect(frame).not.toBeNull();
+      state.releaseRuntimeFrame(frame!);
     } finally {
       if (observer.isTransaction) observer.exec("ROLLBACK");
       observer.close();
@@ -314,8 +400,8 @@ describe("AT-02 physical runtime storage", () => {
         createSession(host, { runId: "storage-failure-first" }),
         createSession(host, { runId: "storage-failure-second" }),
       ]);
-      const entries = sessions.map(
-        (session) => host.registry.get(session.sessionId)!,
+      const entries = sessions.map((session) =>
+        host.registry.get(session.sessionId)!,
       );
       const retained = host.hostState.runtimeEventOutboxStats().retainedCount;
 

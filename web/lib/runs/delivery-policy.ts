@@ -1,10 +1,7 @@
 import { z } from "zod";
 
 export type DeliveryPolicyStrategy =
-  | "merge"
-  | "rebase_merge"
-  | "pull_request"
-  | "ai_rebase_merge";
+  "merge" | "rebase_merge" | "pull_request" | "ai_rebase_merge";
 
 export type DeliveryPolicyPush = "never" | "on_success";
 
@@ -24,15 +21,10 @@ export type StoredDeliveryPolicy = Omit<DeliveryPolicy, "targetBranch"> & {
 export type DeliveryPolicyOverride = Partial<StoredDeliveryPolicy>;
 
 export type LegacyPromotionMode =
-  | "local_merge"
-  | "rebase_merge"
-  | "pull_request";
+  "local_merge" | "rebase_merge" | "pull_request";
 
 export type EffectivePromotionMode =
-  | "merge"
-  | "rebase_merge"
-  | "pull_request"
-  | "ai_rebase_merge";
+  "merge" | "rebase_merge" | "pull_request" | "ai_rebase_merge";
 
 export const deliveryPolicyStrategySchema = z.enum([
   "merge",

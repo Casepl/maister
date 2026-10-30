@@ -41,12 +41,10 @@ beforeAll(async () => {
   db = testDatabase.db;
 
   const accountRoute = await import("@/app/api/account/tokens/route");
-  const accountTokenRoute = await import(
-    "@/app/api/account/tokens/[tokenId]/route"
-  );
-  const projectTokensRoute = await import(
-    "@/app/api/projects/[slug]/tokens/route"
-  );
+  const accountTokenRoute =
+    await import("@/app/api/account/tokens/[tokenId]/route");
+  const projectTokensRoute =
+    await import("@/app/api/projects/[slug]/tokens/route");
 
   accountGet = accountRoute.GET;
   accountPost = accountRoute.POST;

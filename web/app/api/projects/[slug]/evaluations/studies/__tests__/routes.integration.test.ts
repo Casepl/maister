@@ -115,9 +115,8 @@ beforeAll(async () => {
   studiesRoute = await import("../route");
   studyRoute = await import("../[studyId]/route");
   participantsRoute = await import("../[studyId]/participants/route");
-  participantRoute = await import(
-    "../[studyId]/participants/[participantId]/route"
-  );
+  participantRoute =
+    await import("../[studyId]/participants/[participantId]/route");
   verdictsRoute = await import("../[studyId]/verdicts/route");
   reviewRoute = await import("../../reviews/[reviewId]/route");
   startRoute = await import("../[studyId]/evaluations/route");
@@ -125,13 +124,11 @@ beforeAll(async () => {
   preflightRoute = await import("../[studyId]/launch-preflight/route");
   batchesRoute = await import("../[studyId]/launch-batches/route");
   batchRoute = await import("../[studyId]/launch-batches/[batchId]/route");
-  batchRetryRoute = await import(
-    "../[studyId]/launch-batches/[batchId]/retry/route"
-  );
+  batchRetryRoute =
+    await import("../[studyId]/launch-batches/[batchId]/retry/route");
   pinOptionsRoute = await import("../../pin-options/route");
-  overrideRoute = await import(
-    "../../../evaluation-profiles/[profileId]/override/route"
-  );
+  overrideRoute =
+    await import("../../../evaluation-profiles/[profileId]/override/route");
 
   adminId = randomUUID();
   viewerId = randomUUID();

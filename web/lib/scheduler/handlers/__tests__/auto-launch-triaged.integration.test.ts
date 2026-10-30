@@ -58,9 +58,8 @@ beforeAll(async () => {
   pool = testDatabase.pool;
   db = testDatabase.db;
 
-  ({ runAutoLaunchTriagedJob } = await import(
-    "@/lib/scheduler/handlers/auto-launch-triaged"
-  ));
+  ({ runAutoLaunchTriagedJob } =
+    await import("@/lib/scheduler/handlers/auto-launch-triaged"));
 }, 180_000);
 
 afterAll(async () => {

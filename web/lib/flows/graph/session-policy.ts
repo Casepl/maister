@@ -4,10 +4,7 @@ import type { SessionPolicy } from "@/lib/config.schema";
 // policy, with the deliberate `resume` engine default — the ~$0.28 idle
 // respawn buys back the critique context, which is the point of resuming.
 export type SessionPolicySource =
-  | "rework-transition"
-  | "node"
-  | "flow-defaults"
-  | "engine-default";
+  "rework-transition" | "node" | "flow-defaults" | "engine-default";
 
 export function resolveSessionPolicy(input: {
   reworkPolicy?: SessionPolicy;

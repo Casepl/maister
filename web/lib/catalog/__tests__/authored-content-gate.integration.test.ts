@@ -85,13 +85,11 @@ function flowBody(args: {
     flowYaml: "schemaVersion: 1\nname: content-gate-flow\n",
     manifest: args.manifest,
     packageMetadata: { slug: "content-gate-flow", name: "Content Gate Flow" },
-    files: args.files.map(
-      (f): AuthoredFlowPackageFile => ({
-        kind: "asset",
-        path: f.path,
-        content: f.content,
-      }),
-    ),
+    files: args.files.map((f): AuthoredFlowPackageFile => ({
+      kind: "asset",
+      path: f.path,
+      content: f.content,
+    })),
     validation: {
       status: "valid",
       issueCount: 0,
@@ -109,9 +107,8 @@ beforeAll(async () => {
   db = testDatabase.db;
 
   ({ updateAuthoredDraft } = await import("@/lib/catalog/authored-service"));
-  ({ PATCH: draftPATCH } = await import(
-    "@/app/api/projects/[slug]/catalog/caps/[capId]/draft/route"
-  ));
+  ({ PATCH: draftPATCH } =
+    await import("@/app/api/projects/[slug]/catalog/caps/[capId]/draft/route"));
 }, 180_000);
 
 afterAll(async () => {

@@ -3,14 +3,44 @@ import type { Socket } from "node:net";
 import {
   createServer,
   request,
+  type IncomingHttpHeaders,
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
+
+import { parseCommandOutputManifestV2 } from "../../runtime/command-evidence";
+import { safeDownloadHeaders } from "../../runtime/safe-download";
 
 import { invocationFromEnvironment, logInvocation } from "./process-invocation";
 
 const MAX_BODY = 8 * 1024 * 1024;
 const MAX_FRAME = 2 * 1024 * 1024;
+const COMMAND_OUTPUT_DISPOSITION = safeDownloadHeaders({
+  fileName: "command-output.v2.json",
+  mediaClass: "opaque",
+})["content-disposition"];
+
+function endToEndHeaders(headers: IncomingHttpHeaders): IncomingHttpHeaders {
+  const hopHeaders = new Set([
+    "connection",
+    "keep-alive",
+    "proxy-connection",
+    "te",
+    "trailer",
+    "transfer-encoding",
+    "upgrade",
+    ...(headers.connection ?? "")
+      .split(",")
+      .map((name) => name.trim().toLowerCase()),
+  ]);
+
+  // Each HTTP hop supplies its own framing and socket lifetime.
+  return Object.fromEntries(
+    Object.entries(headers).filter(
+      ([name]) => !hopHeaders.has(name.toLowerCase()),
+    ),
+  );
+}
 
 export class FaultBarrierError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -29,6 +59,10 @@ export type FaultSelector = {
   sequence?: string;
   assignmentEpoch?: number;
   streamId?: string;
+  responseSchema?: "maister.command-output.v2";
+  applicationClaimToken?: (
+    witness: Readonly<FaultWitness>,
+  ) => Promise<string | null>;
 };
 export type FaultAction =
   | "hold-request"
@@ -50,6 +84,12 @@ export type FaultWitness = {
   eventType: string | null;
   lastEventId: string | null;
   streamId: string | null;
+  runId?: string;
+  hostSessionId?: string;
+  requestSha256?: string;
+  claimToken?: string;
+  contentType?: string;
+  contentDisposition?: string;
 };
 export type ResponseCloseWitness = {
   commandId: string | null;
@@ -241,7 +281,33 @@ function write(response: ServerResponse, data: Buffer): Promise<void> {
   if (response.destroyed) return Promise.resolve();
 
   return new Promise((resolve, reject) => {
-    response.write(data, (error) => (error ? reject(error) : resolve()));
+    response.write(data, (error) => {
+      if (!error) {
+        resolve();
+
+        return;
+      }
+      const code = (error as NodeJS.ErrnoException).code;
+
+      if (
+        code === "EPIPE" ||
+        code === "ECONNRESET" ||
+        code === "ECANCELED" ||
+        code === "ERR_STREAM_DESTROYED"
+      ) {
+        recordFaultEvent("proxy", "downstream-disconnected", {
+          method: response.req.method ?? "GET",
+          path: response.req.url ?? "/",
+          code,
+          error: error.message,
+        });
+        response.destroy();
+        resolve();
+
+        return;
+      }
+      reject(error);
+    });
   });
 }
 
@@ -275,6 +341,7 @@ export async function startSupervisorFaultProxy(
     witness: FaultWitness,
     actions: readonly FaultAction[],
     objectId?: string,
+    responseSchema?: FaultSelector["responseSchema"],
   ): Rule | undefined {
     return rules.find(
       (rule) =>
@@ -292,7 +359,9 @@ export async function startSupervisorFaultProxy(
           rule.selector.eventType === witness.eventType) &&
         (!rule.selector.sequence ||
           rule.selector.sequence === witness.sequence) &&
-        (!rule.selector.objectId || rule.selector.objectId === objectId),
+        (!rule.selector.objectId || rule.selector.objectId === objectId) &&
+        (!rule.selector.responseSchema ||
+          rule.selector.responseSchema === responseSchema),
     );
   }
   function fail(error: unknown, downstream: ServerResponse): void {
@@ -376,7 +445,10 @@ export async function startSupervisorFaultProxy(
     }
     const upstream = request(new URL(pathname, upstreamBase), {
       method,
-      headers: { ...incoming.headers, host: upstreamBase.host },
+      headers: {
+        ...endToEndHeaders(incoming.headers),
+        host: upstreamBase.host,
+      },
     });
 
     downstream.once("close", () => upstream.destroy());
@@ -401,7 +473,7 @@ export async function startSupervisorFaultProxy(
       );
       const forward = async (): Promise<void> => {
         if (pathname === "/runtime-events" && response.statusCode === 200) {
-          downstream.writeHead(200, response.headers);
+          downstream.writeHead(200, endToEndHeaders(response.headers));
           let remainder = Buffer.alloc(0);
 
           for await (const chunk of response) {
@@ -528,14 +600,78 @@ export async function startSupervisorFaultProxy(
 
           return;
         }
-        const rule = matching(
-          received,
+        let responseBody: Buffer | undefined;
+        let responseWitness: FaultWitness = received;
+        let responseSchema: FaultSelector["responseSchema"];
+
+        if (
+          rules.some(
+            (candidate) =>
+              candidate.active &&
+              candidate.selector.responseSchema ===
+                "maister.command-output.v2" &&
+              candidate.selector.method === method &&
+              candidate.selector.path.test(pathname),
+          ) &&
+          response.statusCode === 200 &&
+          response.headers["content-disposition"] === COMMAND_OUTPUT_DISPOSITION
+        ) {
+          responseBody = await bytes(response, MAX_BODY);
+          const manifest = parseCommandOutputManifestV2(
+            JSON.parse(responseBody.toString("utf8")) as unknown,
+          );
+
+          responseSchema = manifest.schema;
+          responseWitness = {
+            ...received,
+            commandId: manifest.commandId,
+            runId: manifest.runId,
+            hostSessionId: manifest.hostSessionId,
+            requestSha256: manifest.requestSha256,
+            assignmentEpoch: manifest.assignmentEpoch,
+            streamId: manifest.streamId,
+            contentType: String(response.headers["content-type"]),
+            contentDisposition: String(response.headers["content-disposition"]),
+          };
+        }
+        let selectedRule = matching(
+          responseWitness,
           ["hold-response", "hold-responses", "drop-responses"],
           objectId,
+          responseSchema,
         );
 
+        if (selectedRule?.selector.applicationClaimToken) {
+          const claimToken =
+            await selectedRule.selector.applicationClaimToken(responseWitness);
+
+          if (claimToken === null) {
+            recordFaultEvent(
+              selectedRule.selector.caseId,
+              "preclaim-response-forwarded",
+              responseWitness,
+            );
+            selectedRule = undefined;
+          } else {
+            if (claimToken.length === 0)
+              throw new FaultBarrierError(
+                "application claim selector returned an empty token",
+              );
+            responseWitness = { ...responseWitness, claimToken };
+          }
+        }
+        const rule = selectedRule;
+
         if (!rule) {
-          downstream.writeHead(received.status, response.headers);
+          downstream.writeHead(
+            received.status,
+            endToEndHeaders(response.headers),
+          );
+          if (responseBody) {
+            downstream.end(responseBody);
+
+            return;
+          }
           response.once("error", (error: NodeJS.ErrnoException) => {
             if (error.code === "ECONNRESET") {
               recordFaultEvent("proxy", "upstream-reset", {
@@ -549,16 +685,16 @@ export async function startSupervisorFaultProxy(
 
           return;
         }
-        const responseBody = await bytes(response, MAX_BODY);
+        responseBody ??= await bytes(response, MAX_BODY);
 
         downstream.once("close", () => {
           rule.recordResponseClose({
-            commandId: received.commandId,
+            commandId: responseWitness.commandId,
             headersSent: downstream.headersSent,
             writableFinished: downstream.writableFinished,
           });
         });
-        rule.reach(received);
+        rule.reach(responseWitness);
         if (rule.action === "drop-responses") {
           downstream.destroy();
 
@@ -588,12 +724,14 @@ export async function startSupervisorFaultProxy(
         });
         rule.retainedBytes -= responseBody.length;
         if (downstream.destroyed) return;
-        downstream.writeHead(received.status, response.headers);
+        downstream.writeHead(
+          received.status,
+          endToEndHeaders(response.headers),
+        );
         downstream.end(responseBody);
       };
 
       void forward().catch((error: unknown) => {
-        if (downstream.destroyed) return;
         if (
           error instanceof Error &&
           (error as NodeJS.ErrnoException).code === "ECONNRESET"
@@ -609,9 +747,23 @@ export async function startSupervisorFaultProxy(
     upstream.end(body);
   }
   const server = createServer((incoming, response) => {
-    void serve(incoming, response).catch((error: unknown) =>
-      fail(error, response),
-    );
+    void serve(incoming, response).catch((error: unknown) => {
+      if (
+        incoming.aborted &&
+        error instanceof Error &&
+        (error as NodeJS.ErrnoException).code === "ECONNRESET"
+      ) {
+        recordFaultEvent("proxy", "downstream-request-aborted", {
+          method: incoming.method ?? "GET",
+          path: incoming.url ?? "/",
+          error: error.message,
+        });
+        response.destroy();
+
+        return;
+      }
+      fail(error, response);
+    });
   });
 
   server.on("connection", (socket) => {
@@ -647,6 +799,13 @@ export async function startSupervisorFaultProxy(
     arm(selector, action) {
       if (selector.path.global || selector.path.sticky)
         throw new FaultBarrierError("stateful route patterns are forbidden");
+      if (
+        selector.applicationClaimToken &&
+        selector.responseSchema !== "maister.command-output.v2"
+      )
+        throw new FaultBarrierError(
+          "application claim selector requires a command-output manifest response",
+        );
       const rule = makeRule(selector, action);
 
       rules.push(rule);

@@ -150,8 +150,7 @@ export function isPassVerdict(verdict: string): boolean {
 export function calibrateVerdict(
   parsed: GateVerdict,
   calibration:
-    | { confidence_min?: number; allow_missing_confidence?: boolean }
-    | undefined,
+    { confidence_min?: number; allow_missing_confidence?: boolean } | undefined,
 ): { pass: boolean; calibration?: GateVerdict["calibration"] } {
   if (calibration?.confidence_min === undefined) {
     // No threshold configured — legacy pass, no calibration recorded.

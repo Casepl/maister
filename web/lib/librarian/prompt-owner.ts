@@ -167,8 +167,7 @@ async function readTurnOutcome(
       halted = true;
     if (event.eventType !== "session.update") continue;
     const update = event.payload?.update as
-      | { sessionUpdate?: string }
-      | undefined;
+      { sessionUpdate?: string } | undefined;
 
     if (variant === "summary" && update?.sessionUpdate === "tool_call")
       toolCalled = true;

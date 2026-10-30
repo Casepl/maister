@@ -118,7 +118,7 @@ execFileSync("pnpm", ["run", "clean"], {
 });
 execFileSync(
   process.execPath,
-  [path.resolve("node_modules/next/dist/bin/next"), "build", "--webpack"],
+  [path.resolve("node_modules/next/dist/bin/next"), "build"],
   {
     cwd: process.cwd(),
     env: process.env,

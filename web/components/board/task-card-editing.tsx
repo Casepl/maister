@@ -420,11 +420,6 @@ export function TaskInlineEditableField({
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
-    if (editing) return;
-    setDraft(value);
-  }, [editing, value]);
-
-  useEffect(() => {
     if (!editing) return;
     inputRef.current?.focus();
     inputRef.current?.select();
@@ -583,7 +578,10 @@ export function TaskInlineEditableField({
           aria-label={editLabel}
           className="mt-px inline-flex h-5 w-5 flex-none items-center justify-center rounded-md border border-transparent text-mute opacity-0 transition hover:border-line hover:bg-ivory hover:text-amber group-hover/edit:opacity-100 focus:opacity-100"
           type="button"
-          onClick={() => setEditing(true)}
+          onClick={() => {
+            setDraft(value);
+            setEditing(true);
+          }}
         >
           <PencilSquareIcon className="h-3.5 w-3.5" />
         </button>
@@ -610,8 +608,8 @@ export function TaskCardEditModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [options, setOptions] = useState<LaunchOptions | null>(null);
-  const [loadingOptions, setLoadingOptions] = useState(false);
   const [optionsError, setOptionsError] = useState(false);
+  const loadingOptions = open && options === null && !optionsError;
   const [title, setTitle] = useState(card.title);
   const [prompt, setPrompt] = useState(card.prompt);
   const [flowId, setFlowId] = useState(card.flowId ?? "");
@@ -638,9 +636,7 @@ export function TaskCardEditModal({
     openerRef.current?.focus();
   }, []);
 
-  useEffect(() => {
-    if (!open) return;
-
+  function reseedFromCard(): void {
     setTitle(card.title);
     setPrompt(card.prompt);
     setFlowId(card.flowId ?? "");
@@ -658,15 +654,20 @@ export function TaskCardEditModal({
       setExecHumanGate,
       setExecPromotion,
     });
-  }, [card, open]);
+  }
+
+  // Each open, and a card refresh while open, re-seeds the form from the card.
+  const [seeded, setSeeded] = useState({ card, open });
+
+  if (seeded.card !== card || seeded.open !== open) {
+    setSeeded({ card, open });
+    if (open) reseedFromCard();
+  }
 
   useEffect(() => {
     if (!open || options) return;
 
     const controller = new AbortController();
-
-    setLoadingOptions(true);
-    setOptionsError(false);
 
     fetch(
       `/api/runs/launch-options?taskId=${encodeURIComponent(card.taskId)}`,
@@ -682,9 +683,6 @@ export function TaskCardEditModal({
       .then((payload) => setOptions(payload))
       .catch(() => {
         if (!controller.signal.aborted) setOptionsError(true);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoadingOptions(false);
       });
 
     return () => controller.abort();

@@ -36,9 +36,7 @@ export type SchedulerRunScheduleOverviewViewRow =
   SchedulerRunScheduleOverviewShape<string>;
 
 export type SchedulerClockDriver =
-  | "fallback_timer"
-  | "external_tick"
-  | "missing_tick";
+  "fallback_timer" | "external_tick" | "missing_tick";
 
 export type SchedulerClockConfiguration = {
   cronTokenConfigured: boolean;
@@ -49,10 +47,7 @@ export type SchedulerClockConfiguration = {
 };
 
 export type SchedulerClockTickOutcome =
-  | "completed"
-  | "partial"
-  | "failed"
-  | "maintenance_noop";
+  "completed" | "partial" | "failed" | "maintenance_noop";
 
 export type SchedulerClockHealthView = {
   processId: number;
@@ -84,10 +79,7 @@ export type SchedulerCoreJobClockRow = {
 };
 
 export type BrainIndexJobReason =
-  | "model_switch"
-  | "manual"
-  | "event"
-  | "chunker_upgrade";
+  "model_switch" | "manual" | "event" | "chunker_upgrade";
 
 export type BrainIndexJobStatus = "queued" | "running" | "completed" | "failed";
 

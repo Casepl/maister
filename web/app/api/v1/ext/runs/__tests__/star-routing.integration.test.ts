@@ -91,13 +91,11 @@ beforeAll(async () => {
   // ADR-166: every launch places the run on the local execution host.
   await fakeExecutionHosts(db);
 
-  ({ issueAgentRunToken, issueOrchestratorRunToken } = await import(
-    "@/lib/agents/tokens"
-  ));
+  ({ issueAgentRunToken, issueOrchestratorRunToken } =
+    await import("@/lib/agents/tokens"));
   ({ POST: messagePost } = await import("@/app/api/v1/ext/runs/message/route"));
-  ({ POST: delegatePost } = await import(
-    "@/app/api/v1/ext/runs/delegate/route"
-  ));
+  ({ POST: delegatePost } =
+    await import("@/app/api/v1/ext/runs/delegate/route"));
 }, 180_000);
 
 afterAll(async () => {

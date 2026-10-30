@@ -33,7 +33,7 @@ const log = pino({
 
 export const clarificationRequestSchema = z
   .object({
-    recipientUserId: z.string().uuid(),
+    recipientUserId: z.string().guid(),
     question: z.string().trim().min(1).max(MAX_CLARIFICATION_QUESTION_CHARS),
     reason: z.string().trim().min(1).max(2_000),
     answerFormat: z.enum(["text", "choice", "yes_no"]),

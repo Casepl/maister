@@ -14,11 +14,9 @@ import { prepareProducerFiles, type ProducerFiles } from "./producer-files";
 import { HostRuntimeEventError } from "./host-runtime-errors";
 import { producerPressure, type ProducerPauseBound } from "./producer-pressure";
 import { captureAcpFrames, reserveOutputProducer } from "./bounded-acp-stream";
-import { SESSION_EVENT_CHANNEL } from "./registry";
 import {
   type ContextMount,
   SupervisorError,
-  type SessionEvent,
   type SessionRecord,
   type StartSessionRequest,
 } from "./types";
@@ -182,7 +180,7 @@ export async function spawnSession(
       envKeys: Object.keys(request.executor.env ?? {}).sort(),
       hasAdapterEnv: Boolean(
         request.adapterLaunch?.env &&
-          Object.keys(request.adapterLaunch.env).length > 0,
+        Object.keys(request.adapterLaunch.env).length > 0,
       ),
       adapterEnvKeys: Object.keys(request.adapterLaunch?.env ?? {}).sort(),
       hasCapabilityProfile: Boolean(
@@ -325,16 +323,6 @@ export async function spawnSession(
   const emitter = new EventEmitter();
 
   emitter.setMaxListeners(0);
-  const lineEmitter = (monotonicId: number, line: string) => {
-    const event: SessionEvent = {
-      type: "session.line",
-      sessionId,
-      monotonicId,
-      line,
-    };
-
-    emitter.emit(SESSION_EVENT_CHANNEL, event);
-  };
 
   if (!child.stdout) {
     releaseOutputProducer();
@@ -397,18 +385,6 @@ export async function spawnSession(
       : undefined,
     directory: dirname(logPath),
     log: logStream,
-    onLine(line) {
-      record.monotonicId += 1;
-      lineEmitter(record.monotonicId, line);
-      logger.debug(
-        {
-          sessionId,
-          monotonicId: record.monotonicId,
-          bytes: Buffer.byteLength(line),
-        },
-        "stdout-frame-captured",
-      );
-    },
     onFailure(error) {
       record.abortOutput?.(error);
     },

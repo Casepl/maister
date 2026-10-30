@@ -244,9 +244,8 @@ beforeAll(async () => {
     listLocalPackageAssistantRunners,
     stopScratchWorkbench,
   } = await import("@/lib/scratch-runs/service"));
-  ({ createLocalPackage, diffWorkingDir, getLocalPackage } = await import(
-    "@/lib/local-packages/service"
-  ));
+  ({ createLocalPackage, diffWorkingDir, getLocalPackage } =
+    await import("@/lib/local-packages/service"));
 
   originalDbUrl = process.env.DB_URL;
   process.env.DB_URL = container.getConnectionUri();
@@ -434,7 +433,10 @@ describe("scratch_runs owner XOR CHECK (ADR-097)", () => {
         dialogStatus: "Running",
         createdByUserId: userId,
       }),
-    ).rejects.toThrow(/scratch_runs_owner_xor_check/);
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringMatching(/scratch_runs_owner_xor_check/),
+    );
 
     await db.delete(runs).where(eq(runs.id, runId));
     await db.delete(schema.projects).where(eq(schema.projects.id, projectId));
@@ -467,7 +469,10 @@ describe("scratch_runs owner XOR CHECK (ADR-097)", () => {
         dialogStatus: "Running",
         createdByUserId: userId,
       }),
-    ).rejects.toThrow(/scratch_runs_owner_xor_check/);
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringMatching(/scratch_runs_owner_xor_check/),
+    );
 
     await db.delete(runs).where(eq(runs.id, runId));
   });
@@ -1014,9 +1019,8 @@ describe("launchLocalPackageAssistant + a turn (ADR-097 T5.7)", () => {
   // The launch keeps its live session and a retryable dialog, and the user's
   // next message is an ordinary turn.
   it("keeps the launched assistant retryable when prompt admission yields, and the next message dispatches", async () => {
-    const { PromptIncarnationPending } = await import(
-      "@/lib/execution-host/prompt-incarnation"
-    );
+    const { PromptIncarnationPending } =
+      await import("@/lib/execution-host/prompt-incarnation");
     const pkg = await createLocalPackage({
       name: `assistant-yield-${randomUUID().slice(0, 8)}`,
       createdBy: userId,
@@ -1121,8 +1125,7 @@ describe("launchLocalPackageAssistant + a turn (ADR-097 T5.7)", () => {
 
     const followUpPrompt = (
       supervisorMock.sendPrompt.mock.calls.at(-1)?.[1] as
-        | { prompt?: string }
-        | undefined
+        { prompt?: string } | undefined
     )?.prompt;
 
     expect(res.actionResult?.status).toBe("applied");

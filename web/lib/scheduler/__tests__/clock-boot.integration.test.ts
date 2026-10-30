@@ -219,8 +219,7 @@ describe("scheduler clock in a production web", () => {
       ORDER BY claimed_at DESC, id DESC LIMIT 1
     `);
     const sweep = attempts.rows[0] as
-      | { status: string; finished_at: string | null }
-      | undefined;
+      { status: string; finished_at: string | null } | undefined;
 
     expect(sweep?.status).toBe("Succeeded");
     expect(sweep?.finished_at).not.toBeNull();

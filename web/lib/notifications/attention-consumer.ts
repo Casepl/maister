@@ -129,8 +129,7 @@ async function lastPublishedCount(
     LIMIT 1
   `);
   const row = (result.rows ?? [])[0] as
-    | { decisions: number | null }
-    | undefined;
+    { decisions: number | null } | undefined;
 
   return row?.decisions ?? null;
 }

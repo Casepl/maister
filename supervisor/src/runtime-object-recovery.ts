@@ -10,11 +10,7 @@ import type { Logger } from "pino";
 import { HostRuntimeEventError } from "./host-runtime-errors";
 
 type Disposition =
-  | "completed"
-  | "object_missing"
-  | "fence_mismatch"
-  | "unsealed"
-  | "undeleted";
+  "completed" | "object_missing" | "fence_mismatch" | "unsealed" | "undeleted";
 
 function dispositionFor(
   receipt: CommandReceiptRow,

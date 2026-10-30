@@ -79,9 +79,8 @@ beforeAll(async () => {
 
   db = testDatabase.db;
 
-  ({ GET } = await import(
-    "@/app/api/runs/[runId]/artifacts/[artifactId]/payload/route"
-  ));
+  ({ GET } =
+    await import("@/app/api/runs/[runId]/artifacts/[artifactId]/payload/route"));
 }, 180_000);
 
 afterAll(async () => {

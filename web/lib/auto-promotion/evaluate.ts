@@ -81,9 +81,7 @@ export type AutoPromotionEvaluation =
 // The external_check gate state: `not_declared` (id absent from the compiled
 // FlowGraph — misconfig) vs `declared_not_passed` (present but no passing row).
 export type ExternalCheckState =
-  | "passed"
-  | "declared_not_passed"
-  | "not_declared";
+  "passed" | "declared_not_passed" | "not_declared";
 
 // The subset of the run row the predicate needs (terms 3-9, 12, 16).
 export interface AutoPromotionRunView {

@@ -77,9 +77,8 @@ const {
   runSyncRecoverySweep,
   SYNC_ATTEMPT_MAX_MINUTES,
 } = await import("@/lib/runs/sync-recovery");
-const { verifySyncGate, pushWithLease } = await import(
-  "@/lib/runs/sync-target"
-);
+const { verifySyncGate, pushWithLease } =
+  await import("@/lib/runs/sync-target");
 const { registerSyncDriver, unregisterSyncDriver, hasSyncDriver } =
   await import("@/lib/runs/sync-driver-registry");
 const {

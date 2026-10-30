@@ -267,9 +267,8 @@ describe("ADR-102 T12 — reviewable diff resolves the TREE workspace for a reus
       withWorkspace: false,
     });
 
-    const { computeRunDiff } = await import(
-      "@/lib/review-comments/run-diff-source"
-    );
+    const { computeRunDiff } =
+      await import("@/lib/review-comments/run-diff-source");
 
     let thrown: unknown;
     let prepared: Awaited<ReturnType<typeof computeRunDiff>> | undefined;

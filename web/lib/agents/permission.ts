@@ -485,8 +485,7 @@ export async function completeAgentPermissionOrigin(
   const parentSource = parseAgentPermission(parent?.schema);
   const priorResponse = parent?.response as Record<string, unknown> | null;
   const grant = priorResponse?._agentResume as
-    | Record<string, unknown>
-    | undefined;
+    Record<string, unknown> | undefined;
 
   if (
     !parent ||

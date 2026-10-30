@@ -1,8 +1,5 @@
 export type PromotionMode =
-  | "merge"
-  | "rebase_merge"
-  | "pull_request"
-  | "ai_rebase_merge";
+  "merge" | "rebase_merge" | "pull_request" | "ai_rebase_merge";
 
 export interface PromotionDeliveryPolicy {
   strategy: PromotionMode;

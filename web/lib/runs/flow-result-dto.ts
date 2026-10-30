@@ -22,8 +22,7 @@ import type { DirtySummary } from "@/lib/runs/dirty-resolution";
 import type { DeliveryPolicy } from "@/lib/runs/delivery-policy";
 
 export type FlowResultDegradationCode =
-  | "dirty-summary-unavailable"
-  | "review-diff-fallback";
+  "dirty-summary-unavailable" | "review-diff-fallback";
 
 export interface FlowResultCapabilityNodeDto {
   nodeId: string;

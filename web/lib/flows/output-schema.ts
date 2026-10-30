@@ -46,10 +46,7 @@ export function isPlainObject(v: unknown): v is Record<string, unknown> {
 // pattern-match the prose. Field-level failures carry no class — they are all
 // "the payload did not satisfy the declared schema".
 export type StructuredOutputFailureReason =
-  | "unsafe_key"
-  | "depth_limit"
-  | "key_limit"
-  | "array_limit";
+  "unsafe_key" | "depth_limit" | "key_limit" | "array_limit";
 
 type StructuralFailure = {
   message: string;

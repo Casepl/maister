@@ -55,11 +55,9 @@ const selectChain = () => ({
     const query = {
       then: <TResult1 = Row[], TResult2 = never>(
         onFulfilled?:
-          | ((value: Row[]) => TResult1 | PromiseLike<TResult1>)
-          | null,
+          ((value: Row[]) => TResult1 | PromiseLike<TResult1>) | null,
         onRejected?:
-          | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
-          | null,
+          ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
       ): Promise<TResult1 | TResult2> =>
         Promise.resolve(selectedRows(table)).then(onFulfilled, onRejected),
       orderBy: () => query,
@@ -120,9 +118,8 @@ vi.mock("@/lib/supervisor-client", () => ({
 }));
 
 vi.mock("@/lib/execution-host", async () => {
-  const { executionHostModuleMock } = await import(
-    "@/test-support/execution-host-module-mock"
-  );
+  const { executionHostModuleMock } =
+    await import("@/test-support/execution-host-module-mock");
 
   return executionHostModuleMock({ deleteSession });
 });

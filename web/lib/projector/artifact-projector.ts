@@ -249,8 +249,7 @@ async function canonicalAttribution(
     )
     .limit(1);
   const attempt = attempts[0] as
-    | { id: string; nodeId: string; attempt: number }
-    | undefined;
+    { id: string; nodeId: string; attempt: number } | undefined;
 
   if (!attempt) {
     throw permanentCanonicalProjectionError(

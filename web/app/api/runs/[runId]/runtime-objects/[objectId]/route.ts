@@ -37,7 +37,7 @@ export async function GET(
     const sessionUser = await requireActiveSession();
     const { runId, objectId } = await params;
 
-    if (!z.string().uuid().safeParse(objectId).success) {
+    if (!z.string().guid().safeParse(objectId).success) {
       return NextResponse.json({ message: "not found" }, { status: 404 });
     }
     const loaded = await getRuntimeObjectForRun({

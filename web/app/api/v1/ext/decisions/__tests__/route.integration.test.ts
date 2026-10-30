@@ -379,9 +379,8 @@ describe("IT-ATN-08 GET /api/v1/ext/decisions", () => {
 
 describe("UT-NTF-09 decisions:read is not an agent scope", () => {
   it("is absent from both agent scope allow-lists", async () => {
-    const { AGENT_TOKEN_SCOPES, CROSS_PROJECT_AGENT_SCOPES } = await import(
-      "@/types/token-scopes"
-    );
+    const { AGENT_TOKEN_SCOPES, CROSS_PROJECT_AGENT_SCOPES } =
+      await import("@/types/token-scopes");
 
     expect(AGENT_TOKEN_SCOPES as readonly string[]).not.toContain(
       "decisions:read",

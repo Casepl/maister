@@ -79,8 +79,7 @@ class FakeSelectQuery implements PromiseLike<QueryRows> {
 
   then<TResult1 = QueryRows, TResult2 = never>(
     onfulfilled?:
-      | ((value: QueryRows) => TResult1 | PromiseLike<TResult1>)
-      | null,
+      ((value: QueryRows) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
     return Promise.resolve(this.rows).then(onfulfilled, onrejected);

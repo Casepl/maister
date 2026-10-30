@@ -18,6 +18,7 @@
 
 import type { ContextMount, SessionRecord, SupervisorError } from "../types";
 import type { Logger } from "pino";
+import type { AcpConnection } from "../acp-connection";
 
 import { EventEmitter } from "node:events";
 import { createWriteStream } from "node:fs";
@@ -26,7 +27,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough, Readable, Writable } from "node:stream";
 
-import * as acp from "@agentclientprotocol/sdk";
+import * as acp from "@agentclientprotocol/sdk/unstable";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createAcpConnection, sendPromptOnConnection } from "../acp-client";
@@ -230,7 +231,7 @@ describe("context-mount prompt preamble (ADR-157)", () => {
     ] as unknown as acp.ContentBlock[];
 
     await sendPromptOnConnection(
-      { prompt } as unknown as acp.ClientSideConnection,
+      { prompt } as unknown as AcpConnection,
       {
         adapter: "claude",
         acpSessionId: "s1",
@@ -252,7 +253,7 @@ describe("context-mount prompt preamble (ADR-157)", () => {
     const prompt = vi.fn().mockResolvedValue({ stopReason: "end_turn" });
 
     await sendPromptOnConnection(
-      { prompt } as unknown as acp.ClientSideConnection,
+      { prompt } as unknown as AcpConnection,
       {
         adapter: "claude",
         acpSessionId: "s1",
@@ -295,27 +296,24 @@ async function openSession(opts: {
     debug: vi.fn(),
   } as unknown as Logger;
 
-  let agentConn: acp.AgentSideConnection | undefined;
-  const agentImpl: acp.Agent = {
-    async initialize() {
-      return { protocolVersion: acp.PROTOCOL_VERSION, agentCapabilities: {} };
-    },
-    async newSession() {
-      return { sessionId: "acp-session-1" };
-    },
-    async authenticate() {
-      return {};
-    },
-    async prompt() {
-      return { stopReason: "end_turn" as const };
-    },
-    async cancel() {
+  const agentApp = acp
+    .agent()
+    .onRequest(acp.methods.agent.initialize, () => ({
+      protocolVersion: acp.PROTOCOL_VERSION,
+      agentCapabilities: {},
+    }))
+    .onRequest(acp.methods.agent.session.new, () => ({
+      sessionId: "acp-session-1",
+    }))
+    .onRequest(acp.methods.agent.authenticate, () => ({}))
+    .onRequest(acp.methods.agent.session.prompt, () => ({
+      stopReason: "end_turn" as const,
+    }))
+    .onNotification(acp.methods.agent.session.cancel, () => {
       /* no-op */
-    },
-  };
+    });
 
-  agentConn = new acp.AgentSideConnection(
-    () => agentImpl,
+  const agentConn = agentApp.connect(
     acp.ndJsonStream(
       Writable.toWeb(agentToClient) as never,
       Readable.toWeb(clientToAgent) as never,
@@ -358,7 +356,7 @@ async function openSession(opts: {
 
   const harness: Harness = {
     ask: (toolCall) =>
-      (agentConn as acp.AgentSideConnection).requestPermission({
+      agentConn.client.request(acp.methods.client.session.requestPermission, {
         sessionId: "acp-session-1",
         toolCall: toolCall as never,
         options: OPTIONS as never,

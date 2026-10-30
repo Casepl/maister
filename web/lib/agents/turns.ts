@@ -217,7 +217,13 @@ export async function acceptAgentMessage(
     if (existing) return existing;
     assertAcceptsAgentMessage(run);
 
-    const turn = await insertAgentMessageTurn(txDb, run, prompt, logicalKey, options.requestedByUserId);
+    const turn = await insertAgentMessageTurn(
+      txDb,
+      run,
+      prompt,
+      logicalKey,
+      options.requestedByUserId,
+    );
 
     await options.recordAccepted?.(txDb, turn);
 

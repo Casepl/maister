@@ -43,7 +43,7 @@ function request(): StartSessionRequest {
 }
 
 describe("spawnSession", () => {
-  it("emits bounded session-line events for host-outbox publication", async () => {
+  it("captures complete bounded frames for protocol-owned publication", async () => {
     const { child, emitter, record, acpStdoutTap } = await spawnSession({
       sessionId: "session-1",
       request: request(),
@@ -59,11 +59,12 @@ describe("spawnSession", () => {
       preArgs: [FIXTURE_PATH, "--lines", "3"],
     });
     const events: SessionEvent[] = [];
+    const frames: Buffer[] = [];
 
     emitter.on(SESSION_EVENT_CHANNEL, (event: SessionEvent) =>
       events.push(event),
     );
-    acpStdoutTap.resume();
+    acpStdoutTap.on("data", (frame: Buffer) => frames.push(frame));
 
     await new Promise<void>((resolvePromise) =>
       child.once("exit", resolvePromise),
@@ -71,8 +72,16 @@ describe("spawnSession", () => {
     await record.outputDrained;
 
     expect(record.outputFailure).toBeUndefined();
-    expect(events.map((event) => event.monotonicId)).toEqual([1, 2, 3]);
-    expect(record.monotonicId).toBe(3);
+    expect(frames).toHaveLength(3);
+    expect(frames.every((frame) => frame.at(-1) === 10)).toBe(true);
+    expect(
+      frames.map(
+        (frame) => (JSON.parse(frame.toString()) as { text: string }).text,
+      ),
+    ).toEqual(["line 0", "line 1", "line 2"]);
+    // The protocol boundary assigns IDs and publishes only after durable commit.
+    expect(events).toEqual([]);
+    expect(record.monotonicId).toBe(0);
   });
 
   it("does not resurrect a run events JSONL file", async () => {

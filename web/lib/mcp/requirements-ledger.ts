@@ -24,11 +24,7 @@ export type DeclaredRef = {
 };
 
 export type RequirementClass =
-  | "bound"
-  | "auto"
-  | "unbound"
-  | "misconfigured"
-  | "not_ready";
+  "bound" | "auto" | "unbound" | "misconfigured" | "not_ready";
 
 export type RequirementCandidate = DeclaredRef & {
   // The project_mcp_bindings row for this ref, if any.

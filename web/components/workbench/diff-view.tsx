@@ -9,7 +9,7 @@ import {
   DiffView as GitDiffView,
   SplitSide,
 } from "@git-diff-view/react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { OutdatedThreadsSection } from "@/components/workbench/outdated-threads";
@@ -729,11 +729,25 @@ export function DiffView({
   const activePath = selected ?? perFile[0]?.path ?? null;
   const active = perFile.find((f) => f.path === activePath) ?? null;
 
-  useEffect(() => {
-    if (!requestedDiffFile) return;
-    if (!perFile.some((file) => file.path === requestedDiffFile)) return;
-    setSelected(requestedDiffFile);
-  }, [requestedDiffFile, perFile]);
+  // A deep link (or a refreshed file list) selects the requested file when the
+  // diff contains it.
+  const [linkedRequest, setLinkedRequest] = useState({
+    requestedDiffFile,
+    perFile,
+  });
+
+  if (
+    linkedRequest.requestedDiffFile !== requestedDiffFile ||
+    linkedRequest.perFile !== perFile
+  ) {
+    setLinkedRequest({ requestedDiffFile, perFile });
+    if (
+      requestedDiffFile &&
+      perFile.some((file) => file.path === requestedDiffFile)
+    ) {
+      setSelected(requestedDiffFile);
+    }
+  }
 
   const selectDiffFile = (path: string): void => {
     setSelected(path);

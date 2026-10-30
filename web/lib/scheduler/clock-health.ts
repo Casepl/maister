@@ -4,10 +4,7 @@ import { randomUUID } from "node:crypto";
 
 export type SchedulerTickSource = "timer" | "cron" | "manual";
 export type SchedulerTickOutcome =
-  | "completed"
-  | "partial"
-  | "failed"
-  | "maintenance_noop";
+  "completed" | "partial" | "failed" | "maintenance_noop";
 
 export type SchedulerTickInvocation = {
   invocationId: string;

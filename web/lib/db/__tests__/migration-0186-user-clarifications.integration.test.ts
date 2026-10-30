@@ -9,6 +9,7 @@ import {
   startMainPostgresTestDbUpTo,
   type StartedPostgresTestDb,
 } from "@/test-support/pg-container";
+import { pgErrorOf } from "@/lib/db/pg-error";
 
 let database: StartedPostgresTestDb;
 const taskId = randomUUID();
@@ -60,7 +61,7 @@ async function refused(query: ReturnType<typeof sql>): Promise<string> {
   try {
     await database.db.execute(query);
   } catch (err) {
-    return String((err as { constraint?: string }).constraint ?? err);
+    return String(pgErrorOf(err)?.constraint ?? err);
   }
 
   throw new Error("expected the database to refuse an invalid clarification");

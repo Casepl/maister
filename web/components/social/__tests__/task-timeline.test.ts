@@ -25,17 +25,21 @@ const at = new Date("2026-06-11T10:00:00Z");
 
 describe("TaskTimeline", () => {
   it("attributes an owner comment written through the librarian", () => {
-    const html = renderToStaticMarkup(createElement(TaskTimeline, {
-      items: [{
-        kind: "comment",
-        id: "librarian-comment",
-        body: "Published excerpt",
-        actor: { type: "user", id: "owner", label: "Owner" },
-        via: "librarian",
-        createdAt: at,
-      }],
-      labels,
-    }));
+    const html = renderToStaticMarkup(
+      createElement(TaskTimeline, {
+        items: [
+          {
+            kind: "comment",
+            id: "librarian-comment",
+            body: "Published excerpt",
+            actor: { type: "user", id: "owner", label: "Owner" },
+            via: "librarian",
+            createdAt: at,
+          },
+        ],
+        labels,
+      }),
+    );
 
     expect(html).toContain("Owner · via Librarian");
     expect(html).toContain("Published excerpt");

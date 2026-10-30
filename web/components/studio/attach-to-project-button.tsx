@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 import { readApiError } from "@/lib/api-error";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 export type AttachTarget = {
   slug: string;
@@ -54,13 +55,11 @@ export function AttachToProjectButton({
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
-  const openRef = useRef(open);
+  const openRef = useLatestRef(open);
   const errorRef = useRef<HTMLParagraphElement>(null);
   const incompatibilityReason = compatibility.compatible
     ? null
     : (compatibility.incompatibilityReason ?? t("compatibilityUnavailable"));
-
-  openRef.current = open;
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {

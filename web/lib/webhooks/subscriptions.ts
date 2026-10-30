@@ -177,8 +177,7 @@ async function loadLastDelivery(
     LIMIT 1
   `);
   const row = (r.rows ?? [])[0] as
-    | { status: string; updated_at: Date }
-    | undefined;
+    { status: string; updated_at: Date } | undefined;
 
   if (!row) return null;
 

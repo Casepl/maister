@@ -2,7 +2,7 @@
 
 import type { ComponentType, ReactElement, ReactNode } from "react";
 
-import { useState } from "react";
+import { createElement, useState } from "react";
 import {
   ArchiveBoxIcon,
   ArrowPathIcon,
@@ -182,7 +182,6 @@ function InspectorActionItem({
   labels: RunInspectorLabels;
   danger?: boolean;
 }): ReactElement {
-  const Icon = actionIcon(action.id);
   const reasonId = `run-inspector-action-${action.id}-reason`;
 
   return (
@@ -194,12 +193,12 @@ function InspectorActionItem({
       data-disabled={action.disabled ? "true" : "false"}
       data-testid="run-inspector-action"
     >
-      <Icon
-        className={clsx(
+      {createElement(actionIcon(action.id), {
+        className: clsx(
           "mt-0.5 h-3.5 w-3.5 shrink-0",
           danger ? "text-[#d9534f]" : "text-mute",
-        )}
-      />
+        ),
+      })}
       <div className="min-w-0">
         {/* C34: a disabled item still opens its panel section, so the link is
             never `aria-disabled` — its reason describes it instead. */}

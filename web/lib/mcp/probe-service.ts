@@ -39,12 +39,10 @@ function rowsOf<T>(result: { rows?: unknown[] }): T[] {
 }
 
 export type ProbeTargetInput =
-  | { refId: string }
-  | { targetKind: BindingTargetKind; targetId: string };
+  { refId: string } | { targetKind: BindingTargetKind; targetId: string };
 
 type ProbeCacheTarget =
-  | { kind: "platform"; id: string }
-  | { kind: "capability"; id: string };
+  { kind: "platform"; id: string } | { kind: "capability"; id: string };
 
 export type ResolvedProbeTarget = {
   request: SupervisorMcpProbeRequest;

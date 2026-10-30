@@ -107,8 +107,7 @@ export type NodeInterruptOptionMatrix = {
 // ADR-183 D-M2: an interrupt is the operator's, or the execution host's own
 // park under outbox pressure. `system` never reaches a route or a HitlActor.
 export type NodeInterruptActor =
-  | { type: "user"; id: string }
-  | { type: "system" };
+  { type: "user"; id: string } | { type: "system" };
 
 export type NodeInterruptCause = "operator" | "host_pressure";
 

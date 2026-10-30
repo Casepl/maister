@@ -4,10 +4,7 @@ import { getAdapterSupportById } from "@/lib/acp-runners/adapter-support";
 // server computes it from rows the settings page already loads.
 
 export type LibrarianAvailabilityState =
-  | "ready"
-  | "disabled"
-  | "not_configured"
-  | "runner_not_ready";
+  "ready" | "disabled" | "not_configured" | "runner_not_ready";
 
 export type LibrarianRunnerIneligibility =
   | "capability_not_supported"
@@ -31,7 +28,10 @@ type RunnerShape = {
 
 // Codex host reads need not emit an ACP permission request and it has no
 // equivalent to Claude's built-in deny settings (ADR-186 D10).
-const LIBRARIAN_CAPABILITIES: ReadonlySet<string> = new Set(["claude", "codex"]);
+const LIBRARIAN_CAPABILITIES: ReadonlySet<string> = new Set([
+  "claude",
+  "codex",
+]);
 const RESERVED_RUNNER_ENV = ["HOME", "CLAUDE_CONFIG_DIR", "CODEX_HOME"];
 
 export function librarianRunnerIneligibility(
@@ -45,8 +45,7 @@ export function librarianRunnerIneligibility(
     return "capability_not_supported";
   if (runner.adapter && runner.adapter !== runner.capabilityAgent)
     return "capability_not_supported";
-  if (runner.capabilityAgent === "codex")
-    return "builtin_denial_unverified";
+  if (runner.capabilityAgent === "codex") return "builtin_denial_unverified";
   if (!readOnlyCapable) return "not_read_only_capable";
   if (runner.permissionPolicy === "dangerously_skip_permissions")
     return "skips_permissions";

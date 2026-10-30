@@ -52,6 +52,7 @@ import {
   replacePackageFileContent,
   upsertPackageFile,
 } from "@/lib/flows/editor/package-files-draft";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 type PathErrorCode = "unsafe_path" | "duplicate_path" | "path_conflict";
 
@@ -140,21 +141,20 @@ export function PackageFilesEditor({
     onDirtyChange?.(serialized !== initialSerialized);
   }, [initialSerialized, isControlled, onDirtyChange, serialized]);
 
-  useEffect(() => {
-    if (
-      selectedPath !== null &&
-      effectiveFiles.some((file) => file.path === selectedPath)
-    ) {
-      return;
-    }
-
-    setSelectedPath(
+  // A selection the file set no longer contains falls back to the initial one,
+  // else the first file.
+  if (
+    selectedPath === null ||
+    !effectiveFiles.some((file) => file.path === selectedPath)
+  ) {
+    const fallback =
       (initialSelectedPath !== null &&
       effectiveFiles.some((file) => file.path === initialSelectedPath)
         ? initialSelectedPath
-        : effectiveFiles[0]?.path) ?? null,
-    );
-  }, [effectiveFiles, initialSelectedPath, selectedPath]);
+        : effectiveFiles[0]?.path) ?? null;
+
+    if (fallback !== selectedPath) setSelectedPath(fallback);
+  }
 
   function updateFiles(next: AuthoredFlowPackageFile[]): void {
     if (isControlled) {
@@ -574,9 +574,7 @@ function DialogShell({
 }): ReactElement {
   const dialogRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
-  const onCloseRef = useRef(onClose);
-
-  onCloseRef.current = onClose;
+  const onCloseRef = useLatestRef(onClose);
 
   useEffect(() => {
     restoreFocusRef.current = document.activeElement as HTMLElement | null;

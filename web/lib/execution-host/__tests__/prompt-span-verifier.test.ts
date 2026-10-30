@@ -334,7 +334,10 @@ describe("prompt span verifier", () => {
         contentRef: reference,
       },
     });
-  const storage = (served: Uint8Array, reference: Record<string, unknown>) =>
+  const storage = (
+    served: Uint8Array<ArrayBuffer>,
+    reference: Record<string, unknown>,
+  ) =>
     ({
       getRuntimeObject: async () => ({
         state: "available",

@@ -21,7 +21,7 @@ export async function DELETE(
     const user = await requireActiveSession();
     const { messageId } = await params;
 
-    if (!z.string().uuid().safeParse(messageId).success)
+    if (!z.string().guid().safeParse(messageId).success)
       return NextResponse.json(
         { code: "PRECONDITION", message: "message not found" },
         { status: 404 },

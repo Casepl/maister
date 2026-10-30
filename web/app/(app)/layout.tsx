@@ -44,6 +44,7 @@ export default async function AppLayout({
   // ADR-171 D7: the render's cursor, taken before any read. Everything this
   // render shows was read at or after it, so the attention stream's scan from
   // here misses nothing the page could be stale about.
+  // eslint-disable-next-line react-hooks/purity -- async Server Component: one render per request reads the request clock.
   const renderedAt = Date.now();
   const sessionUser = await getSessionUser();
 

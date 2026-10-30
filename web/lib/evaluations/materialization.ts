@@ -111,8 +111,7 @@ function snapshotSlot(
 function resolveOneSlot(
   decl: RecipeSlotDeclaration,
   binding:
-    | EvaluationControlledRecipeDefinition["slotBindings"][string]
-    | undefined,
+    EvaluationControlledRecipeDefinition["slotBindings"][string] | undefined,
   runners: readonly RunnerCatalogEntry[],
   defaultChain: SlotDefaultChain,
 ): { resolved?: RecipeResolvedSlot; refusal?: RecipeSlotRefusal } {

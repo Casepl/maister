@@ -48,6 +48,7 @@ afterEach(() => {
 describe("TaskCompleteAction", () => {
   it("posts the expected revision and refreshes after success", async () => {
     const fetchMock = vi.fn(async () => Response.json({ status: "Done" }));
+
     vi.stubGlobal("fetch", fetchMock);
 
     const button = container.querySelector("button");

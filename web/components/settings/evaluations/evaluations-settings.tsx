@@ -41,6 +41,10 @@ type PendingDelete = {
   name: string;
 };
 
+function activationMutationId(methodologyId: string): string {
+  return `eval-method-activation:${methodologyId}:${Date.now()}`;
+}
+
 function HealthDot({
   health,
   labels,
@@ -125,7 +129,7 @@ export function EvaluationsSettings({
         },
       );
       feedback.success({
-        mutationId: `eval-method-activation:${row.id}:${Date.now()}`,
+        mutationId: activationMutationId(row.id),
         message:
           activation === "enabled" ? t("toastEnabled") : t("toastDisabled"),
       });

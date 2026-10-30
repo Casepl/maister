@@ -123,7 +123,8 @@ export async function POST(
       idempotency: {
         kind: "comment_create",
         target: { slug, taskId },
-        parseBody: async (request) => postBodySchema.parse(await request.json()),
+        parseBody: async (request) =>
+          postBodySchema.parse(await request.json()),
       },
       db,
     },
@@ -179,7 +180,12 @@ export async function POST(
                     },
                   }
                 : ctx.operationId
-                  ? { activityPayloadExtra: { via: "librarian", operationId: ctx.operationId } }
+                  ? {
+                      activityPayloadExtra: {
+                        via: "librarian",
+                        operationId: ctx.operationId,
+                      },
+                    }
                   : {}),
             },
             tx,
@@ -204,7 +210,10 @@ export async function POST(
               statusCode: 201,
               operationId: ctx.operationId,
               operation: ctx.operationId
-                ? { id: ctx.operationId, result: { statusCode: 201, body: response } }
+                ? {
+                    id: ctx.operationId,
+                    result: { statusCode: 201, body: response },
+                  }
                 : undefined,
             },
             tx,
@@ -215,10 +224,7 @@ export async function POST(
 
         // (ADR-151) Same response contract as the session route — the
         // assistant-over-MCP is a first-class author of summoning comments.
-        return NextResponse.json(
-          added,
-          { status: 201 },
-        );
+        return NextResponse.json(added, { status: 201 });
       } catch (err) {
         if (isMaisterError(err)) {
           return NextResponse.json(

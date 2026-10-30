@@ -93,11 +93,7 @@ type MissingWorkspaceCandidate = {
   archivedAt: Date | null;
   archivedCommit: string | null;
   preservationOutcome:
-    | "not_needed"
-    | "ref_created"
-    | "snapshot_created"
-    | "legacy_unknown"
-    | null;
+    "not_needed" | "ref_created" | "snapshot_created" | "legacy_unknown" | null;
   runKind: "flow" | "scratch" | "agent";
   runStatus: WorkbenchRunStatus;
 };
@@ -448,10 +444,7 @@ async function loadTrustedProject(args: {
 }
 
 type FinalOrphanRemovalCheck =
-  | "safe"
-  | "trust_lost"
-  | "ownership_reappeared"
-  | "live_session";
+  "safe" | "trust_lost" | "ownership_reappeared" | "live_session";
 
 // ADR-166 D7: after the worktree is gone, release the run's adopted handle on
 // the host — a driverless `workspace.release` under the run's newest

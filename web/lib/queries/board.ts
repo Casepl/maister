@@ -773,16 +773,12 @@ export async function getBoardData(projectId: string): Promise<BoardData> {
           (openBlockingClarificationsByTask.get(task.taskId) ?? 0) > 0,
         flowId: task.flowId ?? null,
         triageStatus: (task.triageStatus ?? null) as
-          | "triaged"
-          | "flagged"
-          | null,
+          "triaged" | "flagged" | null,
         runnerId: task.runnerId ?? null,
         baseBranch: task.baseBranch ?? null,
         targetBranch: task.targetBranch ?? null,
         promotionMode: (task.promotionMode ?? null) as
-          | "local_merge"
-          | "pull_request"
-          | null,
+          "local_merge" | "pull_request" | null,
         executionPolicy:
           (task.executionPolicy as ExecutionPolicy | null) ?? null,
         relations: relationsByTask.get(task.taskId) ?? [],

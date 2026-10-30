@@ -797,9 +797,8 @@ describe("resolveWorkspaceRefCommittish (RD6 v1)", () => {
 
       return { runId: world.runId, projectId: world.projectId };
     })();
-    const { resolveWorkspaceRefCommittish } = await import(
-      "@/lib/agents/launch"
-    );
+    const { resolveWorkspaceRefCommittish } =
+      await import("@/lib/agents/launch");
 
     // Literal branch resolves to the commit sha.
     const literal = await resolveWorkspaceRefCommittish(db, {

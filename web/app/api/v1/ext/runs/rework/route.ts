@@ -21,7 +21,7 @@ const ENDPOINT = "POST /api/v1/ext/runs/rework";
 
 const bodySchema = z
   .object({
-    childRunId: z.string().uuid(),
+    childRunId: z.string().guid({ error: "Invalid uuid" }),
     prompt: z.string().min(1).max(1_000_000),
   })
   .strict();

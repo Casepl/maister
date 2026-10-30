@@ -387,9 +387,8 @@ export async function runSystemSweep(
   }
 
   try {
-    const { runLibrarianTurnSweep } = await import(
-      "@/lib/librarian/turn-recovery"
-    );
+    const { runLibrarianTurnSweep } =
+      await import("@/lib/librarian/turn-recovery");
 
     librarian = await runLibrarianTurnSweep();
   } catch (err) {

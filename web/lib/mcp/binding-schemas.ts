@@ -12,8 +12,8 @@ import { envRefSchema, mcpValueSchema } from "@/lib/mcp/value-grammar";
 
 export const mcpConfigOverlaySchema = z
   .object({
-    envRemap: z.record(mcpValueSchema).optional(),
-    headerRemap: z.record(mcpValueSchema).optional(),
+    envRemap: z.record(z.string(), mcpValueSchema).optional(),
+    headerRemap: z.record(z.string(), mcpValueSchema).optional(),
     bearerTokenEnv: envRefSchema.optional(),
     argsOverride: z.array(z.string()).optional(),
     urlOverride: z.string().url().optional(),

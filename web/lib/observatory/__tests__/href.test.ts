@@ -205,9 +205,8 @@ describe("runsLedgerHref (ADR-178 D8)", () => {
   });
 
   it("uses the param names the ledger itself parses", async () => {
-    const { normalizeRunsListFilters } = await import(
-      "@/lib/queries/runs-list"
-    );
+    const { normalizeRunsListFilters } =
+      await import("@/lib/queries/runs-list");
     const href = runsLedgerHref({
       projectSlug: "maister",
       period: current().period,

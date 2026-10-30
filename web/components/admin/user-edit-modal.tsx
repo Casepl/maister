@@ -8,6 +8,8 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import clsx from "clsx";
 
+import { useLatestRef } from "@/lib/use-latest-ref";
+
 async function patchUser(
   userId: string,
   patch: Record<string, unknown>,
@@ -87,9 +89,7 @@ export function UserEditModal({
 
   const dialogRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
-  const onCloseRef = useRef(onClose);
-
-  onCloseRef.current = onClose;
+  const onCloseRef = useLatestRef(onClose);
 
   const passwordTooShort = password.length > 0 && password.length < 12;
   const canDelete = user.status === "pending" && user.lastLoginAt === null;

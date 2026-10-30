@@ -292,9 +292,8 @@ async function runWorkerUntil(
   settled: () => boolean,
   budgetMs = 15_000,
 ): Promise<void> {
-  const { startFlowContinuationWorker } = await import(
-    "../continuation-worker"
-  );
+  const { startFlowContinuationWorker } =
+    await import("../continuation-worker");
   const worker = startFlowContinuationWorker({
     db: db as never,
     executionHosts,
@@ -488,9 +487,8 @@ describe("flow continuation worker — crash-recover arm (ADR-176)", () => {
 
     // What every claim-marker WRITE site does, in one transaction with the
     // marker stamp (D4).
-    const { CRASH_RECOVER_BUDGET_RESET } = await import(
-      "@/lib/runs/crash-recover"
-    );
+    const { CRASH_RECOVER_BUDGET_RESET } =
+      await import("@/lib/runs/crash-recover");
 
     await db
       .update(schema.runs)
@@ -577,9 +575,8 @@ describe("flow continuation worker — crash-recover arm (ADR-176)", () => {
         } as unknown as SupervisorSessionRecord,
       ];
 
-      const { startFlowContinuationWorker } = await import(
-        "../continuation-worker"
-      );
+      const { startFlowContinuationWorker } =
+        await import("../continuation-worker");
       const worker = startFlowContinuationWorker({
         db: db as never,
         executionHosts,

@@ -63,14 +63,13 @@ import {
   type OwnerKind,
 } from "@/test-support/durable-workers-ledger";
 import { mkdtempReal } from "@/test-support/worktree-test-root";
+import { createTerminalBarrier } from "@/test-support/durable-workers-terminal";
 
-// The adapter holds its terminal response this long after streaming output.
-// The window has to outlast a SIGKILL plus the assertions around it, and stay
-// well inside the per-case budget. Sized for the PARALLEL integration lane,
-// not for an idle host: this suite runs among ~480 files there, and CPU
-// starvation between admission and the poll that notices it is what closes the
-// window early. 60 s costs ~40 s per row after the kill and buys that margin.
-const TERMINAL_DELAY_MS = 60_000;
+const terminalTokens = {
+  flow: randomUUID(),
+  agent: randomUUID(),
+  scratch: randomUUID(),
+} as const;
 // Trap 3: the dead process's runtime-event stream claim holds for
 // RUNTIME_EVENT_CLAIM_LEASE_MS (30 s), so terminal evidence lands only after
 // one to three lease cycles. Never assert on a fixed short sleep.
@@ -88,6 +87,7 @@ let web: RealWeb;
 let project: SeededProject;
 let cookie = "";
 let logs = "";
+let adapterLog = "";
 
 async function api(
   pathname: string,
@@ -198,7 +198,7 @@ const domains: DomainRow[] = [
           baseBranch: "main",
           name: `durable-workers ${randomUUID().slice(0, 8)}`,
           prompt: fixturePrompt({
-            terminalDelayMs: TERMINAL_DELAY_MS,
+            terminalBarrier: terminalTokens.scratch,
             text: "\nscratch answered\n",
           }),
           reasoningEffort: "high",
@@ -247,12 +247,21 @@ describe("P0-2 durable workers in the production web boot", () => {
         mkdir(dir, { recursive: true }),
       ),
     );
+    logs = EVIDENCE_DIR ?? base;
+    await mkdir(logs, { recursive: true });
+    adapterLog = path.join(logs, "adapter-invocations.ndjson");
     supervisor = await startRealSupervisor({
       runtimeRoot: supervisorRoot,
       workspaceRoots: [worktreesRoot, base],
       // The adapter stays alive between turns and advertises resume: the
       // restarted web must be able to re-attach rather than start over.
-      fixtureArgs: ["--hang", "--supports-resume"],
+      fixtureArgs: [
+        "--hang",
+        "--supports-resume",
+        "--controlled-terminal",
+        "--invocation-log",
+        adapterLog,
+      ],
       ...(EVIDENCE_DIR
         ? { logFile: path.join(EVIDENCE_DIR, "supervisor.log") }
         : {}),
@@ -263,19 +272,17 @@ describe("P0-2 durable workers in the production web boot", () => {
     const flow = await seedFlowTask(testDatabase.db, {
       projectId: project.projectId,
       installedPath: path.join(packagesRoot, "flow"),
-      terminalDelayMs: TERMINAL_DELAY_MS,
+      terminalBarrier: terminalTokens.flow,
     });
 
     flowTaskId = flow.taskId;
     const agent = await seedAgentDefinition(testDatabase.db, {
       projectId: project.projectId,
       installedPath: path.join(packagesRoot, "agent"),
-      terminalDelayMs: TERMINAL_DELAY_MS,
+      terminalBarrier: terminalTokens.agent,
     });
 
     agentPath = `/api/projects/${project.slug}/agents/${encodeURIComponent(agent.agentId)}/launch`;
-    logs = EVIDENCE_DIR ?? base;
-    await mkdir(logs, { recursive: true });
     const buildId = await buildProductionWeb(path.join(logs, "next-build.log"));
 
     web = await startRealWeb({
@@ -326,58 +333,91 @@ describe("P0-2 durable workers in the production web boot", () => {
             "so boot must log prompt-owner-worker-started before anything else is asserted",
         ).toBeGreaterThanOrEqual(1);
 
-        const before = await promptIdsForKind(testDatabase.db, ownerKind);
-        // The launch call is NOT awaited: the kill window opens at admission,
-        // and the scratch launch's SSE stream can outlive the turn it started.
-        // The web is about to be SIGKILLed under it, so its rejection is
-        // expected and must not become an unhandled rejection.
-        const launched = launch().catch(() => undefined);
-        const accepted = await awaitOwnedPrompt(
-          testDatabase.db,
-          ownerKind,
-          before,
-        );
-        const runId = accepted.runId;
+        const issuer = web;
+        const terminal = createTerminalBarrier({
+          db: testDatabase.db,
+          supervisor,
+          issuer,
+          adapterLog,
+          token: terminalTokens[domain],
+          timeoutMs: EVIDENCE_BUDGET_MS,
+        });
+        let launched: Promise<unknown> | undefined;
 
-        expect(
-          accepted.completionAppliedAt,
-          `${domain}: the turn settled before the kill window opened — raise TERMINAL_DELAY_MS`,
-        ).toBeNull();
-        await web.kill("SIGKILL");
-        await launched;
-        web = await web.restart();
-        cookie = await signInWithCredentials(web.url, WORKER_ADMIN);
+        try {
+          const before = await promptIdsForKind(testDatabase.db, ownerKind);
 
-        // Terminal evidence reaches Postgres only once the restarted manager
-        // takes over the host stream claim, so this waits on applied STATE.
-        const settled = await poll(
-          async () => {
-            const [row] = (
-              await promptCommandsForRun(testDatabase.db, runId)
-            ).filter((entry) => entry.id === accepted.id);
+          // The launch call is NOT awaited: the kill window opens at admission,
+          // and the scratch launch's SSE stream can outlive the turn it started.
+          // The web is about to be SIGKILLed under it, so its rejection is
+          // expected and must not become an unhandled rejection.
+          launched = launch().catch(() => undefined);
+          const accepted = await awaitOwnedPrompt(
+            testDatabase.db,
+            ownerKind,
+            before,
+          );
+          const runId = accepted.runId;
 
-            return row?.applicationState === "applied" ? row : null;
-          },
-          EVIDENCE_BUDGET_MS,
-          `${domain}: the durable owner to apply command ${accepted.id}`,
-        );
+          await terminal.waitForHeld(accepted);
 
-        expect(settled.completionAppliedAt).not.toBeNull();
-        expect(settled.terminalEvidenceSha256).not.toBeNull();
-        // Authorship: the process that held the live waiter is gone, and the
-        // restarted one logged its own worker start.
-        expect(await countStartedLines()).toBeGreaterThan(startedBeforeLaunch);
-        // Exactly one prompt per accepted turn — a second would be a
-        // double-spend, not a recovery.
-        expect(
-          (await promptCommandsForRun(testDatabase.db, runId)).filter(
-            (row) => row.ownerKind === ownerKind,
-          ),
-        ).toHaveLength(1);
-        expect(
-          await expectedTerminal(runId),
-          `${domain}: the applied turn did not settle the domain (run status ${await runStatus(runId)})`,
-        ).toBe(true);
+          expect(
+            accepted.completionAppliedAt,
+            `${domain}: the terminal must remain held until after web death`,
+          ).toBeNull();
+          await issuer.kill("SIGKILL");
+          await launched;
+          web = await issuer.restart();
+          expect(await countStartedLines()).toBeGreaterThan(
+            startedBeforeLaunch,
+          );
+          await terminal.releaseAfterWebDeath();
+          cookie = await signInWithCredentials(web.url, WORKER_ADMIN);
+
+          // Terminal evidence reaches Postgres only once the restarted manager
+          // takes over the host stream claim, so this waits on applied STATE.
+          const settled = await poll(
+            async () => {
+              const [row] = (
+                await promptCommandsForRun(testDatabase.db, runId)
+              ).filter((entry) => entry.id === accepted.id);
+
+              return row?.applicationState === "applied" ? row : null;
+            },
+            EVIDENCE_BUDGET_MS,
+            `${domain}: the durable owner to apply command ${accepted.id}`,
+          );
+
+          expect(settled.completionAppliedAt).not.toBeNull();
+          expect(settled.terminalEvidenceSha256).not.toBeNull();
+          // Authorship: the process that held the live waiter is gone, and the
+          // restarted one logged its own worker start.
+          expect(await countStartedLines()).toBeGreaterThan(
+            startedBeforeLaunch,
+          );
+          // Exactly one prompt per accepted turn — a second would be a
+          // double-spend, not a recovery.
+          expect(
+            (await promptCommandsForRun(testDatabase.db, runId)).filter(
+              (row) => row.ownerKind === ownerKind,
+            ),
+          ).toHaveLength(1);
+          expect(
+            await expectedTerminal(runId),
+            `${domain}: the applied turn did not settle the domain (run status ${await runStatus(runId)})`,
+          ).toBe(true);
+        } finally {
+          try {
+            await terminal.close();
+          } finally {
+            await issuer.kill("SIGKILL");
+            await launched;
+            if (web === issuer) {
+              web = await issuer.restart();
+              cookie = await signInWithCredentials(web.url, WORKER_ADMIN);
+            }
+          }
+        }
       }, 600_000);
     },
   );
@@ -401,9 +441,8 @@ describe("P0-2 durable workers in the production web boot", () => {
       expect(kinds).toHaveLength(6);
       // Drop exactly one family: the composition must refuse rather than start
       // a worker that owns only a subset of the six kinds.
-      const { flowPromptOwners } = await import(
-        "@/lib/flows/graph/prompt-owner"
-      );
+      const { flowPromptOwners } =
+        await import("@/lib/flows/graph/prompt-owner");
 
       expect(() => composePromptOwnerRegistry([flowPromptOwners])).toThrow(
         expect.objectContaining({ code: "CONFIG" }),
@@ -449,9 +488,8 @@ describe("P0-2 durable workers in the production web boot", () => {
     });
 
     it("R5: a double start returns the same three handles", async () => {
-      const { startDurableWorkers, stopDurableWorkers } = await import(
-        "@/lib/workers/runtime"
-      );
+      const { startDurableWorkers, stopDurableWorkers } =
+        await import("@/lib/workers/runtime");
       const first = startDurableWorkers();
 
       try {
@@ -474,11 +512,25 @@ describe("P0-2 durable workers in the production web boot", () => {
           import("@/lib/server-lifecycle"),
           import("@/lib/workers/health"),
         ]);
+      const [{ applyPromptOwner }, { scratchPromptOwners }] = await Promise.all(
+        [
+          import("@/lib/execution-host/prompt-owner-application"),
+          import("@/lib/scratch-runs/prompt-owner"),
+        ],
+      );
 
       quiesceApplication();
       expect(() => startDurableWorkers()).toThrow(
         expect.objectContaining({ code: "EXECUTOR_UNAVAILABLE" }),
       );
+      await expect(
+        applyPromptOwner({
+          db: testDatabase.db,
+          owners: scratchPromptOwners,
+          commandId: randomUUID(),
+          signal: new AbortController().signal,
+        }),
+      ).rejects.toMatchObject({ code: "EXECUTOR_UNAVAILABLE" });
       expect(health.durableWorkersHealth().promptOwner.state).toBe("stopped");
     });
   });

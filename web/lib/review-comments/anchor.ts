@@ -18,9 +18,7 @@ export type AnchorPosition = {
 export type StoredAnchor = AnchorPosition & { lineContent: string };
 
 export type ExtractFailureReason =
-  | "diff_truncated"
-  | "file_absent"
-  | "line_absent";
+  "diff_truncated" | "file_absent" | "line_absent";
 
 export type AnchorExtraction =
   | { ok: true; lineContent: string }

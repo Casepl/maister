@@ -178,6 +178,7 @@ export async function LeftRail({
     unavailable: tStatus("supervisorUnavailable"),
   };
   const locale = await getLocale();
+  // eslint-disable-next-line react-hooks/purity -- async Server Component: one render per request reads the request clock.
   const nowMs = Date.now();
   const activeCount =
     workspaceGroups.length > 0

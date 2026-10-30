@@ -7,11 +7,12 @@ import type {
 } from "@/components/workbench/diff-view";
 import type { ReactElement } from "react";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { DiffView } from "@/components/workbench/diff-view";
 import { readApiError } from "@/lib/api-error";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 // ADR-132 (T18): read-only fork-vs-upstream divergence drawer — the
 // LocalPackageDiffDrawer pattern minus the commit/discard bar. Ours = the
@@ -56,9 +57,8 @@ export function UpstreamDivergenceDrawer({
   const tApiErrors = useTranslations("apiErrors");
   const [source, setSource] = useState<string>("working_dir");
   const [state, setState] = useState<LoadState>({ kind: "loading" });
-  const onCloseRef = useRef(onClose);
+  const onCloseRef = useLatestRef(onClose);
 
-  onCloseRef.current = onClose;
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {
       if (event.key === "Escape") {
@@ -72,55 +72,62 @@ export function UpstreamDivergenceDrawer({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const load = useCallback(async (): Promise<void> => {
-    setState({ kind: "loading" });
-    try {
-      const params = new URLSearchParams();
+  const load = useCallback(
+    (): Promise<void> =>
+      Promise.resolve()
+        .then(async () => {
+          setState({ kind: "loading" });
+          const params = new URLSearchParams();
 
-      if (source !== "working_dir") params.set("cutInstallId", source);
-      if (element !== null) params.set("element", element);
-      const query = params.size > 0 ? `?${params.toString()}` : "";
-      const res = await fetch(
-        `/api/studio/local-packages/${packageId}/divergence${query}`,
-      );
-      const errorResponse = res.clone();
-      const body = (await res.json().catch(() => null)) as {
-        code?: string;
-        message?: string;
-      } | null;
+          if (source !== "working_dir") params.set("cutInstallId", source);
+          if (element !== null) params.set("element", element);
+          const query = params.size > 0 ? `?${params.toString()}` : "";
+          const res = await fetch(
+            `/api/studio/local-packages/${packageId}/divergence${query}`,
+          );
+          const errorResponse = res.clone();
+          const body = (await res.json().catch(() => null)) as {
+            code?: string;
+            message?: string;
+          } | null;
 
-      if (!res.ok) {
-        // The typed "source install unavailable" degradation (CONFIG); the
-        // render supplies the localized headline, so server detail stays out
-        // of the operator-facing surface.
-        if (body?.code === "CONFIG") {
-          setState({ kind: "degraded", message: "" });
-        } else {
+          if (!res.ok) {
+            // The typed "source install unavailable" degradation (CONFIG); the
+            // render supplies the localized headline, so server detail stays out
+            // of the operator-facing surface.
+            if (body?.code === "CONFIG") {
+              setState({ kind: "degraded", message: "" });
+            } else {
+              setState({
+                kind: "error",
+                message: await readApiError(errorResponse, tApiErrors),
+              });
+            }
+
+            return;
+          }
+          if (body === null) {
+            setState({
+              kind: "error",
+              message: tApiErrors("requestFailed"),
+            });
+
+            return;
+          }
+
+          setState({
+            kind: "ready",
+            divergence: body as unknown as DivergenceDto,
+          });
+        })
+        .catch(() => {
           setState({
             kind: "error",
-            message: await readApiError(errorResponse, tApiErrors),
+            message: tApiErrors("requestFailed"),
           });
-        }
-
-        return;
-      }
-      if (body === null) {
-        setState({
-          kind: "error",
-          message: tApiErrors("requestFailed"),
-        });
-
-        return;
-      }
-
-      setState({ kind: "ready", divergence: body as unknown as DivergenceDto });
-    } catch {
-      setState({
-        kind: "error",
-        message: tApiErrors("requestFailed"),
-      });
-    }
-  }, [packageId, source, element, tApiErrors]);
+        }),
+    [packageId, source, element, tApiErrors],
+  );
 
   useEffect(() => {
     void load();

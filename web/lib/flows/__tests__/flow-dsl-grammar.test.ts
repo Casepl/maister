@@ -20,7 +20,7 @@ function def(schema: unknown): Record<string, unknown> {
 }
 
 function typeName(schema: unknown): string {
-  return def(schema).typeName as string;
+  return def(schema).type as string;
 }
 
 function unwrap(schema: unknown): unknown {
@@ -30,13 +30,14 @@ function unwrap(schema: unknown): unknown {
     const name = typeName(current);
 
     if (
-      name === "ZodOptional" ||
-      name === "ZodNullable" ||
-      name === "ZodDefault"
+      name === "optional" ||
+      name === "nullable" ||
+      name === "default" ||
+      name === "prefault"
     ) {
       current = def(current).innerType;
-    } else if (name === "ZodEffects") {
-      current = def(current).schema;
+    } else if (name === "pipe") {
+      current = def(current).in;
     } else {
       return current;
     }
@@ -55,18 +56,18 @@ function enumValues(schema: unknown): string[] {
   const inner = unwrap(schema);
   const name = typeName(inner);
 
-  if (name === "ZodEnum") return [...(inner as { options: string[] }).options];
-  if (name === "ZodLiteral") return [String(def(inner).value)];
+  if (name === "enum") return [...(inner as { options: string[] }).options];
+  if (name === "literal") return (def(inner).values as unknown[]).map(String);
 
   throw new Error(`expected enum/literal, got ${name}`);
 }
 
 function isNever(schema: unknown): boolean {
-  return typeName(unwrap(schema)) === "ZodNever";
+  return typeName(unwrap(schema)) === "never";
 }
 
 function nodeTypeOf(option: unknown): string {
-  return String(def(shapeOf(option).type).value);
+  return enumValues(shapeOf(option).type)[0] ?? "";
 }
 
 function realShapeKeys(schema: unknown): string[] {

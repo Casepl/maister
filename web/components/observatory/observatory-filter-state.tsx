@@ -6,7 +6,13 @@ import type {
 } from "@/lib/observatory/href";
 import type { ReactElement, ReactNode } from "react";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { buildObservatoryHref } from "@/lib/observatory/href";
 
@@ -69,16 +75,18 @@ export function ObservatoryFilterState({
   // settles before the page it asked for arrives, so `isPending` is not.
   const currentHref = buildObservatoryHref(pathname, current);
 
-  useEffect(() => {
-    // Either the patch arrived, or the reader went somewhere else entirely
-    // (Back, a heatmap drill-down). Both spend it — replaying it onto the next
-    // edit would re-impose a filter the URL no longer carries. Returning the
-    // same reference when there is nothing to clear keeps React from
-    // re-rendering the tabs on every landing.
+  // Either the patch arrived, or the reader went somewhere else entirely (Back,
+  // a heatmap drill-down). Both spend it — replaying it onto the next edit would
+  // re-impose a filter the URL no longer carries. Leaving an already-empty
+  // patch alone keeps React from re-rendering the tabs on every landing.
+  const [landedHref, setLandedHref] = useState(currentHref);
+
+  if (landedHref !== currentHref) {
+    setLandedHref(currentHref);
+    if (Object.keys(pending).length > 0) setPending({});
+  }
+  useLayoutEffect(() => {
     pendingRef.current = {};
-    setPending((previous) =>
-      Object.keys(previous).length === 0 ? previous : {},
-    );
   }, [currentHref]);
 
   const commit = (patch: ObservatoryHrefPatch): ObservatoryHrefPatch => {

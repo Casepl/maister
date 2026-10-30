@@ -390,7 +390,9 @@ export async function sendTaskToTriageInTransaction(
       triageStatus: null,
       launchMode: null,
       launchArmedAt: null,
-      ...(input.launchIntent === undefined ? {} : { launchIntent: input.launchIntent }),
+      ...(input.launchIntent === undefined
+        ? {}
+        : { launchIntent: input.launchIntent }),
       updatedAt: new Date(),
     })
     .where(

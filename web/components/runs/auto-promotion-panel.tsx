@@ -45,7 +45,7 @@ function formatRemaining(ms: number): string {
 
 // Live countdown to `targetIso`. Initial value is computed synchronously so the
 // first (server) render is deterministic; the interval only runs client-side.
-function useCountdown(targetIso: string): string {
+function useCountdown(targetIso: string): number {
   const target = new Date(targetIso).getTime();
   const [remaining, setRemaining] = useState(() => target - Date.now());
 
@@ -59,7 +59,7 @@ function useCountdown(targetIso: string): string {
     return () => clearInterval(id);
   }, [target]);
 
-  return formatRemaining(remaining);
+  return remaining;
 }
 
 function EligibleChip({
@@ -71,8 +71,9 @@ function EligibleChip({
   labelPromotesIn: (time: string) => string;
   labelReady: string;
 }): ReactElement {
-  const remaining = useCountdown(eligibleAt);
-  const due = new Date(eligibleAt).getTime() <= Date.now();
+  const remainingMs = useCountdown(eligibleAt);
+  const remaining = formatRemaining(remainingMs);
+  const due = remainingMs <= 0;
 
   return (
     <span
@@ -321,7 +322,7 @@ function GracePending({
   eligibleAt: string;
   labelPromotesIn: (time: string) => string;
 }): ReactElement {
-  const remaining = useCountdown(eligibleAt);
+  const remaining = formatRemaining(useCountdown(eligibleAt));
 
   return <span data-countdown={remaining}>{labelPromotesIn(remaining)}</span>;
 }

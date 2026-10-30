@@ -455,10 +455,7 @@ export interface HitlDecisionControlsProps {
 }
 
 type PermissionOptionMeaning =
-  | "allow_once"
-  | "allow_with_updates"
-  | "allow_always"
-  | "reject";
+  "allow_once" | "allow_with_updates" | "allow_always" | "reject";
 
 function normalizedPermissionOption(value: string): string {
   return value

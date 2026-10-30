@@ -35,6 +35,7 @@ import {
   isGitPanelSection,
   type GitPanelSection,
 } from "@/lib/workbench-git/panel-link";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 export interface WorkbenchLifecycleActionsProps {
   runId: string;
@@ -254,10 +255,8 @@ function DialogShell({
 }): ReactElement | null {
   const dialogRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
-  const onCloseRef = useRef(onClose);
+  const onCloseRef = useLatestRef(onClose);
   const anchored = anchorRect != null;
-
-  onCloseRef.current = onClose;
 
   useEffect(() => {
     restoreFocusRef.current = document.activeElement as HTMLElement | null;
@@ -453,9 +452,12 @@ function DetailGitHost({
 
   // A deep link on the same page (the review panel's "Sync branch") changes the
   // query without remounting this host, so the section it names opens here.
-  useEffect(() => {
+  const [linkedSection, setLinkedSection] = useState(initialSection);
+
+  if (linkedSection !== initialSection) {
+    setLinkedSection(initialSection);
     if (initialSection !== null) setOpen(true);
-  }, [initialSection]);
+  }
   // The run page's stream ticks re-read git-state (debounced in the panel).
   const { eventCount } = useRunPageStream(runId, false);
 

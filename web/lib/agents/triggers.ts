@@ -44,12 +44,7 @@ type LaunchFn = (
 ) => Promise<LaunchAgentRunResult>;
 
 type AgentScheduleOutcome =
-  | "launched"
-  | "queued"
-  | "refused"
-  | "deduplicated"
-  | "suppressed"
-  | "failed";
+  "launched" | "queued" | "refused" | "deduplicated" | "suppressed" | "failed";
 
 async function claimAgentScheduleTelemetry(input: {
   db: Db;

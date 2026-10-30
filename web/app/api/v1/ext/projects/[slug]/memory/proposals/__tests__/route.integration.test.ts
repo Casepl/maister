@@ -97,9 +97,8 @@ beforeAll(async () => {
   ctx = await startBrainTestDb();
   dbRef = ctx.db;
 
-  const mod = await import(
-    "@/app/api/v1/ext/projects/[slug]/memory/proposals/route"
-  );
+  const mod =
+    await import("@/app/api/v1/ext/projects/[slug]/memory/proposals/route");
 
   POST = mod.POST;
 }, 180_000);

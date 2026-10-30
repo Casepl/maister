@@ -7,7 +7,7 @@ import type {
 import type { ReactElement } from "react";
 
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 
 import { useModalFocusTrap } from "@/components/feedback/use-modal-focus-trap";
@@ -34,9 +34,13 @@ export function MobileRailDrawer({
 
   useModalFocusTrap(drawerRef, () => setOpen(false), open);
 
-  useEffect(() => {
+  // A navigation closes the drawer.
+  const [openedAt, setOpenedAt] = useState(pathname);
+
+  if (openedAt !== pathname) {
+    setOpenedAt(pathname);
     setOpen(false);
-  }, [pathname]);
+  }
 
   return (
     <div className="md:hidden">

@@ -29,6 +29,7 @@ import {
 } from "@/lib/board/evidence-graph-layout";
 
 import "@xyflow/react/dist/style.css";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 export interface EvidenceGraphLabels extends EvidenceTextLabels {
   title: string;
@@ -350,9 +351,7 @@ function PayloadModal({
 
   const dialogRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
-  const onCloseRef = useRef(onClose);
-
-  onCloseRef.current = onClose;
+  const onCloseRef = useLatestRef(onClose);
 
   useEffect(() => {
     let cancelled = false;

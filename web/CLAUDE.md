@@ -24,12 +24,12 @@ is template demo material to be **replaced** as we implement MAIster routes.
 
 | Layer       | Choice                                            |
 | ----------- | ------------------------------------------------- |
-| Framework   | Next.js `16.2.6` (App Router)                     |
-| React       | `19.2.6`                                          |
-| Language    | TypeScript `5.6.3`, strict, `@/*` → `./*`         |
-| UI library  | `@heroui/react` `3.0.4` + `@heroui/styles`        |
-| Styling     | Tailwind CSS `4.1.11` via `@tailwindcss/postcss`  |
-| Variants    | `tailwind-variants` `3.2.2`                       |
+| Framework   | Next.js `16.4.3` (App Router)                     |
+| React       | `19.3.1`                                          |
+| Language    | TypeScript `6.0.3`, strict, `@/*` → `./*`         |
+| UI library  | `@heroui/react` `3.2.6` + `@heroui/styles`        |
+| Styling     | Tailwind CSS `4.3.3` via `@tailwindcss/postcss`   |
+| Variants    | `tailwind-variants` `3.3.1`                       |
 | Theming     | Local script-free theme provider (default `dark`) |
 | Lint        | ESLint `9` flat config + Prettier                 |
 | Pkg manager | pnpm                                              |
@@ -199,6 +199,13 @@ pnpm install-authored-flow-package # bridge export as untrusted installed packag
 `pnpm typecheck` runs `tsc --noEmit` (`noEmit: true` in tsconfig).
 The web A/B runner accepts `--shard i/n`; CI uses `1/2` and `2/2` as complete,
 disjoint file lists. The isolation runner does not accept this flag.
+
+The test-only `MAISTER_TEST_ISOLATION` selector is owned by
+`test-support/process-isolation.ts`; its platform/capability and implemented Linux
+namespace semantics are in `../docs/configuration.md#test-only-isolation-selector`.
+Linux development evidence and hosted qualification are separate gates in
+`../docs/system-analytics/test-infrastructure.md`. No product config/API/schema
+change or production separate-user guarantee is implied.
 
 ### Test database contract
 
@@ -445,8 +452,15 @@ of overwriting Done during directory cleanup. Final consumer suites qualify
 4.868 seconds; both isolation invocations have zero leaks and use the default
 Docker probe deadline. Hosted `37010985789` remains failed: its Docker
 initialization subphase and Intel budget remain unresolved. The CI/R9 plan
-owns exact RED/GREEN reports and local probe settings. S5.2 stays 42/45;
+owns exact RED/GREEN reports and local probe settings. At that historical checkpoint S5.2 stayed 42/45;
 the owner authorized proceeding next to S5.3a's Linux-driver proof.
+
+**Current S5.2 acceptance (2026-10-20):** owner-pushed `b8e72adfe` passed
+both macOS Intel isolation parts (19/31 cases), both preflights, four web
+shards and two supervisor legs on the required Nodes, within unchanged budgets
+and with zero leaks. Parent stabilization is 43/45; S5.3/S5.4 remain open.
+Exact-source receipts and limits: [CI-R9d checkpoint](../.ai-factory/plans/s53a-linux-isolation.md#ci-r9d--t15--accepted-macos-hosted-checkpoint-2026-10-20).
+This does not qualify later sources or Linux.
 
 **A first-hit Next-dev compile can exhaust a 10s e2e timeout.** Before calling
 such a failure a regression, re-run the spec in isolation and read the RETRY

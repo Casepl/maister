@@ -95,8 +95,7 @@ describe("Event ingestion and assignment claim locks", () => {
     });
     const barrier = await testDatabase.pool.connect();
     let completion:
-      | Promise<PromiseSettledResult<RuntimeEventConsumerSummary>[]>
-      | undefined;
+      Promise<PromiseSettledResult<RuntimeEventConsumerSummary>[]> | undefined;
     let releasePromise: Promise<void> | undefined;
     const releaseBarrier = (): Promise<void> =>
       (releasePromise ??= barrier.query("COMMIT").then(() => undefined));

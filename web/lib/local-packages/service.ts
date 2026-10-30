@@ -72,6 +72,7 @@ import {
   type DiffPrepResult,
 } from "@/lib/diff/prepare";
 import { diffWorkingTree } from "@/lib/worktree";
+import { isUniqueViolation } from "@/lib/db/pg-error";
 
 const log = pino({
   name: "local-packages/service",
@@ -700,15 +701,6 @@ async function compensateFailedAdditionalFlow(
     );
     throw err;
   }
-}
-
-// pg unique-violation → CONFLICT (mirrors lib/users.ts + lib/project-members.ts).
-function isUniqueViolation(err: unknown): boolean {
-  return (
-    typeof err === "object" &&
-    err !== null &&
-    (err as { code?: unknown }).code === "23505"
-  );
 }
 
 function isEnoent(err: unknown): boolean {

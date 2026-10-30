@@ -205,8 +205,7 @@ const fakeDb: FakeDb = {
           {
             attemptNumber:
               ((state.selectResults[0]?.[0]?.attemptNumber as
-                | number
-                | undefined) ?? 0) + 1,
+                number | undefined) ?? 0) + 1,
           },
         ];
 

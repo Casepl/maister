@@ -21,9 +21,8 @@ vi.mock("server-only", () => ({}));
 
 const { promptSpanPages, promptSpanReaders, SpanCanonicallyAvailable } =
   await import("@/lib/execution-host/prompt-span-pages");
-const { HostSpanSignals, HostSpanUnavailable } = await import(
-  "@/lib/execution-host/prompt-host-span"
-);
+const { HostSpanSignals, HostSpanUnavailable } =
+  await import("@/lib/execution-host/prompt-host-span");
 
 const STREAM = "stream-row";
 const SESSION = "host-session-1";

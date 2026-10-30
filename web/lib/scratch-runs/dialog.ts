@@ -108,9 +108,7 @@ export type ScratchDetail = {
     options: HitlOption[];
     answerState: "open" | "answer_stored";
     storedResponse:
-      | { optionId: string }
-      | { response: unknown; confidence?: number }
-      | null;
+      { optionId: string } | { response: unknown; confidence?: number } | null;
   } | null;
   // B6: why a Failed | Crashed | Abandoned dialog's run ended. A project-less
   // assistant run emits no event, so its fallback is the dialog's own code.
