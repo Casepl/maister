@@ -5,7 +5,8 @@ import { availableParallelism, tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { createInvocation, fixtureProcessEnvironment, FIXTURE_WATCHDOG, logInvocation, invocationRecords, fixtureLogTail, registerProcess, releaseInvocation, signalInvocationGroup } from "../web/test-support/process-invocation.ts";
+import { createInvocation, fixtureProcessEnvironment, FIXTURE_WATCHDOG, logInvocation, invocationFromEnvironment, invocationRecords, fixtureLogTail, registerProcess, releaseInvocation, signalInvocationGroup } from "../web/test-support/process-invocation.ts";
+import { retainLaneReaper } from "../web/test-support/lane-reaper.ts";
 
 import { assertSupportedNode } from "../runtime/node-version.ts";
 
@@ -54,6 +55,9 @@ export const laneSuites = {
     // the lane.
     ...["ingest", "ingest-batch", "ingest-batch-walk", "ingest-batch-locks", "consumer-batching", "event-claim-lock", "projection-worker"]
       .map((name) => `lib/execution-host/events/__tests__/${name}.integration.test.ts`),
+    // Append harness controls so existing two-shard assignments stay stable.
+    "test-support/__tests__/supervisor-fault-proxy.integration.test.ts",
+    "test-support/__tests__/execution-ab-reaper.integration.test.ts",
   ],
   // AT-16: one real production web (fresh `next build`, `server.ts`) under a
   // kernel isolation driver against a real supervisor — runs alone because
@@ -85,12 +89,34 @@ export function webShardFiles(files, shardIndex, shardCount) {
   return files.filter((_, index) => index % shardCount === shardIndex - 1);
 }
 
-export function parseLaneInvocation(args) {
+export function isolationPartFiles(part) {
+  assert(part === 1 || part === 2, "usage: isolation --part 1/2|2/2");
+
+  return part === 1 ? laneSuites.isolation.slice(0, 2) : laneSuites.isolation.slice(2);
+}
+
+export function isolationFiles(platform = process.platform) {
+  assert(platform === "darwin" || platform === "linux", `unsupported isolation platform: ${platform}`);
+
+  return platform === "darwin" ? laneSuites.isolation :
+    [...laneSuites.isolation, "test-support/__tests__/linux-isolation-driver.integration.test.ts"];
+}
+
+export function parseLaneInvocation(args, platform = process.platform) {
   const [slice, flag, shard, ...extra] = args;
 
   assert(Object.hasOwn(laneSuites, slice ?? ""), "usage: run-stage-ab-tests.mjs web|supervisor|isolation [--shard i/n]");
   assert.equal(extra.length, 0, "usage: unexpected A/B lane arguments");
-  if (flag === undefined && shard === undefined) return { slice, files: laneSuites[slice] };
+  const files = slice === "isolation" ? isolationFiles(platform) : laneSuites[slice];
+
+  if (flag === undefined && shard === undefined) return { slice, files };
+  if (flag === "--part") {
+    assert.equal(slice, "isolation", "only isolation accepts --part");
+    assert.equal(platform, "darwin", "only Darwin isolation accepts --part");
+    assert(/^[12]\/2$/u.test(shard ?? ""), "usage: isolation --part 1/2|2/2");
+
+    return { slice, files: isolationPartFiles(Number(shard[0])) };
+  }
   assert.equal(slice, "web", "only the web A/B slice accepts --shard");
   assert.equal(flag, "--shard", "usage: --shard i/n");
   const match = /^([1-9]\d*)\/([1-9]\d*)$/u.exec(shard ?? "");
@@ -122,12 +148,20 @@ export function vitestArgs({ files, reportPath, concurrency }) {
   return [
     "node_modules/vitest/vitest.mjs", "run", ...files, "--project=integration",
     "--reporter=json", `--outputFile=${reportPath}`, "--reporter=default",
-    `--maxWorkers=${concurrency}`, "--minWorkers=1",
+    `--maxWorkers=${concurrency}`,
   ];
 }
 
 // Frozen acceptance case names make partial collection fail, even when the suite survives.
 export const requiredIsolationCases = {
+  "test-support/__tests__/supervisor-fault-proxy.integration.test.ts": [
+    "HTTP cancellation: an aborted upload drains and the proxy continues forwarding",
+    "SSE cancellation: closing a real client during frame delivery drains and permits reconnect",
+    "proxy refusal: malformed SSE and an unreleased barrier remain observable failures"
+  ],
+  "test-support/__tests__/execution-ab-reaper.integration.test.ts": [
+    "O-reaper: the owning runner retains real Ryuk across worker death and the next database start"
+  ],
   "lib/scratch-runs/__tests__/dispatch-window.integration.test.ts": [
     "S1 launch: a web death after Running commits and before prompt admission re-drives the original turn once",
     "S1 direct message: a later turn on the same incarnation is recovered after an earlier completed prompt",
@@ -194,6 +228,13 @@ export const requiredIsolationCases = {
   ],
   "test-support/__tests__/execution-ab-preflight.integration.test.ts": [
     "I-CI: the real driver denies the host root and the real PostgreSQL container is reachable"
+  ],
+  "test-support/__tests__/linux-isolation-driver.integration.test.ts": [
+    "LI-boundary: exact mounts deny private reads and escape paths while descendants retain authorized access",
+    "LI-refusal: unavailable capabilities and invalid policies refuse launch and probes release on every failure",
+    "LI-term: verified graceful forwarding preserves production drain and exact application code or signal",
+    "LI-kill: namespace and outer death terminate detached resistant descendants without touching siblings",
+    "LI-parent: startup ready and active-probe parent death close the namespace before exit-sweep containment"
   ]
 };
 
@@ -220,6 +261,11 @@ export function validateLaneReport(report, files) {
       assert.equal(result.assertionResults.filter((item) => item.title === title).length, 1,
         `A/B required case missing or duplicated: ${file}: ${title}`);
     }
+    if (laneSuites.isolation.includes(file) ||
+      file === "test-support/__tests__/linux-isolation-driver.integration.test.ts" ||
+      file === "test-support/__tests__/execution-ab-preflight.integration.test.ts")
+      assert.equal(result.assertionResults.length, requiredIsolationCases[file].length,
+        `A/B unexpected isolation case: ${file}`);
   }
   assert.equal(report.numFailedTests, 0);
   assert.equal(report.numPendingTests, 0);
@@ -228,29 +274,35 @@ export function validateLaneReport(report, files) {
   assert.equal(report.success, true, "A/B reporter recorded errors");
 }
 
-export async function runStageAbLane({ slice, files = laneSuites[slice], workspace, evidenceDirectory = process.env.MAISTER_TEST_EVIDENCE_DIR }) {
+export async function runStageAbLane({ slice, files = slice === "isolation" ? isolationFiles() : laneSuites[slice], workspace, evidenceDirectory = process.env.MAISTER_TEST_EVIDENCE_DIR, owningInvocation }) {
   const startedAt = Date.now();
   assertSupportedNode(process.versions.node);
   assert(Object.hasOwn(laneSuites, slice ?? ""), "usage: run-stage-ab-tests.mjs web|supervisor|isolation");
   const cwd = fileURLToPath(new URL(`../${lanePackages[slice]}/`, import.meta.url));
 
+  // A private nested control may pre-mint its own lane capability so its
+  // parent can reclaim exact resources even if this runner dies before IPC.
+  if (owningInvocation) assert.deepEqual(invocationFromEnvironment(), owningInvocation,
+    "A/B supplied invocation must match the inherited private lane capability");
   await Promise.all(files.map((file) => access(join(cwd, file))));
   const directory = await mkdtemp(join(evidenceDirectory ?? tmpdir(), `maister-ab-${slice}-`));
-  const invocation = await createInvocation(directory);
+  const invocation = owningInvocation ?? await createInvocation(directory);
   const reportPath = join(directory, "vitest.json");
   const concurrency = laneConcurrency(availableParallelism(), slice);
   const env = { ...process.env, ...await fixtureProcessEnvironment(invocation), MAISTER_TEST_DOCKER_PROBE_TIMEOUT_MS: "30000" };
   const args = ["--import", FIXTURE_WATCHDOG, ...vitestArgs({ files, reportPath, concurrency })];
 
-  if (workspace) args.push("--workspace", workspace);
+  if (workspace) args.push("--config", workspace);
   let child;
   let escalation;
   let caughtSignal;
   let failure;
   let status;
   const signalDeliveries = [];
+  const acquisition = new AbortController();
   const onSignal = (signal) => {
     caughtSignal ??= signal;
+    acquisition.abort(new Error(`A/B runner interrupted by ${signal}`));
     if (!child?.pid || child.exitCode !== null || child.signalCode !== null) return;
     signalDeliveries.push(signalInvocationGroup(invocation, child.pid, signal).catch((error) => {
       failure = failure ? new AggregateError([failure, error], "A/B group signal failed") : error;
@@ -268,6 +320,16 @@ export async function runStageAbLane({ slice, files = laneSuites[slice], workspa
   process.on("SIGTERM", onTerminate);
   try {
     await registerProcess(invocation, { role: "runner", caseName: slice, rootRole: "invocation", root: null, bootId: invocation.id, logFile: null }, process.pid);
+    logInvocation(invocation, "lane-selection", {
+      platform: process.platform, slice, files, concurrency,
+      requiredCases: files.flatMap((file) => requiredIsolationCases[file] ?? []),
+    });
+    if (slice !== "supervisor") {
+      const reaper = await retainLaneReaper(acquisition.signal);
+
+      logInvocation(invocation, "lane-reaper-retained", { role: "runner", caseName: slice, pid: process.pid, rootRole: "shared-reaper", containerId: reaper.containerId, sessionId: reaper.sessionId, outcome: "retained-until-runner-exit" });
+    }
+    assert.equal(caughtSignal, undefined, `A/B runner interrupted by ${caughtSignal}`);
     child = spawn(process.execPath, args, { cwd, stdio: "inherit", env, detached: true });
     const exited = new Promise((resolve, reject) => {
       child.once("error", reject);

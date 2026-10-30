@@ -49,9 +49,7 @@ export const MAX_CONTEXT_MOUNT_GC_ATTEMPTS = RETRY_BACKOFF_MS.length + 1;
 // A deterministic failure can never succeed on a retry, so it is recorded as a
 // permanent `failed` with evidence rather than burning the retry budget.
 export type ContextMountGcFailureCode =
-  | "sibling_project_absent"
-  | "not_a_registered_worktree"
-  | "removal_failed";
+  "sibling_project_absent" | "not_a_registered_worktree" | "removal_failed";
 
 export type ContextMountGcMarker = {
   state: "retry_waiting" | "failed";

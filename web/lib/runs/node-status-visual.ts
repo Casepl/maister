@@ -27,13 +27,7 @@ export const DERIVED_NODE_STATUS_KEYS = ["WaitingOnChildren"] as const;
 export type DerivedNodeStatusKey = (typeof DERIVED_NODE_STATUS_KEYS)[number];
 
 export type NodeStatusTone =
-  | "pending"
-  | "running"
-  | "done"
-  | "failed"
-  | "needs"
-  | "rework"
-  | "stale";
+  "pending" | "running" | "done" | "failed" | "needs" | "rework" | "stale";
 
 export interface NodeStatusVisual {
   // @heroicons/react/24/outline export name resolved by the render site.

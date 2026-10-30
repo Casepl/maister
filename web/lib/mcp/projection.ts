@@ -1,7 +1,6 @@
 import "server-only";
 
-import type { InferSelectModel } from "drizzle-orm";
-import type { PgTable } from "drizzle-orm/pg-core";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { PlatformMcpCapability } from "@/lib/capabilities/types";
 import type { PlatformMcpServer } from "@/lib/db/schema";
 
@@ -14,13 +13,7 @@ import { platformMcpServers } from "@/lib/db/schema";
 // `env`/`headers` VALUE maps under the shared grammar, so this projection is an
 // identity pass — a value behind an `env:NAME` reference still never leaves the
 // execution host.
-type Db = {
-  select: () => {
-    from: <TTable extends PgTable>(
-      table: TTable,
-    ) => Promise<InferSelectModel<TTable>[]> | InferSelectModel<TTable>[];
-  };
-};
+type Db = Pick<NodePgDatabase, "select">;
 
 // Still read by `lib/brain/openai-compatible.ts` for its own provider ref.
 export function stripEnvPrefix(ref: string): string {

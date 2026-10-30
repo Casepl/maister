@@ -44,8 +44,8 @@ export async function hasNativeOutputCommand(
 
   return Boolean(
     command &&
-      command.kind.startsWith("session.") &&
-      (command.kind === "session.create" ||
-        command.targetSessionId === input.hostSessionId),
+    command.kind.startsWith("session.") &&
+    (command.kind === "session.create" ||
+      command.targetSessionId === input.hostSessionId),
   );
 }

@@ -20,8 +20,7 @@ export type Predicate = {
 };
 
 export type ParseWhenResult =
-  | { ok: true; predicate: Predicate }
-  | { ok: false; error: string };
+  { ok: true; predicate: Predicate } | { ok: false; error: string };
 
 // Walk `dotpath` ("a.b.c") into `obj`. A null/non-object hop, or a segment the
 // current object does not OWN, yields `undefined`. Never throws. `Object.hasOwn`

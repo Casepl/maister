@@ -5,11 +5,18 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 
 import { getDb } from "@/lib/db/client";
-import { librarianTaskLinks, librarianTurns, taskStatementRevisions } from "@/lib/db/schema";
+import {
+  librarianTaskLinks,
+  librarianTurns,
+  taskStatementRevisions,
+} from "@/lib/db/schema";
 import { isMaisterError } from "@/lib/errors";
 import { listLaunchableFlowSummaries } from "@/lib/queries/project";
 import { recordTaskActivity } from "@/lib/social/activity";
-import { renderStatementPrompt, taskStatementSchema } from "@/lib/tasks/statement";
+import {
+  renderStatementPrompt,
+  taskStatementSchema,
+} from "@/lib/tasks/statement";
 import { createTask } from "@/lib/services/tasks";
 import { listTaskDTOs } from "@/lib/services/tasks";
 import { tokenAuditIdentity } from "@/lib/tokens/audit";
@@ -59,7 +66,8 @@ export async function POST(
       idempotency: {
         kind: "task_create",
         target: { slug },
-        parseBody: async (request) => postBodySchema.parse(await request.json()),
+        parseBody: async (request) =>
+          postBodySchema.parse(await request.json()),
       },
       db,
     },
@@ -82,42 +90,60 @@ export async function POST(
       const librarian = ctx.actor.tokenKind === "librarian";
 
       if (librarian && !body.statement) {
-        return NextResponse.json({ code: "CONFIG", message: "a librarian task requires a statement" }, { status: 422 });
+        return NextResponse.json(
+          { code: "CONFIG", message: "a librarian task requires a statement" },
+          { status: 422 },
+        );
       }
       if (!librarian && !body.prompt) {
-        return NextResponse.json({ code: "CONFIG", message: "prompt is required" }, { status: 422 });
+        return NextResponse.json(
+          { code: "CONFIG", message: "prompt is required" },
+          { status: 422 },
+        );
       }
 
       const launchableFlows = librarian
         ? await listLaunchableFlowSummaries(ctx.projectId, db)
         : [];
       const requestedFlow = body.flowId
-        ? launchableFlows.find((flow) => flow.id === body.flowId || flow.ref === body.flowId)
+        ? launchableFlows.find(
+            (flow) => flow.id === body.flowId || flow.ref === body.flowId,
+          )
         : null;
 
       if (librarian && body.flowId && !requestedFlow) {
-        return NextResponse.json({ code: "CONFIG", message: "selected flow is not launchable" }, { status: 422 });
+        return NextResponse.json(
+          { code: "CONFIG", message: "selected flow is not launchable" },
+          { status: 422 },
+        );
       }
 
       const flowId = librarian
-        ? (requestedFlow?.id ?? (launchableFlows.length === 1 ? launchableFlows[0].id : undefined))
+        ? (requestedFlow?.id ??
+          (launchableFlows.length === 1 ? launchableFlows[0].id : undefined))
         : body.flowId;
-      const turn = librarian && ctx.actor.librarianTurnId
-        ? await db.query.librarianTurns.findFirst({
-            where: eq(librarianTurns.id, ctx.actor.librarianTurnId),
-            columns: { conversationId: true, messageId: true },
-          })
-        : null;
+      const turn =
+        librarian && ctx.actor.librarianTurnId
+          ? await db.query.librarianTurns.findFirst({
+              where: eq(librarianTurns.id, ctx.actor.librarianTurnId),
+              columns: { conversationId: true, messageId: true },
+            })
+          : null;
 
       if (librarian && (!turn || !ctx.operationId)) {
-        return NextResponse.json({ code: "PRECONDITION", message: "librarian turn has no operation" }, { status: 409 });
+        return NextResponse.json(
+          { code: "PRECONDITION", message: "librarian turn has no operation" },
+          { status: 409 },
+        );
       }
 
       const receipt = librarian
         ? {
             revision: 1,
             launchability: flowId ? "requires_admission_check" : "unconfigured",
-            nextStep: flowId ? "check_launch_options" : "send_to_triage_or_choose_flow",
+            nextStep: flowId
+              ? "check_launch_options"
+              : "send_to_triage_or_choose_flow",
           }
         : {};
 
@@ -127,7 +153,9 @@ export async function POST(
             const created = await createTask(
               {
                 title: body.title,
-                prompt: body.statement ? renderStatementPrompt(body.statement) : body.prompt!,
+                prompt: body.statement
+                  ? renderStatementPrompt(body.statement)
+                  : body.prompt!,
                 flowId,
               },
               {
@@ -173,7 +201,10 @@ export async function POST(
                 projectId: ctx.projectId,
                 actor: socialActorForToken(ctx.actor),
                 eventKind: "statement_accepted",
-                payload: { statementRevision: 1, viaOperationId: ctx.operationId },
+                payload: {
+                  statementRevision: 1,
+                  viaOperationId: ctx.operationId,
+                },
               });
             }
 
@@ -188,7 +219,13 @@ export async function POST(
                 statusCode: 201,
                 operationId: ctx.operationId,
                 operation: ctx.operationId
-                  ? { id: ctx.operationId, result: { statusCode: 201, body: { taskId: created.taskId, ...receipt } } }
+                  ? {
+                      id: ctx.operationId,
+                      result: {
+                        statusCode: 201,
+                        body: { taskId: created.taskId, ...receipt },
+                      },
+                    }
                   : undefined,
               },
               tx,

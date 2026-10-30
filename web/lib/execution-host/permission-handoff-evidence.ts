@@ -60,8 +60,7 @@ export function isRefusedPermissionDelivery(
   command: ExecutionCommand,
 ): boolean {
   const details = command.lastError?.details as
-    | Record<string, unknown>
-    | undefined;
+    Record<string, unknown> | undefined;
 
   return (
     command.kind === "session.input" &&
@@ -228,17 +227,15 @@ export async function permissionCheckpointOrder(
       ),
     );
 
-  if (
-    !(
-      terminal &&
-      terminal.payload?.commandId === command.id &&
-      terminal.payload.kind === "session.prompt" &&
-      terminal.payload.phase ===
-        (command.state === "succeeded" ? "completed" : "rejected") &&
-      terminal.eventStreamId !== null &&
-      terminal.hostSequence !== null
-    )
-  )
+  if (!(
+    terminal &&
+    terminal.payload?.commandId === command.id &&
+    terminal.payload.kind === "session.prompt" &&
+    terminal.payload.phase ===
+      (command.state === "succeeded" ? "completed" : "rejected") &&
+    terminal.eventStreamId !== null &&
+    terminal.hostSequence !== null
+  ))
     return "unproven";
 
   // A checkpoint the host acknowledged as ALREADY parked did not cause the

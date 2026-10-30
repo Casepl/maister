@@ -10,9 +10,11 @@
 import { randomUUID } from "node:crypto";
 import { Readable, Writable } from "node:stream";
 
-import * as acp from "@agentclientprotocol/sdk";
+import * as acp from "@agentclientprotocol/sdk/unstable";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+
+import { serveAgent } from "./acp-agent-app.mjs";
 
 const OPTIONS = [
   { optionId: "allow", kind: "allow_once", name: "Allow" },
@@ -192,7 +194,7 @@ class LibrarianAgent {
 const input = Writable.toWeb(process.stdout);
 const output = Readable.toWeb(process.stdin);
 
-new acp.AgentSideConnection(
+serveAgent(
   (connection) => new LibrarianAgent(connection),
   acp.ndJsonStream(input, output),
 );

@@ -21,8 +21,7 @@ export type ProjectCapabilityCatalogEntry = {
 };
 
 export type CapabilityAgentsMask =
-  | readonly string[]
-  | Record<string, string | null>;
+  readonly string[] | Record<string, string | null>;
 
 /** Mirrors resolver.ts `supportsAgent`: array → membership; map → key present. */
 export function capabilityAgentSupported(

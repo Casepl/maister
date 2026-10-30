@@ -27,11 +27,12 @@ info:
     `seq` is the conversation's durable message sequence
     (`librarian_messages.seq`). It never decreases and is never reused within
     a conversation — not across a reset, a history clear or the retention
-    purge. Every frame's SSE `id` is its `seq` as a canonical decimal string,
-    so `id` is monotonic (non-decreasing) over the life of a stream.
+    purge. Every conversation frame's SSE `id` is its `seq` as a canonical
+    decimal string, so `id` is monotonic (non-decreasing) over the life of a stream.
 
-    `librarian.heartbeat` is a synthetic web-tier message. It carries no SSE
-    `id` and never advances a replay cursor.
+    `librarian.settings` and `librarian.heartbeat` carry no SSE `id` and never
+    advance a message replay cursor. Settings notifications contain no runner
+    configuration, credentials or runner identity.
   contact:
     name: MAIster maintainers
     url: https://github.com/your-org/mAIster
@@ -67,6 +68,9 @@ channels:
           order (owner, librarian, update and system messages alike);
         - `librarian.turn` when a turn changes status;
         - `librarian.indicator` when the top-navigation indicator changes;
+        - `librarian.settings` when librarian enablement, the selected runner,
+          its configuration or its persisted readiness changes; the client
+          refetches availability through `GET /api/librarian/conversation`;
         - `librarian.reset` when a reset starts (`resetting`), when it is
           acknowledged (`none` + the new `segmentId`), and after a history
           clear (`none` without `segmentId`) — in every case the client drops
@@ -83,6 +87,13 @@ channels:
         `GET /api/librarian/messages`. There is no in-memory replay buffer; a
         server restart costs a reader only a reconnect.
 
+        Every connection also receives a `librarian.settings` notification,
+        even before a conversation exists. Settings changes are observed by
+        the same server-side read loop, independently of conversation `seq`;
+        each open tab refreshes its state without client polling. A running
+        response keeps its runner; the next response resolves current settings
+        when it starts. Refreshing availability preserves the draft and history.
+
         A quiet stream emits `librarian.heartbeat` every 15 s. A stream with no
         non-heartbeat frame for 5 minutes is closed by the server; the
         browser's `EventSource` reconnects with its last `id`. Poll interval,
@@ -94,6 +105,7 @@ channels:
           - $ref: "#/components/messages/LibrarianTurn"
           - $ref: "#/components/messages/LibrarianIndicator"
           - $ref: "#/components/messages/LibrarianReset"
+          - $ref: "#/components/messages/LibrarianSettings"
           - $ref: "#/components/messages/LibrarianHeartbeat"
 components:
   messages:
@@ -127,6 +139,12 @@ components:
       contentType: application/json
       payload:
         $ref: "#/components/schemas/LibrarianHeartbeatEvent"
+    LibrarianSettings:
+      name: librarian.settings
+      title: Librarian availability or selected runner configuration changed
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/LibrarianSettingsEvent"
   schemas:
     LibrarianMessageEvent:
       type: object
@@ -296,6 +314,18 @@ components:
         seq: "58"
         resetState: none
         segmentId: 7e5d3c1b-2a4f-4c6e-9d8b-1a2b3c4d5e6f
+    LibrarianSettingsEvent:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum:
+            - librarian.settings
+      example:
+        type: librarian.settings
     LibrarianHeartbeatEvent:
       type: object
       additionalProperties: false

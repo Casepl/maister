@@ -47,9 +47,8 @@ beforeAll(async () => {
   pool = testDatabase.pool;
   db = testDatabase.db;
 
-  const { issueAgentRunToken, issueOrchestratorRunToken } = await import(
-    "@/lib/agents/tokens"
-  );
+  const { issueAgentRunToken, issueOrchestratorRunToken } =
+    await import("@/lib/agents/tokens");
 
   posts.set(
     "message",

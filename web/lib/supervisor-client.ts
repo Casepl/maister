@@ -293,7 +293,7 @@ export type SupervisorModelCatalog = {
 export const ExecutionHostIdentitySchema = z
   .object({
     hostKey: z.string().regex(/^[A-Za-z0-9_-]{8,64}$/),
-    bootId: z.string().uuid(),
+    bootId: z.string().guid(),
     protocolVersion: z.literal(1),
   })
   .strict();
@@ -1509,7 +1509,7 @@ export type RuntimeObjectWireMetadata = {
 
 const RuntimeObjectWireMetadataSchema = z
   .object({
-    objectId: z.string().uuid(),
+    objectId: z.string().guid(),
     kind: z.string().min(1),
     logicalName: z.string().min(1),
     mimeType: z.string().min(1),
@@ -1831,9 +1831,9 @@ export async function uploadRuntimeObject(input: {
   timeoutMs?: number | null;
 }): Promise<RuntimeObjectWireMetadata> {
   const uploadSchema = z.object({
-    objectId: z.string().uuid(),
-    commandId: z.string().uuid(),
-    assignmentId: z.string().uuid(),
+    objectId: z.string().guid(),
+    commandId: z.string().guid(),
+    assignmentId: z.string().guid(),
     assignmentEpoch: z.number().int().positive(),
     generation: z.number().int().positive(),
     sizeBytes: z.number().int().min(0).max(26_214_400),
@@ -2099,7 +2099,7 @@ export async function acknowledgeRuntimeEvents(input: {
   });
   const parsed = z
     .object({
-      streamId: z.string().uuid(),
+      streamId: z.string().guid(),
       acknowledgedThrough: z.string().regex(/^(0|[1-9][0-9]{0,18})$/),
     })
     .strict()
@@ -2212,7 +2212,7 @@ export type SteerWireResult = {
 const SteerWireBodySchema = z
   .object({
     outcome: z.literal("injected"),
-    parentCommandId: z.string().uuid(),
+    parentCommandId: z.string().guid(),
     latencyMs: z.number().int().nonnegative(),
   })
   .strict();

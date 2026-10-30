@@ -3,8 +3,7 @@ import type { Logger } from "pino";
 import { SupervisorError } from "./types";
 
 export type AcpPermissionOutcome =
-  | { outcome: "selected"; optionId: string }
-  | { outcome: "cancelled" };
+  { outcome: "selected"; optionId: string } | { outcome: "cancelled" };
 
 export type PermissionDeferred = {
   resolve: (outcome: AcpPermissionOutcome) => void;

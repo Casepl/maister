@@ -15,15 +15,10 @@ import { useState } from "react";
 import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
 
 export type NodeInterruptOptionId =
-  | "resume"
-  | "restart_node"
-  | "restart_from"
-  | "stop";
+  "resume" | "restart_node" | "restart_from" | "stop";
 
 export type NodeInterruptWorkspacePolicy =
-  | "keep"
-  | "rewind-to-node-checkpoint"
-  | "fresh-attempt";
+  "keep" | "rewind-to-node-checkpoint" | "fresh-attempt";
 
 export interface NodeInterruptControlsProps {
   interruptedNodeId: string;

@@ -49,13 +49,11 @@ vi.mock("@/lib/authz", () => ({
   requireProjectAction: vi.fn(async () => undefined),
 }));
 
-const { snapshotWorkbenchCommit } = await import(
-  "@/lib/workbench-lifecycle/service"
-);
+const { snapshotWorkbenchCommit } =
+  await import("@/lib/workbench-lifecycle/service");
 const { claimTakeover } = await import("@/lib/flows/graph/ledger");
-const { REVIEW_REWORK_CLAIM_DECISION } = await import(
-  "@/lib/flows/graph/attempt-decisions"
-);
+const { REVIEW_REWORK_CLAIM_DECISION } =
+  await import("@/lib/flows/graph/attempt-decisions");
 
 let testDatabase: StartedPostgresTestDb;
 let root: string;
@@ -160,9 +158,8 @@ describe("the rework-claim carve-out, in production", () => {
 
   it("exposes the owner on the run detail and derives the git set for the owner only", async () => {
     const run = await claimedRun();
-    const { getRunDetail, lifecycleActionsForViewer } = await import(
-      "@/lib/queries/run"
-    );
+    const { getRunDetail, lifecycleActionsForViewer } =
+      await import("@/lib/queries/run");
     const detail = await getRunDetail(run.runId);
 
     expect(detail).not.toBeNull();

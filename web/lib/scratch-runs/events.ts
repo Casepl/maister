@@ -931,9 +931,8 @@ export async function applyScratchSessionTerminal(input: {
       input.event.reason === "checkpoint" &&
       scratch.dialogStatus === "NeedsInput"
     ) {
-      const { markCheckpointedFromExit } = await import(
-        "@/lib/runs/state-transitions"
-      );
+      const { markCheckpointedFromExit } =
+        await import("@/lib/runs/state-transitions");
       const result = await markCheckpointedFromExit(input.runId, { db: tx });
 
       log.info(

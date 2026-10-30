@@ -1,17 +1,20 @@
 import "server-only";
 
 import type { Db } from "@/lib/execution-host/db";
+import type { LibrarianSettings } from "./settings";
+
+import { isDeepStrictEqual } from "node:util";
 
 import { and, asc, eq, gt, inArray } from "drizzle-orm";
 import pino from "pino";
 
 import { librarianIndicator, loadLatestTurn } from "./view";
+import { readLibrarianSettings } from "./settings";
 
 import {
   librarianConversations,
   librarianMessages,
   librarianTurns,
-  platformRuntimeSettings,
 } from "@/lib/db/schema";
 
 const log = pino({
@@ -53,7 +56,8 @@ async function readConversation(db: Db, ownerId: string) {
 
 /** ADR-185 (LCV-12): the owner's conversation stream. A server-side poll of
  * durable rows; frames are pointers the client refetches, each carrying the
- * conversation's `seq` as its SSE id. Only the caller's own conversation is
+ * conversation's `seq` as its SSE id. Settings pointers carry no cursor.
+ * Only the caller's own conversation is
  * ever read — there is no parameter naming a user or a conversation. */
 export async function* librarianStreamFrames(input: {
   db: Db;
@@ -83,6 +87,7 @@ export async function* librarianStreamFrames(input: {
   let lastTurnKey: string | null = null;
   let lastIndicator: string | null = null;
   let lastReset: string | null = null;
+  let lastSettings: LibrarianSettings | null = null;
   let lastFrameAt = Date.now();
   let lastHeartbeatAt = Date.now();
 
@@ -194,6 +199,19 @@ export async function* librarianStreamFrames(input: {
           }
         }
       }
+      const settings = await readLibrarianSettings(input.db);
+
+      // Settings have no message seq; reconnects must refresh even when the
+      // conversation cursor has not moved (or no conversation exists yet).
+      if (!isDeepStrictEqual(settings, lastSettings)) {
+        lastSettings = settings;
+        yield sse({ type: "librarian.settings" }, null);
+        lastFrameAt = Date.now();
+        log.debug(
+          { ownerId: input.ownerId, availability: settings.availability },
+          "[FIX:librarian-runner] settings change notified",
+        );
+      }
       const now = Date.now();
 
       if (now - lastFrameAt >= timings.quietCloseMs) {
@@ -205,17 +223,10 @@ export async function* librarianStreamFrames(input: {
         lastHeartbeatAt = now;
         yield sse({ type: "librarian.heartbeat" }, null);
       }
-      const [settings] = active
-        ? [{ enabled: true }]
-        : await input.db
-            .select({ enabled: platformRuntimeSettings.librarianEnabled })
-            .from(platformRuntimeSettings)
-            .where(eq(platformRuntimeSettings.id, "singleton"));
-
       await sleep(
         active
           ? timings.activePollMs
-          : settings?.enabled
+          : settings.enabled
             ? timings.idlePollMs
             : timings.disabledPollMs,
         input.signal,

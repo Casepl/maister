@@ -83,7 +83,7 @@ export const capabilityKindSchema = z.enum([
 const capabilityAgentsSchema = z
   .union([
     z.array(capabilityAgentSchema).min(1),
-    z.record(capabilityAgentSchema, z.string().min(1)),
+    z.partialRecord(capabilityAgentSchema, z.string().min(1)),
   ])
   .default([...ADAPTER_IDS]);
 
@@ -173,7 +173,7 @@ export const maisterCapabilitiesSchema = z
     agent_definitions: z.array(agentDefinitionCapabilitySchema).default([]),
     env_profiles: z.array(envProfileCapabilitySchema).default([]),
   })
-  .default({});
+  .prefault({});
 
 // M18 (§3.4): project-level promotion defaults materialized at registration.
 // SPARSE — keys are `.optional()` with no per-key `.default()`; the

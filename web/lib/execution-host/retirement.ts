@@ -18,6 +18,7 @@ import {
 import { getDb } from "@/lib/db/client";
 import { isMaisterError } from "@/lib/errors";
 import { isApplicationStopping } from "@/lib/server-lifecycle";
+import { pgErrorOf } from "@/lib/db/pg-error";
 
 // Retirement is bounded by the SAME window the ledger already promises for a
 // legal retry. Widening it silently would widen the idempotency claim too.
@@ -237,14 +238,20 @@ function databaseFailure(error: unknown): {
   constraint?: string;
   message: string;
 } {
-  const record = (error ?? {}) as { code?: unknown; constraint?: unknown };
+  // The driver error, not drizzle's wrapper: the wrapper's message carries the
+  // query parameters, i.e. the same protected values.
+  const pg = pgErrorOf(error);
 
   return {
-    code: typeof record.code === "string" ? record.code : "UNKNOWN",
-    ...(typeof record.constraint === "string"
-      ? { constraint: record.constraint }
+    code: pg?.code ?? "UNKNOWN",
+    ...(typeof pg?.constraint === "string"
+      ? { constraint: pg.constraint }
       : {}),
-    message: error instanceof Error ? error.message : String(error),
+    message: pg
+      ? String(pg.message)
+      : error instanceof Error
+        ? error.message
+        : String(error),
   };
 }
 

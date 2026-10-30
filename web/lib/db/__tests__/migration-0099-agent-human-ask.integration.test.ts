@@ -126,14 +126,20 @@ describe("migration 0099 — agent human ask (ADR-136)", () => {
         )
         VALUES (${id()}, ${runId}, 'form', 'form', ${taskId}, 'active', 'Invalid legacy shape')
       `),
-    ).rejects.toThrow(/hitl_requests_agent_question_shape_check/);
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringMatching(/hitl_requests_agent_question_shape_check/),
+    );
 
     await expect(
       db.execute(sql`
         INSERT INTO hitl_requests (id, run_id, step_id, kind, prompt)
         VALUES (${id()}, ${runId}, 'agent', 'agent_question', 'Missing task and activation state')
       `),
-    ).rejects.toThrow(/hitl_requests_agent_question_shape_check/);
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringMatching(/hitl_requests_agent_question_shape_check/),
+    );
   });
 
   it("enforces one immutable clarification source and per-task sequence", async () => {
@@ -179,7 +185,10 @@ describe("migration 0099 — agent human ask (ADR-136)", () => {
           'Duplicate sequence', '{"schemaVersion":1,"fields":[]}'::jsonb, 'agent'
         )
       `),
-    ).rejects.toThrow(/task_clarifications_task_seq_uq/);
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringMatching(/task_clarifications_task_seq_uq/),
+    );
 
     await expect(
       db.execute(sql`
@@ -192,7 +201,10 @@ describe("migration 0099 — agent human ask (ADR-136)", () => {
           'Duplicate source', '{"schemaVersion":1,"fields":[]}'::jsonb, 'agent'
         )
       `),
-    ).rejects.toThrow(/task_clarifications_source_hitl_request_uq/);
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringMatching(/task_clarifications_source_hitl_request_uq/),
+    );
 
     await db.execute(sql`DELETE FROM runs WHERE id = ${runId}`);
 
@@ -217,7 +229,10 @@ describe("migration 0099 — agent human ask (ADR-136)", () => {
         supersededByHitlRequestId: id(),
         supersededByRunId: id(),
       }),
-    ).rejects.toThrow(/hitl_requests_agent_question_supersession_check/);
+    ).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringMatching(/hitl_requests_agent_question_supersession_check/),
+    );
   });
 
   it("uses the active-question partial index for Inbox predicates", async () => {

@@ -2407,27 +2407,20 @@ export async function fakeExecutionHosts(
   const { executionHosts } = await import("@/lib/db/schema");
   const { and, eq, isNull } = await import("drizzle-orm");
   const { mintAssignment } = await import("@/lib/execution-host/assignments");
-  const { getActiveAssignment } = await import(
-    "@/lib/execution-host/assignments"
-  );
-  const { ingestRuntimeEvent } = await import(
-    "@/lib/execution-host/events/ingest"
-  );
-  const { canonicalTranscriptProjector } = await import(
-    "@/lib/execution-host/events/transcript-projector"
-  );
-  const { projectExecutionEvents } = await import(
-    "@/lib/execution-host/events/projector"
-  );
-  const { projectCanonicalRuntimeObjects } = await import(
-    "@/lib/execution-host/events/runtime-object-projector"
-  );
-  const { projectCanonicalPromptCommands } = await import(
-    "@/lib/execution-host/events/prompt-projector"
-  );
-  const { projectCanonicalSessionLifecycle } = await import(
-    "@/lib/execution-host/events/lifecycle-projector"
-  );
+  const { getActiveAssignment } =
+    await import("@/lib/execution-host/assignments");
+  const { ingestRuntimeEvent } =
+    await import("@/lib/execution-host/events/ingest");
+  const { canonicalTranscriptProjector } =
+    await import("@/lib/execution-host/events/transcript-projector");
+  const { projectExecutionEvents } =
+    await import("@/lib/execution-host/events/projector");
+  const { projectCanonicalRuntimeObjects } =
+    await import("@/lib/execution-host/events/runtime-object-projector");
+  const { projectCanonicalPromptCommands } =
+    await import("@/lib/execution-host/events/prompt-projector");
+  const { projectCanonicalSessionLifecycle } =
+    await import("@/lib/execution-host/events/lifecycle-projector");
   const {
     RUNTIME_EVENT_PAYLOAD_SCHEMAS,
     RUNTIME_EVENT_TYPES,

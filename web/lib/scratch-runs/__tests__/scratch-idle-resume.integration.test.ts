@@ -21,13 +21,17 @@ import { and, asc, eq } from "drizzle-orm";
 import { type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { atomicWriteJson } from "@/lib/atomic";
 import * as schema from "@/lib/db/schema";
 import { testPlatformRunnerRow } from "@/lib/__tests__/runner-fixtures";
 import { canonicalProjectors } from "@/lib/execution-host/events/projection-runtime";
 import { createExecutionHosts } from "@/lib/execution-host/client";
 import { startProjectionWorker } from "@/lib/execution-host/events/projection-worker";
 import { stopRuntimeEventConsumers } from "@/lib/execution-host/events/consumer";
-import { resetRegistrarStateForTests } from "@/lib/execution-host/registrar";
+import {
+  ensureLocalExecutionHost,
+  resetRegistrarStateForTests,
+} from "@/lib/execution-host/registrar";
 import { resetResolverForTests } from "@/lib/execution-host/resolver";
 import { runSweepTick } from "@/lib/runs/keepalive-sweeper";
 import { countLiveRuns, promoteNextPending } from "@/lib/scheduler";
@@ -545,12 +549,14 @@ describe("scratch idle resume after a host park (D-A8)", () => {
     };
 
     expect(journal.pendingPermission).toBeDefined();
-    journal.pendingPermission = {
-      ...journal.pendingPermission,
-      toolCall,
-      ...(options ? { options } : {}),
-    };
-    await writeFile(path, JSON.stringify(journal));
+    await atomicWriteJson(path, {
+      ...journal,
+      pendingPermission: {
+        ...journal.pendingPermission,
+        toolCall,
+        ...(options ? { options } : {}),
+      },
+    });
   }
 
   it("C4: a freed-slot respawn that fails puts the answered run back in the queue at its place", async () => {
@@ -592,22 +598,42 @@ describe("scratch idle resume after a host park (D-A8)", () => {
       // from the queue with the operator's answer undelivered.
       expect(run.status).toBe("NeedsInputIdle");
       expect(run.resumeRequestedAt?.getTime()).toBe(queuedAt?.getTime());
+      // Observe the stopped host without inheriting another case's throttled
+      // readiness write. The next promotion must start from this real outage.
+      resetRegistrarStateForTests();
+      expect(
+        await ensureLocalExecutionHost({ db: db as unknown as Db }),
+      ).toMatchObject({ status: "unavailable" });
+      expect(
+        await db
+          .select({ readiness: schema.executionHosts.readiness })
+          .from(schema.executionHosts),
+      ).toEqual([{ readiness: "unavailable" }]);
     } finally {
       supervisor = await supervisor.restart();
       resetRegistrarStateForTests();
       resetResolverForTests();
     }
+    // Restarting the process does not register its new boot in Postgres.
+    // This fixture drives the slot gate directly, without the system sweep.
+    expect(
+      await ensureLocalExecutionHost({ db: db as unknown as Db }),
+    ).toMatchObject({ status: "registered", host: { readiness: "ready" } });
     // The next freed-slot pass admits it again and delivers the answer.
-    await promoteNextPending({ db: db as never, pool: "flow" });
+    const promoted = await promoteNextPending({
+      db: db as never,
+      pool: "flow",
+    });
+
+    expect(promoted.promotedRunId).toBe(runId);
     await resumedAndDelivered(runId);
   }, 180_000);
 
   it("C3: the resumed session is re-prompted with the interrupted turn's own message, never a newer queued one", async () => {
     const { runId, hitlId } = await parkedDialog();
     // Sent while the first turn ran: queued behind it, its own turn next.
-    const { appendScratchMessage } = await import(
-      "@/lib/scratch-runs/messages"
-    );
+    const { appendScratchMessage } =
+      await import("@/lib/scratch-runs/messages");
     const queued = await db.transaction((tx) =>
       appendScratchMessage(tx as never, {
         runId,

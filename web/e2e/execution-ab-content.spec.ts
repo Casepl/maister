@@ -45,7 +45,11 @@ const ACTIVE_SCRIPT = [
   `document.title = "${MARKER}";`,
 ].join("\n");
 
-type Upload = { fileName: string; mimeType: string; bytes: Uint8Array };
+type Upload = {
+  fileName: string;
+  mimeType: string;
+  bytes: Uint8Array<ArrayBuffer>;
+};
 
 const utf8 = new TextEncoder();
 

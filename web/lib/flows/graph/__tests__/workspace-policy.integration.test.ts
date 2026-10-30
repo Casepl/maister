@@ -578,12 +578,10 @@ describe("ledger — checkpoint_ref on the attempt row", () => {
   it("setCheckpointRef records the namespaced ref on node_attempts", async () => {
     const { randomUUID } = await import("node:crypto");
     const fullSchema = await import("@/lib/db/schema");
-    const { appendNodeAttempt, setCheckpointRef } = await import(
-      "@/lib/flows/graph/ledger"
-    );
-    const { testPlatformRunnerRow, testRunnerSnapshot } = await import(
-      "@/lib/__tests__/runner-fixtures"
-    );
+    const { appendNodeAttempt, setCheckpointRef } =
+      await import("@/lib/flows/graph/ledger");
+    const { testPlatformRunnerRow, testRunnerSnapshot } =
+      await import("@/lib/__tests__/runner-fixtures");
 
     // FIXME(any): same drizzle duplicate peer-dep type clash as
     // schema.integration.test.ts — runtime is fine.

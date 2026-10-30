@@ -25,8 +25,7 @@ export type FlowRefMismatch = {
 };
 
 export type FlowRefResolution =
-  | { ok: true; flowId: string }
-  | { ok: false; detail: FlowRefMismatch };
+  { ok: true; flowId: string } | { ok: false; detail: FlowRefMismatch };
 
 const EXPECTED =
   "a flow UUID (flows.id) or the project's flow ref (flows.flow_ref_id), as returned by flow_list";

@@ -1,3 +1,6 @@
+import type { ReactElement } from "react";
+import type { TabsProps } from "@/components/navigation/tabs";
+
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -8,6 +11,19 @@ vi.mock("next-intl/server", () => ({
 import { ProjectTabs } from "@/components/board/project-tabs";
 
 describe("ProjectTabs", () => {
+  it("keeps the viewport position while switching project tabs", async () => {
+    const projectTabs = (await ProjectTabs({
+      slug: "demo",
+      active: "board",
+      boardCount: 7,
+      showBrain: true,
+    })) as ReactElement<{ children: ReactElement<TabsProps> }>;
+    const tabs = projectTabs.props.children;
+
+    expect(tabs.props.items).not.toHaveLength(0);
+    expect(tabs.props.items.every((item) => item.scroll === false)).toBe(true);
+  });
+
   it("includes Project Brain as a first-class project tab", async () => {
     const html = renderToStaticMarkup(
       await ProjectTabs({

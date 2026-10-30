@@ -89,8 +89,7 @@ vi.mock("@/lib/runs/active-run-session", async (importOriginal) => ({
           capabilityAgent: (run.capabilityAgent ?? null) as string | null,
           runnerId: (run.runnerId ?? null) as string | null,
           runnerResolutionTier: (run.runnerResolutionTier ?? null) as
-            | string
-            | null,
+            string | null,
         }
       : null;
   }),

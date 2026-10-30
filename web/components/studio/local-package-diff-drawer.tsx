@@ -93,32 +93,32 @@ export function LocalPackageDiffDrawer({
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [message, setMessage] = useState("");
 
-  const load = useCallback(async (): Promise<void> => {
-    try {
-      const res = await fetch(`/api/studio/local-packages/${packageId}/diff`, {
-        method: "GET",
-      });
+  const load = useCallback(
+    (): Promise<void> =>
+      fetch(`/api/studio/local-packages/${packageId}/diff`, { method: "GET" })
+        .then(async (res) => {
+          if (!res.ok) {
+            setState({
+              kind: "error",
+              message: await readApiError(res, tApiErrors),
+            });
 
-      if (!res.ok) {
-        setState({
-          kind: "error",
-          message: await readApiError(res, tApiErrors),
-        });
+            return;
+          }
 
-        return;
-      }
+          const diff = (await res.json()) as WorkingDirDiff;
 
-      const diff = (await res.json()) as WorkingDirDiff;
-
-      setState({ kind: "ready", diff });
-      onChanged?.(diff.changedCount);
-    } catch {
-      setState({
-        kind: "error",
-        message: tApiErrors("requestFailed"),
-      });
-    }
-  }, [packageId, tApiErrors, onChanged]);
+          setState({ kind: "ready", diff });
+          onChanged?.(diff.changedCount);
+        })
+        .catch(() => {
+          setState({
+            kind: "error",
+            message: tApiErrors("requestFailed"),
+          });
+        }),
+    [packageId, tApiErrors, onChanged],
+  );
 
   useEffect(() => {
     void load();

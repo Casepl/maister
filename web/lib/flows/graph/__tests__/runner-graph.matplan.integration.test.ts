@@ -205,8 +205,7 @@ async function makeSupervisorSpy(runId: string): Promise<{
 
   fake.onCall("createSession", async (call: FakeCall) => {
     const payload = call.envelope?.payload as
-      | { capabilityProfileObjectId?: string }
-      | undefined;
+      { capabilityProfileObjectId?: string } | undefined;
 
     if (payload?.capabilityProfileObjectId) {
       const content = await fake.transport.getRuntimeObjectContent(

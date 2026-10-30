@@ -14,9 +14,7 @@ import { parseExecutableStoredFlowManifest } from "@/lib/flows/manifest-parser";
 // Slots are NEVER deduped by intent — two identical-intent consensus
 // participants are distinct, independently-bindable slots.
 export type RunnerSlotKind =
-  | "session"
-  | "consensus_participant"
-  | "consensus_synthesizer";
+  "session" | "consensus_participant" | "consensus_synthesizer";
 
 export type RunnerSlotDescriptor = {
   slotKey: string;

@@ -54,6 +54,10 @@ import {
 } from "./prompt-owner";
 
 import { ensureSubstepRunSession } from "@/lib/runs/substep-session";
+import {
+  mergeRunnerAdapterLaunch,
+  runnerSupervisorInput,
+} from "@/lib/acp-runners/spawn-intent";
 import * as schemaModule from "@/lib/db/schema";
 import { isMaisterError } from "@/lib/errors";
 import { createExecutionHosts, isFencedError } from "@/lib/execution-host";
@@ -578,9 +582,15 @@ async function runOneGate(
               agent: loaded.executor.agent,
               model: loaded.executor.model,
               env: (loaded.executor.env ?? undefined) as
-                | Record<string, string>
-                | undefined,
+                Record<string, string> | undefined,
             },
+            // The executor is legacy display/compatibility metadata. The
+            // supervisor applies the configured model and provider only from
+            // the versioned runner launch intent. Omitting it makes adapters
+            // fall back to their own current default, which can be unavailable
+            // for the run's authentication mode.
+            runner: runnerSupervisorInput({ snapshot: loaded.runner }),
+            adapterLaunch: mergeRunnerAdapterLaunch(loaded.runner),
           },
           ctx.execution,
         ),
@@ -745,8 +755,7 @@ async function runOneGate(
       // explicitly `skipped` rather than silently absent (forward-compat for
       // gate kinds a future engine introduces).
       const out = gate.output as
-        | { id?: string; kind?: ArtifactKind }
-        | undefined;
+        { id?: string; kind?: ArtifactKind } | undefined;
 
       if (out?.id) {
         await recordSkippedArtifact(

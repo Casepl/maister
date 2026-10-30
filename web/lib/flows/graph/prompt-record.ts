@@ -21,9 +21,7 @@ const log = pino({
 });
 
 export type DispatchPromptOwner =
-  | NodePromptOwner
-  | GatePromptOwner
-  | ConsensusPromptOwner;
+  NodePromptOwner | GatePromptOwner | ConsensusPromptOwner;
 
 /** TRC-09. A resolved prompt can inject artifact bodies through
  * `{{ artifacts.<id>.content }}` (ADR-120) and reach megabytes; storing that

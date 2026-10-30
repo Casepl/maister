@@ -35,14 +35,16 @@ export function LibrarianMemoryDialog(input: {
 
   useModalA11y(dialogRef, input.onClose, input.open);
 
-  const refresh = useCallback(async (): Promise<void> => {
-    const response = await fetch("/api/librarian/memory", {
-      cache: "no-store",
-    });
-
-    if (!response.ok) throw new Error("memory list unavailable");
-    setList((await response.json()) as MemoryList);
-  }, []);
+  const refresh = useCallback(
+    (): Promise<void> =>
+      fetch("/api/librarian/memory", { cache: "no-store" }).then(
+        async (response) => {
+          if (!response.ok) throw new Error("memory list unavailable");
+          setList((await response.json()) as MemoryList);
+        },
+      ),
+    [],
+  );
 
   useEffect(() => {
     if (input.open) void refresh().catch(() => setError(true));
@@ -129,23 +131,23 @@ export function LibrarianMemoryDialog(input: {
   return (
     <>
       <div
-        className="fixed inset-0 z-[70] bg-black/40"
         aria-hidden
+        className="fixed inset-0 z-[70] bg-black/40"
         onClick={input.onClose}
       />
       <div
         ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
         aria-label={t("memoryTitle")}
+        aria-modal="true"
         className="fixed inset-x-4 top-[8vh] z-[71] mx-auto max-h-[84vh] max-w-xl overflow-y-auto rounded-xl border border-line bg-paper p-5 text-ink shadow-2xl"
         data-testid="librarian-memory-dialog"
+        role="dialog"
       >
         <header className="mb-4 flex items-center justify-between gap-3">
           <h2 className="m-0 text-lg font-semibold">{t("memoryTitle")}</h2>
           <button
-            type="button"
             className="text-sm underline"
+            type="button"
             onClick={input.onClose}
           >
             {t("memoryClose")}
@@ -153,15 +155,15 @@ export function LibrarianMemoryDialog(input: {
         </header>
         <label className="flex items-center gap-2 text-sm">
           <input
-            type="checkbox"
             checked={list?.memoryEnabledNextSegment ?? true}
+            type="checkbox"
             onChange={(event) =>
               void setNextSegmentEnabled(event.target.checked)
             }
           />
           {t("memoryUseNextSegment")}
         </label>
-        <ul className="my-4 space-y-2 pl-0" aria-label={t("memoryItemsLabel")}>
+        <ul aria-label={t("memoryItemsLabel")} className="my-4 space-y-2 pl-0">
           {list?.items.map((item) => (
             <li
               key={item.id}
@@ -183,11 +185,11 @@ export function LibrarianMemoryDialog(input: {
               </p>
               <div className="mt-2 flex gap-3">
                 <button
-                  type="button"
                   className="underline disabled:opacity-50"
                   disabled={
                     busy || item.excludedReason === "source_unavailable"
                   }
+                  type="button"
                   onClick={() => {
                     setEditing(item);
                     setKind(item.kind);
@@ -199,9 +201,9 @@ export function LibrarianMemoryDialog(input: {
                   {t("memoryEdit")}
                 </button>
                 <button
-                  type="button"
                   className="underline disabled:opacity-50"
                   disabled={busy}
+                  type="button"
                   onClick={() => setPendingForgetId(item.id)}
                 >
                   {t("memoryForget")}
@@ -221,16 +223,16 @@ export function LibrarianMemoryDialog(input: {
             {editing ? t("memoryEdit") : t("memoryAdd")}
           </h3>
           <textarea
+            aria-label={t("memoryContent")}
             className="w-full rounded-md border border-line bg-canvas p-2 text-sm"
             maxLength={2000}
-            aria-label={t("memoryContent")}
             value={content}
             onChange={(event) => setContent(event.target.value)}
           />
           <div className="flex gap-2">
             <select
-              className="rounded-md border border-line bg-canvas p-2 text-sm"
               aria-label={t("memoryKind")}
+              className="rounded-md border border-line bg-canvas p-2 text-sm"
               value={kind}
               onChange={(event) => setKind(event.target.value as MemoryKind)}
             >
@@ -244,8 +246,8 @@ export function LibrarianMemoryDialog(input: {
             </select>
             {!editing ? (
               <select
-                className="rounded-md border border-line bg-canvas p-2 text-sm"
                 aria-label={t("memoryScope")}
+                className="rounded-md border border-line bg-canvas p-2 text-sm"
                 value={scope}
                 onChange={(event) =>
                   setScope(event.target.value as MemoryScope)
@@ -258,24 +260,24 @@ export function LibrarianMemoryDialog(input: {
           </div>
           {!editing && scope === "project" ? (
             <input
-              className="w-full rounded-md border border-line bg-canvas p-2 text-sm"
               aria-label={t("memoryProjectSlug")}
+              className="w-full rounded-md border border-line bg-canvas p-2 text-sm"
               value={projectSlug}
               onChange={(event) => setProjectSlug(event.target.value)}
             />
           ) : null}
           <div className="flex gap-3">
             <button
-              type="submit"
-              disabled={busy || !content.trim()}
               className="rounded-md bg-ink px-3 py-1.5 text-sm text-paper disabled:opacity-50"
+              disabled={busy || !content.trim()}
+              type="submit"
             >
               {t("memorySave")}
             </button>
             {editing ? (
               <button
-                type="button"
                 className="text-sm underline"
+                type="button"
                 onClick={() => {
                   setEditing(null);
                   setContent("");
@@ -287,7 +289,7 @@ export function LibrarianMemoryDialog(input: {
           </div>
         </form>
         {error ? (
-          <p role="alert" className="mt-3 text-sm text-red-700">
+          <p className="mt-3 text-sm text-red-700" role="alert">
             {t("memoryError")}
           </p>
         ) : null}

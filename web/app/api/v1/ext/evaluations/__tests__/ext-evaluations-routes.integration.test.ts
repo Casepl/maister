@@ -187,9 +187,8 @@ beforeAll(async () => {
 
   ({ issueJudgeAttemptToken } = await import("@/lib/agents/tokens"));
   ({ generateToken } = await import("@/lib/tokens/secret"));
-  ({ sealEvidenceSnapshot } = await import(
-    "@/lib/evaluations/evidence/snapshots"
-  ));
+  ({ sealEvidenceSnapshot } =
+    await import("@/lib/evaluations/evidence/snapshots"));
 
   projectId = randomUUID();
   await db.insert(schema.projects).values({

@@ -80,9 +80,8 @@ function stubDeps(
 ): EvaluationDispatchDeps {
   return {
     captureEvidence: async () => {
-      const { sealEvidenceSnapshot } = await import(
-        "@/lib/evaluations/evidence/snapshots"
-      );
+      const { sealEvidenceSnapshot } =
+        await import("@/lib/evaluations/evidence/snapshots");
       const sealed = await sealEvidenceSnapshot(
         {
           studyId,

@@ -55,7 +55,7 @@ const rootBodySchema = z
 
 const replyBodySchema = z
   .object({
-    parentId: z.string().uuid(),
+    parentId: z.string().guid(),
     body: z.string().min(1).max(10_000),
   })
   .strict();

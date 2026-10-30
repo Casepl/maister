@@ -25,11 +25,7 @@ const log = pino({
 });
 
 export type TaskRelationKind =
-  | "blocks"
-  | "depends_on"
-  | "parent_of"
-  | "requires"
-  | "duplicate_of";
+  "blocks" | "depends_on" | "parent_of" | "requires" | "duplicate_of";
 
 export type KeyRef = { taskId: string; key: string; number: number };
 
@@ -319,7 +315,9 @@ export async function addTaskRelation(
         toTaskId: to.id,
         fromRef: `${from.taskKey}-${from.number}`,
         toRef: `${to.taskKey}-${to.number}`,
-        ...(input.viaOperationId ? { viaOperationId: input.viaOperationId } : {}),
+        ...(input.viaOperationId
+          ? { viaOperationId: input.viaOperationId }
+          : {}),
       },
     });
 
@@ -397,7 +395,9 @@ export async function removeTaskRelation(
         toTaskId: to.id,
         fromRef: `${from.taskKey}-${from.number}`,
         toRef: `${to.taskKey}-${to.number}`,
-        ...(input.viaOperationId ? { viaOperationId: input.viaOperationId } : {}),
+        ...(input.viaOperationId
+          ? { viaOperationId: input.viaOperationId }
+          : {}),
       },
     });
 

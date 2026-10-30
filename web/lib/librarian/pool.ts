@@ -11,7 +11,11 @@ import { getDb } from "@/lib/db/client";
 import { librarianConversations, librarianTurns, runs } from "@/lib/db/schema";
 import { localHost } from "@/lib/execution-host/resolver";
 import { upgradeMaintenanceEngaged } from "@/lib/maintenance/upgrade-fence";
-import { countLiveRuns, effectivePoolCap, takeSchedulerLock } from "@/lib/scheduler";
+import {
+  countLiveRuns,
+  effectivePoolCap,
+  takeSchedulerLock,
+} from "@/lib/scheduler";
 
 const log = pino({
   name: "librarian.pool",

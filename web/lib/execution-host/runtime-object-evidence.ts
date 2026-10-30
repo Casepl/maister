@@ -41,8 +41,7 @@ export type RuntimeObjectSeal = Pick<
 >;
 
 type SealEvidence = { kind: "seal"; metadata: RuntimeObjectSeal } & (
-  | { source: "ack" }
-  | { source: "event"; eventId: string }
+  { source: "ack" } | { source: "event"; eventId: string }
 );
 type StateEvidence = {
   kind: "state";

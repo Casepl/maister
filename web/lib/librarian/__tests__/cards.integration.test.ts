@@ -49,9 +49,8 @@ vi.mock("@/lib/services/hitl", () => ({
 beforeAll(async () => {
   database = await startMainPostgresTestDb({ databaseName: "librarian_cards" });
   db = database.db as unknown as ReturnType<typeof getDb>;
-  ({ POST: proposePost } = await import(
-    "@/app/api/v1/ext/librarian/cards/route"
-  ));
+  ({ POST: proposePost } =
+    await import("@/app/api/v1/ext/librarian/cards/route"));
 }, 180_000);
 
 afterAll(async () => {

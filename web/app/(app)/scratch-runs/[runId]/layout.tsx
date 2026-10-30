@@ -116,6 +116,7 @@ export default async function ScratchRunDetailLayout({
     : null;
 
   const shellLabels: RunShellLabels = {
+    runStatus: t("headerRunStatus"),
     branch: t("headerBranch"),
     changes: t("headerChanges"),
     changesUnavailable: t("headerChangesUnavailable"),
@@ -176,7 +177,8 @@ export default async function ScratchRunDetailLayout({
   );
   const wallDurationMs = detail.endedAt
     ? Math.max(0, detail.endedAt.getTime() - detail.startedAt.getTime())
-    : Math.max(0, Date.now() - detail.startedAt.getTime());
+    : // eslint-disable-next-line react-hooks/purity -- async Server Component: one render per request reads the request clock.
+      Math.max(0, Date.now() - detail.startedAt.getTime());
   const costLabels = {
     tokenTotal: t("tokenTotal"),
     inputTokens: t("inputTokens"),

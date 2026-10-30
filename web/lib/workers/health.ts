@@ -15,9 +15,7 @@ import "server-only";
 // constraint for the lifecycle callbacks.
 
 export type DurableWorkerName =
-  | "promptOwner"
-  | "flowContinuation"
-  | "agentContinuation";
+  "promptOwner" | "flowContinuation" | "agentContinuation";
 
 export type DurableWorkerState = Readonly<{
   state: "running" | "degraded" | "stopped";

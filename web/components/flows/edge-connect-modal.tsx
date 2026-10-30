@@ -4,6 +4,8 @@ import type { ReactElement } from "react";
 
 import { useEffect, useRef, useState } from "react";
 
+import { useLatestRef } from "@/lib/use-latest-ref";
+
 // T3.4 — typed-edge connect modal (spec §4.7, D7). Collects the `outcome` for a
 // new connection; the parent writes it through `setTransition` → `applyManifest`
 // (the same single source of truth the side-form uses — there is NO second edge
@@ -66,9 +68,7 @@ export function EdgeConnectModal({
 
   const dialogRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
-  const onCancelRef = useRef(onCancel);
-
-  onCancelRef.current = onCancel;
+  const onCancelRef = useLatestRef(onCancel);
 
   const changeOutcome = (next: string): void => {
     setOutcome(next);

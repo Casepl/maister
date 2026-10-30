@@ -517,13 +517,20 @@ export async function forgetPersonalMemory(
       .for("update");
 
     if (!item) throw unavailable();
-    const revisions = await tx.select({ content: librarianMemoryItemRevisions.content })
-      .from(librarianMemoryItemRevisions).where(eq(librarianMemoryItemRevisions.itemId, itemId));
+    const revisions = await tx
+      .select({ content: librarianMemoryItemRevisions.content })
+      .from(librarianMemoryItemRevisions)
+      .where(eq(librarianMemoryItemRevisions.itemId, itemId));
 
-    await tx.insert(librarianMemoryTombstones).values(revisions.map((revision) => ({
-      userId: ownerId,
-      contentDigest: memoryContentDigest(revision.content),
-    }))).onConflictDoNothing();
+    await tx
+      .insert(librarianMemoryTombstones)
+      .values(
+        revisions.map((revision) => ({
+          userId: ownerId,
+          contentDigest: memoryContentDigest(revision.content),
+        })),
+      )
+      .onConflictDoNothing();
     await tx
       .update(librarianMemoryItems)
       .set({ forgottenAt: new Date(), updatedAt: new Date() })

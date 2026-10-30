@@ -1,4 +1,4 @@
-import type * as acp from "@agentclientprotocol/sdk";
+import type * as acp from "@agentclientprotocol/sdk/unstable";
 
 // ACP 1.x replaced the pre-1.0 `models` (SessionModelState) field of the
 // session/new and session/resume responses with `configOptions`, a "model"

@@ -41,7 +41,10 @@ const scheduledLaunchRequestSchema = z
     deliveryPolicy: storedDeliveryPolicySchema.optional(),
     executionPolicy: executionPolicySchema.optional(),
     packageVersions: z
-      .record(z.enum(["keep", "adopt", "cut_and_adopt", "try_once"]))
+      .record(
+        z.string(),
+        z.enum(["keep", "adopt", "cut_and_adopt", "try_once"]),
+      )
       .optional(),
     brainContext: z.boolean().nullable().optional(),
     autoPromote: z.boolean().optional(),

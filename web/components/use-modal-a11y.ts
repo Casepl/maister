@@ -2,7 +2,9 @@
 
 import type { RefObject } from "react";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
+
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 const FOCUSABLE =
   'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
@@ -24,9 +26,7 @@ export function useModalA11y(
   onClose: () => void,
   active = true,
 ): void {
-  const onCloseRef = useRef(onClose);
-
-  onCloseRef.current = onClose;
+  const onCloseRef = useLatestRef(onClose);
 
   useEffect(() => {
     if (!active) return;

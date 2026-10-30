@@ -46,9 +46,8 @@ beforeEach(() => {
 
 describe("continuation worker start/stop observability", () => {
   it("the flow worker announces its identity and slot count, and its stop", async () => {
-    const { startFlowContinuationWorker } = await import(
-      "@/lib/flows/graph/continuation-worker"
-    );
+    const { startFlowContinuationWorker } =
+      await import("@/lib/flows/graph/continuation-worker");
     const worker = startFlowContinuationWorker({ db: brokenDb });
     const started = lineFor("flow-continuation-worker-started");
 
@@ -71,9 +70,8 @@ describe("continuation worker start/stop observability", () => {
   });
 
   it("the agent worker announces its single loop and its stop", async () => {
-    const { startAgentContinuationWorker } = await import(
-      "@/lib/agents/continuation-worker"
-    );
+    const { startAgentContinuationWorker } =
+      await import("@/lib/agents/continuation-worker");
     const worker = startAgentContinuationWorker({ db: brokenDb });
     const started = lineFor("agent-continuation-worker-started");
 

@@ -7,8 +7,9 @@ import type { Logger } from "pino";
 
 import { randomUUID } from "node:crypto";
 
-import * as acp from "@agentclientprotocol/sdk";
+import * as acp from "@agentclientprotocol/sdk/unstable";
 
+import { connectAcpClient, type AcpConnection } from "./acp-connection";
 import { readSessionModels, type SessionModelView } from "./session-models";
 import { boundedAcpStream, type BoundedAcpClient } from "./bounded-acp-stream";
 import {
@@ -36,6 +37,7 @@ import {
   type AcpPermissionOutcome,
   type PendingPermissionRegistry,
 } from "./pending-permissions";
+import { extractCost } from "./cost";
 import { SESSION_EVENT_CHANNEL } from "./registry";
 import {
   isSupervisorError,
@@ -49,6 +51,7 @@ import {
   type SessionCapabilities,
   type SessionEvent,
   type SessionRecord,
+  type SessionTextFrameEvents,
   type SteerAdapterOutcome,
 } from "./types";
 
@@ -60,6 +63,7 @@ export type CreateAcpConnectionArgs = {
   worktreePath: string;
   record: SessionRecord;
   emitter: EventEmitter;
+  publishTextFrame?: (events: SessionTextFrameEvents) => void;
   logger: Logger;
   adapter: ExecutorAgent;
   pendingPermissions?: PendingPermissionRegistry;
@@ -74,7 +78,7 @@ export type CreateAcpConnectionArgs = {
 };
 
 export type CreateAcpConnectionResult = {
-  connection: acp.ClientSideConnection;
+  connection: AcpConnection;
   acpSessionId: string;
   capabilities: SessionCapabilities;
 };
@@ -85,9 +89,7 @@ export function readSessionCapabilities(initResp: {
   _meta?: unknown;
 }): SessionCapabilities {
   const meta = initResp._meta as
-    | { steering?: { supported?: unknown } | null }
-    | null
-    | undefined;
+    { steering?: { supported?: unknown } | null } | null | undefined;
 
   return { steering: { supported: meta?.steering?.supported === true } };
 }
@@ -380,15 +382,45 @@ export async function createAcpConnection(
     emitter.emit(SESSION_EVENT_CHANNEL, event);
   };
 
-  const clientImpl: BoundedAcpClient = {
-    async sessionUpdate(params) {
-      record.monotonicId += 1;
-      const event: SessionEvent = {
-        type: "session.update",
+  const lineEvent = (
+    line: string,
+  ): Extract<SessionEvent, { type: "session.line" }> => {
+    record.monotonicId += 1;
+    logger.debug(
+      {
         sessionId,
         monotonicId: record.monotonicId,
-        update: params.update,
-      };
+        bytes: Buffer.byteLength(line),
+      },
+      "stdout-frame-captured",
+    );
+
+    return {
+      type: "session.line",
+      sessionId,
+      monotonicId: record.monotonicId,
+      line,
+    };
+  };
+  const emitLine = (line: string): void => {
+    emitter.emit(SESSION_EVENT_CHANNEL, lineEvent(line));
+  };
+  const updateEvent = (
+    params: acp.SessionNotification,
+  ): Extract<SessionEvent, { type: "session.update" }> => {
+    record.monotonicId += 1;
+
+    return {
+      type: "session.update",
+      sessionId,
+      monotonicId: record.monotonicId,
+      update: params.update,
+    };
+  };
+
+  const clientImpl: BoundedAcpClient = {
+    async sessionUpdate(params) {
+      const event = updateEvent(params);
 
       emitter.emit(SESSION_EVENT_CHANNEL, event);
       logger.debug(
@@ -920,6 +952,22 @@ export async function createAcpConnection(
     source: stdoutSource,
     stdin,
     client: clientImpl,
+    onLine: emitLine,
+    async onUpdateFrame(params, line) {
+      if (
+        args.publishTextFrame &&
+        (params.update.sessionUpdate === "agent_message_chunk" ||
+          params.update.sessionUpdate === "agent_thought_chunk" ||
+          params.update.sessionUpdate === "user_message_chunk") &&
+        params.update.content.type === "text" &&
+        extractCost(line, sessionId) === null
+      ) {
+        args.publishTextFrame([lineEvent(line), updateEvent(params)]);
+      } else {
+        emitLine(line);
+        await clientImpl.sessionUpdate(params);
+      }
+    },
     onFailure(error) {
       record.abortOutput?.(error);
       record.outputFailure = {
@@ -939,7 +987,9 @@ export async function createAcpConnection(
       stdin.destroy();
     },
   });
-  const connection = new acp.ClientSideConnection(() => clientImpl, stream);
+
+  record.settlePermissionCallbacks = stream.settlePermissionCallbacks;
+  const connection = connectAcpClient(stream);
 
   logger.info({ sessionId }, "acp connection-init");
 
@@ -1105,7 +1155,7 @@ export async function createAcpConnection(
 }
 
 type ApplyModelArgs = {
-  connection: acp.ClientSideConnection;
+  connection: AcpConnection;
   runner: RunnerLaunch | undefined;
   models: SessionModelView;
   acpSessionId: string;
@@ -1214,7 +1264,7 @@ export async function applyAndVerifyModel(args: ApplyModelArgs): Promise<void> {
 }
 
 export async function sendPromptOnConnection(
-  conn: acp.ClientSideConnection,
+  conn: AcpConnection,
   args: {
     adapter: ExecutorAgent;
     acpSessionId: string;
@@ -1312,7 +1362,7 @@ const REFUSING_OUTCOMES: ReadonlySet<string> = new Set([
 // typed 409; an ACP error is the `error` outcome, a missed deadline `timeout`.
 // A late answer after the deadline is dropped (its promise is kept handled).
 export async function steerOnConnection(
-  conn: acp.ClientSideConnection,
+  conn: AcpConnection,
   args: {
     adapter: ExecutorAgent;
     acpSessionId: string;

@@ -177,7 +177,8 @@ const TABLE_RUN_SESSIONS = {
   updatedAt: { _t: "run_sessions.updatedAt" },
 } as const;
 
-vi.mock("@/lib/db/schema", () => ({
+vi.mock("@/lib/db/schema", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/db/schema")>()),
   hitlRequests: TABLE_HITL,
   runs: TABLE_RUNS,
   nodeAttempts: TABLE_NODE_ATTEMPTS,

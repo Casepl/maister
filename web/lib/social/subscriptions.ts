@@ -17,10 +17,7 @@ const log = pino({
 
 export type Subscriber = { type: "user" | "agent"; id: string };
 export type SubscriptionReason =
-  | "creator"
-  | "commenter"
-  | "mentioned"
-  | "manual";
+  "creator" | "commenter" | "mentioned" | "manual";
 
 // Upsert is ON CONFLICT DO NOTHING against UNIQUE(task_id, subscriber_type,
 // subscriber_id) — the FIRST reason wins and is never overwritten (ADR-078 D8).

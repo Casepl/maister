@@ -5,12 +5,7 @@ import type { ReactElement } from "react";
 import { useEffect, useRef } from "react";
 
 type Tone =
-  | "is-prompt"
-  | "is-note"
-  | "is-hot"
-  | "is-ok"
-  | "is-reject"
-  | "is-tagline";
+  "is-prompt" | "is-note" | "is-hot" | "is-ok" | "is-reject" | "is-tagline";
 
 interface TermLine {
   style: Tone;

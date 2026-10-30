@@ -325,15 +325,12 @@ beforeAll(async () => {
   fx.token = issued.secret;
   fx.tokenId = issued.tokenId;
 
-  ({ POST: commentsPOST } = await import(
-    "@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/comments/route"
-  ));
-  ({ POST: triagePOST } = await import(
-    "@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/triage/route"
-  ));
-  ({ POST: tasksPOST } = await import(
-    "@/app/api/v1/ext/projects/[slug]/tasks/route"
-  ));
+  ({ POST: commentsPOST } =
+    await import("@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/comments/route"));
+  ({ POST: triagePOST } =
+    await import("@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/triage/route"));
+  ({ POST: tasksPOST } =
+    await import("@/app/api/v1/ext/projects/[slug]/tasks/route"));
 }, 240_000);
 
 afterAll(async () => {
@@ -730,9 +727,8 @@ describe("ADR-156 cross-project relations:delete is limited to self-authored edg
     rel.targetBNumber = await taskNumber(rel.targetB);
     rel.homeBNumber = await taskNumber(rel.homeB);
 
-    ({ DELETE: relationsDELETE } = await import(
-      "@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/relations/route"
-    ));
+    ({ DELETE: relationsDELETE } =
+      await import("@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/relations/route"));
   }, 60_000);
 
   it("lets the reaching agent delete an edge IT authored in the target project", async () => {

@@ -36,18 +36,33 @@ describe("IT-TST-02: task revision", () => {
     `);
 
     const results = await Promise.allSettled([
-      updateTask(taskId, projectId, { title: "First", expectedRevision: 0 }, db),
-      updateTask(taskId, projectId, { title: "Second", expectedRevision: 0 }, db),
+      updateTask(
+        taskId,
+        projectId,
+        { title: "First", expectedRevision: 0 },
+        db,
+      ),
+      updateTask(
+        taskId,
+        projectId,
+        { title: "Second", expectedRevision: 0 },
+        db,
+      ),
     ]);
     const fulfilled = results.filter((result) => result.status === "fulfilled");
     const rejected = results.filter((result) => result.status === "rejected");
-    const rows = await db.execute(sql`SELECT title, revision FROM tasks WHERE id = ${taskId}`);
+    const rows = await db.execute(
+      sql`SELECT title, revision FROM tasks WHERE id = ${taskId}`,
+    );
 
     expect(fulfilled).toHaveLength(1);
     expect(rejected).toHaveLength(1);
     expect(rejected[0]).toMatchObject({
       reason: { code: "CONFLICT", details: { reason: "stale_revision" } },
     });
-    expect(rows.rows[0]).toMatchObject({ title: expect.stringMatching(/^(First|Second)$/), revision: 1 });
+    expect(rows.rows[0]).toMatchObject({
+      title: expect.stringMatching(/^(First|Second)$/),
+      revision: 1,
+    });
   });
 });

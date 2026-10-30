@@ -129,9 +129,8 @@ describe("runOutcomeBucketSql", () => {
 
   it("emits exactly one arm per run status, in map order, bound as parameters", async () => {
     const { text, params } = await render();
-    const { BUCKET_BY_RUN_STATUS: map } = await import(
-      "@/lib/runs/outcome-bucket"
-    );
+    const { BUCKET_BY_RUN_STATUS: map } =
+      await import("@/lib/runs/outcome-bucket");
 
     // Pairwise: every status arm binds (status, its bucket) and nothing else.
     // Read as pairs rather than by `indexOf`, because several statuses are also

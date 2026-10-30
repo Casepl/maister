@@ -323,16 +323,15 @@ async function makeOpts(over: {
 }) {
   const runFlow = vi.fn(async () => {});
 
-  const listWorktrees = vi.fn(
-    async (): Promise<WorktreeInfo[]> =>
-      (over.worktreePaths ?? []).map((p) => ({
-        path: p,
-        branch: "b",
-        head: "h",
-        bare: false,
-        locked: false,
-        prunable: false,
-      })),
+  const listWorktrees = vi.fn(async (): Promise<WorktreeInfo[]> =>
+    (over.worktreePaths ?? []).map((p) => ({
+      path: p,
+      branch: "b",
+      head: "h",
+      bare: false,
+      locked: false,
+      prunable: false,
+    })),
   );
 
   const listSessions =
@@ -2231,9 +2230,8 @@ describe("runReconcileSweep — evidence-first crash classification (ADR-177)", 
   it.each(STREAM_SHAPES)(
     "commandStreamLost: $states -> $lost ($why)",
     async ({ states, lost }) => {
-      const { commandStreamLost } = await import(
-        "@/lib/execution-host/events/stream-health"
-      );
+      const { commandStreamLost } =
+        await import("@/lib/execution-host/events/stream-health");
       const runId = await seedRun({ acpSessionId: null });
 
       await seedWorkspace(runId, `/worktrees/sl-${randomUUID().slice(0, 8)}`);
@@ -2613,9 +2611,8 @@ describe("runReconcileSweep — evidence-first crash classification (ADR-177)", 
   }, 60_000);
 
   it("RED 6: the boundary makes the command RETIREMENT-eligible — at Crashed, and again at Done", async () => {
-    const { classifyCommandRetirement } = await import(
-      "@/lib/execution-host/retirement"
-    );
+    const { classifyCommandRetirement } =
+      await import("@/lib/execution-host/retirement");
     const runId = await seedRun({ acpSessionId: null });
 
     await seedWorkspace(runId, "/worktrees/retire");

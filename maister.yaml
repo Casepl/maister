@@ -14,4 +14,8 @@ packages:
     source: https://github.com/maister-dev/maister-plugins
     version: aif/v3.0.0
     path: packages/aif
+  - id: core
+    source: https://github.com/maister-dev/maister-plugins
+    version: core/v1.3.0
+    path: packages/core
 flows: []

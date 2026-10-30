@@ -29,15 +29,12 @@ vi.mock("@/lib/supervisor-client", async (importOriginal) => ({
 }));
 
 const { RuntimeEventSpanSchema } = await import("../runtime-events");
-const { createLocalDirectTransport } = await import(
-  "../transports/local-direct"
-);
-const { hostSpanPages, HostSpanUnavailable } = await import(
-  "../prompt-host-span"
-);
-const { createFakeExecutionHost } = await import(
-  "@/test-support/fake-execution-host"
-);
+const { createLocalDirectTransport } =
+  await import("../transports/local-direct");
+const { hostSpanPages, HostSpanUnavailable } =
+  await import("../prompt-host-span");
+const { createFakeExecutionHost } =
+  await import("@/test-support/fake-execution-host");
 
 const ENVELOPE = JSON.parse(
   readFileSync(

@@ -179,9 +179,8 @@ beforeAll(async () => {
 
   capIdInProjectB = resultB.capability.id;
 
-  ({ GET } = await import(
-    "@/app/api/projects/[slug]/catalog/caps/[capId]/graph/route"
-  ));
+  ({ GET } =
+    await import("@/app/api/projects/[slug]/catalog/caps/[capId]/graph/route"));
 }, 180_000);
 
 afterAll(async () => {

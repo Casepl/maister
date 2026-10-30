@@ -26,8 +26,7 @@ function db(): NodePgDatabase<typeof schema> {
 const passwordSchema = z.string().min(12);
 
 export type ChangePasswordState =
-  | { error: "weak" | "mismatch" | "unauthenticated" | "generic" }
-  | undefined;
+  { error: "weak" | "mismatch" | "unauthenticated" | "generic" } | undefined;
 
 export async function changePassword(
   _prev: ChangePasswordState,

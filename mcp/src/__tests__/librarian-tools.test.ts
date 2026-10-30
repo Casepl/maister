@@ -186,7 +186,9 @@ describe("CT-LAU-06 librarian discovery tools route to the visibility-scoped ext
     });
     expect(call().url).toBe(`${BASE_URL}/api/v1/ext/librarian/memory`);
     expect(call().init.method).toBe("POST");
-    expect((call().init.headers as Record<string, string>)["Idempotency-Key"]).toBe("turn-1:memory:1");
+    expect(
+      (call().init.headers as Record<string, string>)["Idempotency-Key"],
+    ).toBe("turn-1:memory:1");
     expect(JSON.parse(call().init.body as string)).toEqual({
       kind: "preference",
       content: "Prefer short updates",
@@ -210,7 +212,11 @@ describe("CT-LAU-06 librarian discovery tools route to the visibility-scoped ext
       name: "librarian_card_propose",
       args: {
         action: "memory_suggest",
-        memory: { kind: "preference", content: "Prefer short updates", scope: "global" },
+        memory: {
+          kind: "preference",
+          content: "Prefer short updates",
+          scope: "global",
+        },
         operationKey: "turn-1:card:1",
       },
       ctx,
@@ -219,7 +225,11 @@ describe("CT-LAU-06 librarian discovery tools route to the visibility-scoped ext
     expect(call().url).toBe(`${BASE_URL}/api/v1/ext/librarian/cards`);
     expect(JSON.parse(call().init.body as string)).toEqual({
       action: "memory_suggest",
-      memory: { kind: "preference", content: "Prefer short updates", scope: "global" },
+      memory: {
+        kind: "preference",
+        content: "Prefer short updates",
+        scope: "global",
+      },
     });
   });
 });
@@ -249,6 +259,7 @@ describe("CT-LAU-06 the librarian toolset lists only librarian-permitted tools",
       "run_collect",
       "run_cancel",
       "run_rework",
+      "task_complete",
       "triage_set",
       "agent_memory_write",
       "ask_human",

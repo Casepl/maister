@@ -532,9 +532,8 @@ async function scheduleBudgetBreachResume(args: {
 
   if (cur?.status === "NeedsInputIdle") {
     const { resumeRun } = await import("@/lib/runs/resume");
-    const { scheduleResumedSessionDrive } = await import(
-      "@/lib/runs/resume-driver"
-    );
+    const { scheduleResumedSessionDrive } =
+      await import("@/lib/runs/resume-driver");
     const r = await resumeRun(runId, { db, executionHosts });
 
     if (r.ok) {
@@ -1299,9 +1298,8 @@ async function handlePermissionResponse(
   // would drift.
   const runIdleResume = async (): Promise<NextResponse> => {
     const { resumeRun } = await import("@/lib/runs/resume");
-    const { scheduleResumedSessionDrive } = await import(
-      "@/lib/runs/resume-driver"
-    );
+    const { scheduleResumedSessionDrive } =
+      await import("@/lib/runs/resume-driver");
     const r = await resumeRun(runId, {
       db,
       executionHosts: args.executionHosts,
@@ -1640,9 +1638,8 @@ async function handlePermissionResponse(
   // with `session/resume` and re-prompts the interrupted turn; the scratch
   // permission handler answers the re-raised request from the stored row.
   const runScratchIdleResume = async (): Promise<NextResponse> => {
-    const { claimScratchIdleResume, driveScratchIdleResume } = await import(
-      "@/lib/scratch-runs/idle-resume"
-    );
+    const { claimScratchIdleResume, driveScratchIdleResume } =
+      await import("@/lib/scratch-runs/idle-resume");
     // Whether Phase 1 stored this request's answer, or found it already stored.
     const storedHere = claim.kind === "claimed";
     const retryable = (err: unknown): NextResponse => {
@@ -2078,9 +2075,8 @@ async function handlePermissionResponse(
       if (outcome.transition === "checkpointed-resume") {
         // Park through the SHARED CAS: a mismatch means one of the other four
         // writers already parked this run, which is not an error here.
-        const { markCheckpointed } = await import(
-          "@/lib/runs/state-transitions"
-        );
+        const { markCheckpointed } =
+          await import("@/lib/runs/state-transitions");
         const parked = await markCheckpointed(runId, { db });
 
         log.info(
@@ -5918,9 +5914,8 @@ async function handleNodeInterruptResponse(args: {
 
   if (optionId === "stop") {
     // Delegates to the existing terminal stop — no new stop semantics.
-    const { stopWorkbenchRun } = await import(
-      "@/lib/workbench-lifecycle/service"
-    );
+    const { stopWorkbenchRun } =
+      await import("@/lib/workbench-lifecycle/service");
 
     const outcome = await db.transaction(async (tx: any) => {
       const locked = await lockHitlRow(tx, hitlRequestId);
@@ -6127,9 +6122,7 @@ async function handleNodeInterruptResponse(args: {
       .from(workspaces)
       .where(eq(workspaces.runId, runId));
     const worktreePath = workspaceRows[0]?.worktreePath as
-      | string
-      | null
-      | undefined;
+      string | null | undefined;
 
     if (!targetCheckpointRef || !worktreePath) {
       log.warn(
@@ -6155,18 +6148,15 @@ async function handleNodeInterruptResponse(args: {
           const target = targetNodeId as string;
 
           try {
-            const { loadRunManifest } = await import(
-              "@/lib/queries/run-manifest"
-            );
+            const { loadRunManifest } =
+              await import("@/lib/queries/run-manifest");
             const loaded = await loadRunManifest(runId, db);
 
             if (!loaded?.manifest) return [target];
-            const { compileManifest } = await import(
-              "@/lib/flows/graph/compile"
-            );
-            const { downstreamOf } = await import(
-              "@/lib/flows/graph/runner-graph"
-            );
+            const { compileManifest } =
+              await import("@/lib/flows/graph/compile");
+            const { downstreamOf } =
+              await import("@/lib/flows/graph/runner-graph");
 
             return [
               target,
@@ -6202,9 +6192,8 @@ async function handleNodeInterruptResponse(args: {
       return;
     }
 
-    const { applyWorkspacePolicy } = await import(
-      "@/lib/flows/graph/workspace-checkpoint"
-    );
+    const { applyWorkspacePolicy } =
+      await import("@/lib/flows/graph/workspace-checkpoint");
 
     await applyWorkspacePolicy({
       policy: effectiveWorkspacePolicy as never,

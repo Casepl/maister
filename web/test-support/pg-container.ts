@@ -13,12 +13,15 @@ import pino from "pino";
 import { Pool } from "pg";
 import { getContainerRuntimeClient } from "testcontainers";
 
+import { probeContainerRuntimeDaemon } from "./docker-runtime-probe";
 import {
   INVOCATION_CONTAINER_LABEL,
+  InvocationOwnershipError,
   invocationFromEnvironment,
   registerContainerAllocation,
   registerContainer,
 } from "./process-invocation";
+import { migrateTestDatabase } from "./migrate-test-database";
 
 import * as mainSchema from "@/lib/db/schema";
 
@@ -33,16 +36,23 @@ type MigrationJournalEntry = { idx: number; tag: string };
 export const PGVECTOR_IMAGE = "pgvector/pgvector:pg16";
 export const TEST_DATABASE_DOCKER_MESSAGE =
   "integration/e2e require Docker; build/unit do not";
+const postgresStorage = {
+  storageKind: "tmpfs",
+  storagePath: "/var/lib/postgresql/data",
+  storageLimitBytes: 512 * 1024 * 1024,
+  maxWalSizeMb: 64,
+  minWalSizeMb: 32,
+  autovacuumNaptimeSeconds: 1,
+} as const;
 
-// The probe only exists to turn an absent Docker into a typed error instead of
-// a hang, so a few seconds is right when Docker is missing. On a shared runner
-// mid-container-teardown the runtime client can take longer than that to hand
-// itself back, and the cost is not one slow case: the probe runs inside a
-// suite's beforeAll, so tripping it skips every case in the file. Lanes that
-// already know Docker is present raise it.
+// Daemon reachability has a short absent-Docker guard. SDK construction also
+// resolves the runtime host (DNS), which must not consume that guard after a genuine
+// Engine response. Its separate ceiling matches the existing known-Docker lanes.
 const dockerProbeTimeoutMs =
   Number(process.env.MAISTER_TEST_DOCKER_PROBE_TIMEOUT_MS) || 3_000;
+const dockerClientTimeoutMs = 30_000;
 const logger = pino({ name: "test-database" });
+const DATABASE_ALLOCATION_LABEL = "maister.test.database-allocation";
 
 export type TestDatabaseLane = "integration" | "e2e";
 
@@ -99,7 +109,7 @@ function maskedEndpoint(databaseUrl: string): string {
 
 function createDockerUnavailableError(
   lane: TestDatabaseLane,
-  phase: "docker-probe" | "container-start",
+  phase: "docker-probe" | "docker-client-construction" | "container-start",
   startedAt: number,
   cause: unknown,
 ): TestDatabaseDockerUnavailableError {
@@ -173,38 +183,147 @@ async function throwAfterCleanup(
   throw operationError;
 }
 
+async function removeFailedPostgresAllocation(
+  allocationId: string,
+): Promise<void> {
+  const docker = (await getContainerRuntimeClient()).container.dockerode;
+  const list = async (): Promise<string[]> => {
+    const containers = await docker.listContainers({
+      all: true,
+      filters: { label: [`${DATABASE_ALLOCATION_LABEL}=${allocationId}`] },
+      abortSignal: AbortSignal.timeout(30_000),
+    });
+
+    return containers.map((container) => container.Id);
+  };
+
+  for (const id of await list()) {
+    if (!/^[a-f0-9]{64}$/u.test(id))
+      throw new InvocationOwnershipError(
+        "Docker returned an invalid allocation identity",
+      );
+    try {
+      const container = docker.getContainer(id);
+      const inspected = await container.inspect({
+        abortSignal: AbortSignal.timeout(10_000),
+      });
+
+      if (inspected.Config.Labels[DATABASE_ALLOCATION_LABEL] !== allocationId)
+        throw new InvocationOwnershipError("database allocation label changed");
+      const removal = {
+        force: true,
+        v: true,
+        abortSignal: AbortSignal.timeout(30_000),
+      };
+
+      await container.remove(removal);
+      logger.info(
+        {
+          phase: "container-start-cleanup",
+          allocationId,
+          containerId: id,
+          outcome: "removed",
+        },
+        "removed failed PostgreSQL allocation",
+      );
+    } catch (error) {
+      if (error instanceof InvocationOwnershipError) throw error;
+      if ((await list()).includes(id)) throw error;
+      // SDK readiness cleanup or Ryuk may already have removed this exact object.
+    }
+  }
+  if ((await list()).length)
+    throw new InvocationOwnershipError(
+      "PostgreSQL allocation survived startup cleanup",
+    );
+}
+
 async function startPostgresContainer(
   options: TestDatabaseOptions,
   lane: TestDatabaseLane,
   startedAt: number,
 ): Promise<StartedPostgreSqlContainer> {
   const invocation = invocationFromEnvironment();
+  const allocationId = randomUUID();
 
   if (invocation) await registerContainerAllocation(invocation);
+  logger.info(
+    {
+      lane,
+      phase: "container-create-start",
+      preparationDurationMs: Date.now() - startedAt,
+      ...postgresStorage,
+    },
+    "starting owned PostgreSQL container",
+  );
+  const containerStartedAt = Date.now();
+
   try {
     const container = await new PostgreSqlContainer(PGVECTOR_IMAGE)
       .withDatabase(options.databaseName)
       .withUsername("test")
       .withPassword("test")
-      .withLabels(
-        invocation ? { [INVOCATION_CONTAINER_LABEL]: invocation.id } : {},
-      )
+      .withTmpFs({ [postgresStorage.storagePath]: "rw,size=512m" })
+      .withCommand([
+        "postgres",
+        "-c",
+        `max_wal_size=${postgresStorage.maxWalSizeMb}MB`,
+        "-c",
+        `min_wal_size=${postgresStorage.minWalSizeMb}MB`,
+        "-c",
+        `autovacuum_naptime=${postgresStorage.autovacuumNaptimeSeconds}s`,
+      ])
+      .withLabels({
+        [DATABASE_ALLOCATION_LABEL]: allocationId,
+        ...(invocation ? { [INVOCATION_CONTAINER_LABEL]: invocation.id } : {}),
+      })
       .start();
+    const containerStartDurationMs = Date.now() - containerStartedAt;
 
     try {
       if (invocation) await registerContainer(invocation, container.getId());
     } catch (error) {
       await throwAfterCleanup(lane, error, { container });
     }
+    logger.info(
+      {
+        lane,
+        phase: "container-start",
+        outcome: "passed",
+        durationMs: containerStartDurationMs,
+        containerId: container.getId(),
+        ...postgresStorage,
+      },
+      "started owned PostgreSQL container",
+    );
 
     return container;
   } catch (cause) {
-    throw createDockerUnavailableError(
+    const operationError = createDockerUnavailableError(
       lane,
       "container-start",
       startedAt,
       cause,
     );
+
+    try {
+      await removeFailedPostgresAllocation(allocationId);
+    } catch (cleanupError) {
+      logger.error(
+        {
+          lane,
+          phase: "container-start-cleanup",
+          allocationId,
+          safeCause: asSafeCause(cleanupError),
+        },
+        "failed PostgreSQL allocation cleanup failed",
+      );
+      throw new AggregateError(
+        [operationError, cleanupError],
+        "PostgreSQL startup and allocation cleanup failed",
+      );
+    }
+    throw operationError;
   }
 }
 
@@ -212,20 +331,70 @@ export async function assertTestDatabaseDockerRuntime(
   lane: TestDatabaseLane,
 ): Promise<void> {
   const startedAt = Date.now();
+  const controller = new AbortController();
   let timeout: ReturnType<typeof setTimeout> | undefined;
 
   try {
-    await Promise.race([
+    timeout = setTimeout(
+      () =>
+        controller.abort(new Error("container runtime daemon probe timed out")),
+      dockerProbeTimeoutMs,
+    );
+    const evidence = await probeContainerRuntimeDaemon(controller.signal);
+
+    logger.info(
+      {
+        lane,
+        phase: "docker-daemon-contact",
+        outcome: "passed",
+        durationMs: Date.now() - startedAt,
+        ...evidence,
+      },
+      "test container daemon contacted",
+    );
+  } catch (cause) {
+    throw createDockerUnavailableError(lane, "docker-probe", startedAt, cause);
+  } finally {
+    if (timeout !== undefined) clearTimeout(timeout);
+  }
+
+  const constructionStartedAt = Date.now();
+
+  try {
+    logger.info(
+      { lane, phase: "docker-client-construction", outcome: "started" },
+      "constructing test container runtime client",
+    );
+    const client = await Promise.race([
       getContainerRuntimeClient(),
       new Promise<never>((_, reject) => {
         timeout = setTimeout(
-          () => reject(new Error("container runtime probe timed out")),
-          dockerProbeTimeoutMs,
+          () =>
+            reject(
+              new Error("container runtime client construction timed out"),
+            ),
+          dockerClientTimeoutMs,
         );
       }),
     ]);
+
+    logger.info(
+      {
+        lane,
+        phase: "docker-client-construction",
+        outcome: "passed",
+        durationMs: Date.now() - constructionStartedAt,
+        serverVersion: client.info.containerRuntime.serverVersion,
+      },
+      "test container runtime client ready",
+    );
   } catch (cause) {
-    throw createDockerUnavailableError(lane, "docker-probe", startedAt, cause);
+    throw createDockerUnavailableError(
+      lane,
+      "docker-client-construction",
+      constructionStartedAt,
+      cause,
+    );
   } finally {
     if (timeout !== undefined) {
       clearTimeout(timeout);
@@ -440,10 +609,13 @@ export async function startMainPostgresTestDbUpTo(
 export async function startMainAndBrainPostgresTestDb(
   options: TestDatabaseOptions,
 ): Promise<StartedPostgresTestDb> {
-  const database = await startMainPostgresTestDb(options);
+  const database = await startBarePostgresTestDb(options);
 
   try {
-    await migrate(database.db, {
+    await migrateTestDatabase(database.pool, {
+      migrationsFolder: "./lib/db/migrations",
+    });
+    await migrateTestDatabase(database.pool, {
       migrationsFolder: "./lib/db/brain-migrations",
       migrationsTable: "__drizzle_brain_migrations",
     });

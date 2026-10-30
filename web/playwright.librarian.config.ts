@@ -45,6 +45,7 @@ export default defineConfig({
     url: baseURL,
     timeout: 180_000,
     reuseExistingServer: false,
+    stdout: "pipe",
     env: {
       DB_URL: resolvePostgresDbUrl(),
       AUTH_SECRET:

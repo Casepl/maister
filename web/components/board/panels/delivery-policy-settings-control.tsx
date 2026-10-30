@@ -7,10 +7,7 @@ import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
 
 type DeliveryPolicyStrategy =
-  | "merge"
-  | "rebase_merge"
-  | "pull_request"
-  | "ai_rebase_merge";
+  "merge" | "rebase_merge" | "pull_request" | "ai_rebase_merge";
 type DeliveryPolicyPush = "never" | "on_success";
 type DeliveryPolicyTrigger = "manual" | "auto_on_ready";
 

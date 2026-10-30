@@ -55,7 +55,7 @@ describe("graph-only manifest shape contract", () => {
 
   it("requires a non-empty nodes[] graph", () => {
     expect(issueMessages({ ...baseManifest, nodes: [] })).toContain(
-      "Array must contain at least 1 element(s)",
+      "Too small: expected array to have >=1 items",
     );
   });
 

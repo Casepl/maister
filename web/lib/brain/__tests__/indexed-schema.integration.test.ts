@@ -202,7 +202,7 @@ describe("brain indexed-tier schema (ADR-127, migration 0003)", () => {
            ${TEST_EMBEDDING_MODEL}, ${TEST_EMBEDDING_DIMENSIONS}, 'v1',
            'source', 'content')
       `),
-    ).rejects.toMatchObject({ code: "23514" });
+    ).rejects.toMatchObject({ cause: { code: "23514" } });
 
     await expect(
       ctx.db.execute(sql`
@@ -216,7 +216,7 @@ describe("brain indexed-tier schema (ADR-127, migration 0003)", () => {
            ${TEST_EMBEDDING_DIMENSIONS}, 'v1', 'source', 'content',
            'markdown', '1')
       `),
-    ).rejects.toMatchObject({ code: "23514" });
+    ).rejects.toMatchObject({ cause: { code: "23514" } });
 
     await ctx.db.execute(sql`
       INSERT INTO brain_embeddings
@@ -241,7 +241,7 @@ describe("brain indexed-tier schema (ADR-127, migration 0003)", () => {
            ${TEST_EMBEDDING_DIMENSIONS}, 'v1', 'source-2', 'content-2',
            'markdown', '1')
       `),
-    ).rejects.toMatchObject({ code: "23505" });
+    ).rejects.toMatchObject({ cause: { code: "23505" } });
 
     await expect(
       indexExists("brain_embeddings_chunk_generation_uq"),

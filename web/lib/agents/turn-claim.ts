@@ -31,10 +31,7 @@ export type AgentTurnClaim =
       kind: "queued";
       turn: AgentTurn;
       reason:
-        | "capacity"
-        | "prior_turn"
-        | "run_state"
-        | "session_not_admissible";
+        "capacity" | "prior_turn" | "run_state" | "session_not_admissible";
     }>;
 
 /** Serialize input binding with the same admission lock used by the scheduler. */

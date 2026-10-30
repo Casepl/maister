@@ -60,9 +60,8 @@ beforeAll(async () => {
     databaseName: "push_delivery_test",
   });
   db = testDatabase.db;
-  ({ runWebhookDeliveryJob } = await import(
-    "@/lib/scheduler/handlers/webhook-delivery"
-  ));
+  ({ runWebhookDeliveryJob } =
+    await import("@/lib/scheduler/handlers/webhook-delivery"));
 }, 180_000);
 
 afterAll(async () => {

@@ -34,7 +34,11 @@ import pino from "pino";
 import { assertRuntimeObjectsReferenceable } from "@/lib/execution-host/runtime-object-holds";
 import { assertCurrentSessionBinding } from "@/lib/execution-host/session-binding";
 import { PromptIncarnationPending } from "@/lib/execution-host/prompt-incarnation";
-import { requireActiveSession, requireProjectAction, requireProjectActionForUser } from "@/lib/authz";
+import {
+  requireActiveSession,
+  requireProjectAction,
+  requireProjectActionForUser,
+} from "@/lib/authz";
 import { ensureLocalPackageGitExclude } from "@/lib/local-packages/git";
 import { assertHoldsLock } from "@/lib/local-packages/lock";
 import { assertLocalPackageAssistantActor } from "@/lib/scratch-runs/authorization";
@@ -2754,7 +2758,11 @@ async function appendScratchUserMessage(args: {
   acceptWhileBusy?: boolean;
   operatorUserId?: string;
   viaOperationId?: string;
-  recordAccepted?: (tx: Db, messageId: string, delivery: ScratchMessageDelivery) => Promise<void>;
+  recordAccepted?: (
+    tx: Db,
+    messageId: string,
+    delivery: ScratchMessageDelivery,
+  ) => Promise<void>;
 }) {
   const runRows = await args.db
     .select()
@@ -2776,9 +2784,16 @@ async function appendScratchUserMessage(args: {
   if (run.projectId) {
     if (args.operatorUserId) {
       if (run.createdByUserId !== args.operatorUserId) {
-        throw new MaisterError("UNAUTHORIZED", "only the scratch run owner can send an operator message");
+        throw new MaisterError(
+          "UNAUTHORIZED",
+          "only the scratch run owner can send an operator message",
+        );
       }
-      await requireProjectActionForUser(args.operatorUserId, run.projectId, "operateScratchRun");
+      await requireProjectActionForUser(
+        args.operatorUserId,
+        run.projectId,
+        "operateScratchRun",
+      );
     } else {
       await requireProjectAction(run.projectId, "operateScratchRun");
     }
@@ -3028,7 +3043,11 @@ export async function sendScratchUserMessage(args: {
   executionHosts?: ExecutionHosts;
   operatorUserId?: string;
   viaOperationId?: string;
-  recordAccepted?: (tx: Db, messageId: string, delivery: ScratchMessageDelivery) => Promise<void>;
+  recordAccepted?: (
+    tx: Db,
+    messageId: string,
+    delivery: ScratchMessageDelivery,
+  ) => Promise<void>;
 }): Promise<ScratchMessageResponse> {
   const db = getDb() as Db;
   const appended = await appendScratchUserMessage({

@@ -1793,6 +1793,21 @@ here rather than as new `PRM` ids.)
 - **PRM-09 (Implemented):** Cancellation reuses the command ledger and has one terminal prompt outcome despite retry or ACK loss.
 - **PRM-10:** Fencing happens before ACP and records a durable fenced receipt/audit event without owner mutation.
 - **PRM-11 (Implemented):** `{commandId}` remains queryable through Postgres after web or supervisor process restart; `startDurableWorkers()` starts the three workers exactly once per process behind their `Symbol.for("maister.durable-workers.*.v1")` slots, `stopDurableWorkers()` is awaited inside the boot quiesce `Promise.allSettled` before the DB drain, and a claim release the worker cannot confirm MUST fail shutdown (`AggregateError: web workers could not drain`) and leave the durable claim to expire rather than be silently dropped.
+
+  **Direct application shutdown:** the same obligation
+  covers `applyPromptOwner` invoked by an HTTP waiter outside a worker slot.
+  `applyPromptOwner` registers its process-local lifetime before claim
+  acquisition and retains it through preparation, application and token-guarded
+  release. Quiesce refuses new direct claims, aborts preparation and immediately
+  joins existing applications alongside worker stops, before closing the
+  database. A confirmed cancellation is deferred work; an unconfirmed release
+  fails shutdown. The active set and stop signal share a process symbol across
+  Next bundles, and the saved drain retains failures even after an application
+  leaves that set. The HTTP drain
+  remains 5 seconds and the whole shutdown deadline remains 25 seconds.
+  A clean exit with the observed claim still `applying` is a contract failure.
+  Complete local and hosted qualification is tracked separately in
+  [CI-R8](../../.ai-factory/plans/s53a-linux-isolation.md#ci-r8--production-browser-build-and-causal-fixture-publication-2026-10-16).
 - **PRM-12 (Implemented):** Prompt receipt pruning waits for terminal ACK, owner application, terminal run, and replay grace.
 
 ## Edge cases

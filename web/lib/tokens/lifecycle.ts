@@ -27,11 +27,7 @@ export const RESERVED_TOKEN_NAME_PATTERN =
   /^(orchestrator-run|agent-run|librarian-turn):/i;
 
 export type TokenLifecycleEventName =
-  | "issued"
-  | "scopes_changed"
-  | "renamed"
-  | "expiry_changed"
-  | "revoked";
+  "issued" | "scopes_changed" | "renamed" | "expiry_changed" | "revoked";
 
 export type TokenLifecycleActor = {
   userId: string | null;

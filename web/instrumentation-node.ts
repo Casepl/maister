@@ -20,13 +20,11 @@ export async function registerNodeRuntime(): Promise<void> {
   const { assertSupportedNode } = await import("../runtime/node-version");
 
   assertSupportedNode(process.versions.node);
-  const { eventIngestBatchRows, initializeEventStreamLagConfig } = await import(
-    "@/lib/instance-config"
-  );
+  const { eventIngestBatchRows, initializeEventStreamLagConfig } =
+    await import("@/lib/instance-config");
 
-  const { readSchedulerClockStatus } = await import(
-    "@/lib/scheduler/timer-config"
-  );
+  const { readSchedulerClockStatus } =
+    await import("@/lib/scheduler/timer-config");
 
   // Operator configuration is validated before any recoverable boot step so a
   // malformed value refuses the process rather than surfacing later: an
@@ -36,9 +34,8 @@ export async function registerNodeRuntime(): Promise<void> {
   initializeEventStreamLagConfig();
   eventIngestBatchRows();
   readSchedulerClockStatus();
-  const { projectionLimitsFromEnv } = await import(
-    "@/lib/execution-host/events/projection-limits"
-  );
+  const { projectionLimitsFromEnv } =
+    await import("@/lib/execution-host/events/projection-limits");
 
   projectionLimitsFromEnv();
   const { librarianConfig } = await import("@/lib/librarian/config");
@@ -128,9 +125,8 @@ export async function registerNodeRuntime(): Promise<void> {
       } else if (step === "recoverExecutionCommands") {
         await hosts.recoverExecutionCommands({ graceMs: 0 });
       } else if (step === "startCanonicalProjectionWorker") {
-        const { startCanonicalProjectionWorker } = await import(
-          "@/lib/execution-host/events/projection-runtime"
-        );
+        const { startCanonicalProjectionWorker } =
+          await import("@/lib/execution-host/events/projection-runtime");
 
         startCanonicalProjectionWorker();
       } else if (step === "startDurableWorkers") {
@@ -203,9 +199,8 @@ export async function registerNodeRuntime(): Promise<void> {
 
     // ADR-022/ADR-038: idempotent boot catch-up so event-stream evidence is
     // projected before any run is viewed (deterministic-PK upsert → no dups).
-    const { runProjectorCatchUpSweep } = await import(
-      "@/lib/projector/catch-up-sweep"
-    );
+    const { runProjectorCatchUpSweep } =
+      await import("@/lib/projector/catch-up-sweep");
 
     await runProjectorCatchUpSweep();
   } catch (err) {
@@ -220,36 +215,33 @@ export async function registerNodeRuntime(): Promise<void> {
 
   startSchedulerTimer();
 
-  const { registerApplicationLifecycle } = await import(
-    "@/lib/server-lifecycle"
-  );
+  const { registerApplicationLifecycle } =
+    await import("@/lib/server-lifecycle");
   const { stopSchedulerTimer } = await import("@/lib/scheduler/timer");
-  const { stopRuntimeObjectRetentionTimer } = await import(
-    "@/lib/execution-host/runtime-object-retention"
-  );
-  const { stopRuntimeEventConsumers } = await import(
-    "@/lib/execution-host/events/consumer"
-  );
-  const { stopCanonicalProjectionWorker } = await import(
-    "@/lib/execution-host/events/projection-runtime"
-  );
+  const { stopRuntimeObjectRetentionTimer } =
+    await import("@/lib/execution-host/runtime-object-retention");
+  const { stopRuntimeEventConsumers } =
+    await import("@/lib/execution-host/events/consumer");
+  const { stopCanonicalProjectionWorker } =
+    await import("@/lib/execution-host/events/projection-runtime");
   const { stopDurableWorkers } = await import("@/lib/workers/runtime");
+  const { stopPromptOwnerApplications } =
+    await import("@/lib/execution-host/prompt-owner-application");
   const { beginDbShutdown, closeDb } = await import("@/lib/db/client");
   let draining: Promise<PromiseSettledResult<void>[]> | undefined;
 
   registerApplicationLifecycle({
     quiesce: () => {
-      // All four stops run concurrently, so the shutdown budget is the MAX,
-      // not the sum. A prompt-owner slot mid-application holds a renewed 30 s
-      // lease — longer than the 25 s drain — so the overrun branch below is
-      // reachable by construction, and taking it is correct: an unconfirmed
-      // claim release must fail shutdown and leave the claim to expire.
+      // Stop and join workers and direct HTTP applications concurrently. Keep
+      // their results while HTTP drains: an unconfirmed release must fail
+      // shutdown even if its waiter has already left the active application set.
       draining ??= Promise.allSettled([
         stopSchedulerTimer(),
         stopRuntimeObjectRetentionTimer(),
         stopRuntimeEventConsumers(),
         stopCanonicalProjectionWorker(),
         stopDurableWorkers(),
+        stopPromptOwnerApplications(),
       ]);
     },
     drain: async () => {

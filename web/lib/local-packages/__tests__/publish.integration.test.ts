@@ -1,7 +1,6 @@
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { lstat, mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
@@ -37,6 +36,12 @@ vi.mock("@/lib/runs/pr-adapter", async (importOriginal) => {
 });
 
 import { closeDb } from "@/lib/db/client";
+import { git } from "@/test-support/git-fixture";
+import { mkdtempReal } from "@/test-support/worktree-test-root";
+import {
+  invocationFromEnvironment,
+  logInvocation,
+} from "@/test-support/process-invocation";
 import * as schemaModule from "@/lib/db/schema";
 import { isMaisterError } from "@/lib/errors";
 import {
@@ -61,6 +66,9 @@ let homeDir: string;
 let originalHome: string | undefined;
 let originalDbUrl: string | undefined;
 let userId: string;
+const bareRoots: Array<
+  Readonly<{ path: string; device: number; inode: number }>
+> = [];
 
 beforeAll(async () => {
   testDatabase = await startMainPostgresTestDb({
@@ -69,7 +77,7 @@ beforeAll(async () => {
   container = testDatabase.container;
   db = testDatabase.db;
 
-  homeDir = await mkdtemp(join(tmpdir(), "publish-int-home-"));
+  homeDir = await mkdtempReal("publish-int-home-");
   originalHome = process.env.HOME;
   process.env.HOME = homeDir;
   originalDbUrl = process.env.DB_URL;
@@ -88,17 +96,50 @@ afterAll(async () => {
   else process.env.HOME = originalHome;
   if (originalDbUrl === undefined) delete process.env.DB_URL;
   else process.env.DB_URL = originalDbUrl;
-  await closeDb();
-  await testDatabase?.stop();
-  if (homeDir) await rm(homeDir, { recursive: true, force: true });
+  const failures: unknown[] = [];
+  const cleanup = [
+    closeDb,
+    async (): Promise<void> => {
+      await testDatabase?.stop();
+    },
+    async (): Promise<void> => {
+      if (homeDir) await rm(homeDir, { recursive: true, force: true });
+    },
+  ];
+
+  for (const release of cleanup) {
+    try {
+      await release();
+    } catch (error) {
+      failures.push(error);
+    }
+  }
+  for (const root of bareRoots) {
+    try {
+      // This assertion runs before invocation containment can erase a fixture leak.
+      await expect(lstat(root.path)).rejects.toMatchObject({ code: "ENOENT" });
+      const invocation = invocationFromEnvironment();
+
+      if (invocation) logInvocation(invocation, "publish-bare-absent", root);
+    } catch (error) {
+      failures.push(error);
+    }
+  }
+  if (failures.length > 0)
+    throw new AggregateError(failures, "publish fixture cleanup failed");
 });
 
 async function makeBareRemote(): Promise<{
   sourceId: string;
   barePath: string;
 }> {
-  const barePath = await mkdtemp(join(tmpdir(), "publish-bare-"));
+  const barePath = await mkdtemp(join(homeDir, "publish-bare-"));
+  const identity = await lstat(barePath);
+  const root = { path: barePath, device: identity.dev, inode: identity.ino };
+  const invocation = invocationFromEnvironment();
 
+  bareRoots.push(root);
+  if (invocation) logInvocation(invocation, "publish-bare-created", root);
   await execFileAsync("git", ["init", "--bare", "-q", barePath]);
   const sourceId = randomUUID();
 
@@ -435,8 +476,7 @@ body
       "rev-parse",
       `${branch}^{tree}`,
     ]);
-    const { stdout: moved } = await execFileAsync("git", [
-      "-C",
+    const moved = await git(
       barePath,
       "commit-tree",
       tree.trim(),
@@ -444,7 +484,7 @@ body
       parent,
       "-m",
       "moved upstream",
-    ]);
+    );
 
     await execFileAsync("git", [
       "-C",

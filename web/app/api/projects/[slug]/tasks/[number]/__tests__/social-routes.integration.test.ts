@@ -175,15 +175,12 @@ beforeAll(async () => {
 
   fx.otherTaskNumber = other.number;
 
-  const routes = await import(
-    "@/app/api/projects/[slug]/tasks/[number]/comments/route"
-  );
-  const relations = await import(
-    "@/app/api/projects/[slug]/tasks/[number]/relations/route"
-  );
-  const subscription = await import(
-    "@/app/api/projects/[slug]/tasks/[number]/subscription/route"
-  );
+  const routes =
+    await import("@/app/api/projects/[slug]/tasks/[number]/comments/route");
+  const relations =
+    await import("@/app/api/projects/[slug]/tasks/[number]/relations/route");
+  const subscription =
+    await import("@/app/api/projects/[slug]/tasks/[number]/subscription/route");
 
   commentsGET = routes.GET;
   commentsPOST = routes.POST;
@@ -220,6 +217,31 @@ describe("comments routes", () => {
       id: fx.memberId,
       label: "Social member",
     });
+  });
+
+  it("accepts a large Markdown table without stalling", async () => {
+    actAs(fx.memberId);
+    const markdown = [
+      "| Column A | Column B |",
+      "| --- | --- |",
+      ...Array.from(
+        { length: 120 },
+        (_, index) => `| row ${index} | ${"content ".repeat(8)}|`,
+      ),
+    ].join("\n");
+
+    expect(markdown.length).toBeGreaterThan(8_000);
+    expect(markdown.length).toBeLessThan(10_000);
+
+    const res = await commentsPOST(
+      jsonRequest("POST", { body: markdown }),
+      routeParams(SLUG, fx.taskNumber),
+    );
+
+    expect(res.status).toBe(201);
+    expect(
+      ((await res.json()) as { comment: { body: string } }).comment.body,
+    ).toBe(markdown);
   });
 
   // ADR-151 — the session route reports the same mention contract as the ext

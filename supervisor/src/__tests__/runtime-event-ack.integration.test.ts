@@ -1,6 +1,10 @@
 import { get } from "node:http";
+import { Writable } from "node:stream";
 
+import pino from "pino";
 import { afterEach, describe, expect, it } from "vitest";
+
+import { RuntimeEventSubscribers } from "../runtime-event-subscribers";
 
 import {
   bootHost,
@@ -16,7 +20,12 @@ type RuntimeSseEvent = {
   data: { sequence: string; eventType: string };
 };
 
-function appendEvent(eventType: "session.created" | "session.command") {
+function appendEvent(
+  eventType: "session.created" | "session.command",
+  payload: Readonly<{ sourceMonotonicId: number; text?: string }> = {
+    sourceMonotonicId: 1,
+  },
+) {
   if (!host) throw new Error("host is not booted");
 
   return host.hostState.appendRuntimeEvent({
@@ -27,7 +36,7 @@ function appendEvent(eventType: "session.created" | "session.command") {
       hostSessionId: "9f314433-b7e9-49b9-baf7-3a23879eae68",
       eventType,
       occurredAt: "2026-09-04T12:00:00.000Z",
-      payload: { sourceMonotonicId: 1 },
+      payload,
     },
     terminal: eventType === "session.command",
   });
@@ -215,11 +224,36 @@ describe("Stage B host runtime-event acknowledgement", () => {
     // subscriber can fall below the floor another subscriber's ACK moved.
     let clock = Date.now();
 
-    host = await bootHost({ now: () => new Date(clock) });
+    let pausedCursor: string | undefined;
+    const subscribers = new RuntimeEventSubscribers(
+      pino(
+        { level: "debug" },
+        new Writable({
+          write(chunk, _encoding, done) {
+            const entry = JSON.parse(String(chunk)) as {
+              msg?: string;
+              cursor?: string;
+            };
+
+            if (entry.msg === "runtime-event-stream-paused")
+              pausedCursor = entry.cursor;
+            done();
+          },
+        }),
+      ),
+    );
+
+    host = await bootHost({
+      now: () => new Date(clock),
+      runtimeEventSubscribers: subscribers,
+    });
     const streamId = host.hostState.getRuntimeEventStreamId();
 
     for (let index = 0; index < 5_000; index += 1)
-      appendEvent("session.created");
+      appendEvent("session.created", {
+        sourceMonotonicId: 1,
+        text: "x".repeat(8192),
+      });
     const received: string[] = [];
     const response = await new Promise<import("node:http").IncomingMessage>(
       (resolve, reject) => {
@@ -239,6 +273,11 @@ describe("Stage B host runtime-event acknowledgement", () => {
     const ended = new Promise<void>((resolve) => response.once("end", resolve));
 
     await new Promise((resolve) => setTimeout(resolve, 200));
+    // A client pause alone does not prove a paused server: kernel buffers may
+    // already hold the whole replay. Prune only after reaching the real barrier.
+    expect(subscribers.bufferedBytes()).toBeGreaterThan(0);
+    expect(pausedCursor).toBeDefined();
+    expect(BigInt(pausedCursor!)).toBeLessThan(4999n);
     host.hostState.ackRuntimeEvents(streamId, "4999");
     clock += host.hostState.limits.eventAckGraceMs + 1;
     let pruned = 0;

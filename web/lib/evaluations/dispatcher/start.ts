@@ -40,8 +40,7 @@ export function deriveEvidenceProtocolDigest(
   methodDef: Record<string, unknown>,
 ): string {
   const evidence = methodDef.evidence as
-    | { captureBudgetBytes?: number; requiredCoverage?: string[] }
-    | undefined;
+    { captureBudgetBytes?: number; requiredCoverage?: string[] } | undefined;
 
   if (!evidence || typeof evidence !== "object") {
     return contentDigest({ evidenceProtocol: "diff+ground_truth@1" });

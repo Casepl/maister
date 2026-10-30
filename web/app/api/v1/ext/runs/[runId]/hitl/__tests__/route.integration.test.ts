@@ -187,9 +187,8 @@ afterAll(async () => {
 
 beforeAll(async () => {
   const hitlModule = await import("@/app/api/v1/ext/runs/[runId]/hitl/route");
-  const respondModule = await import(
-    "@/app/api/v1/ext/runs/[runId]/hitl/[hitlRequestId]/respond/route"
-  );
+  const respondModule =
+    await import("@/app/api/v1/ext/runs/[runId]/hitl/[hitlRequestId]/respond/route");
 
   GET = hitlModule.GET;
   POST = respondModule.POST;
@@ -1632,9 +1631,8 @@ describe("POST /api/v1/ext/runs/[runId]/hitl/[hitlRequestId]/respond", () => {
       `ext-hitl-owner-human-${randomUUID().slice(0, 8)}`,
     );
     const ownerUserId = await seedUser("hitl-owner-human");
-    const { ensureApiTokenActor, ensureUserActor } = await import(
-      "@/lib/assignments/service"
-    );
+    const { ensureApiTokenActor, ensureUserActor } =
+      await import("@/lib/assignments/service");
 
     const humanActor = await ensureUserActor({
       db: db as any,

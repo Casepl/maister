@@ -9,8 +9,10 @@ import { createPortal } from "react-dom";
 import { ConfirmDialogFrame } from "@/components/feedback/confirm-dialog-frame";
 import { useModalFocusTrap } from "@/components/feedback/use-modal-focus-trap";
 
-export interface ConfirmDialogProps
-  extends Omit<ConfirmDialogFrameProps, "dialogRef" | "onClose"> {
+export interface ConfirmDialogProps extends Omit<
+  ConfirmDialogFrameProps,
+  "dialogRef" | "onClose"
+> {
   onClose: () => void;
 }
 

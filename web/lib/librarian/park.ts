@@ -10,7 +10,11 @@ import { librarianTurns, runs } from "@/lib/db/schema";
 import { releaseAssignmentForRun } from "@/lib/execution-host/assignments";
 import { mintPlacement } from "@/lib/execution-host/placement";
 import { upgradeMaintenanceEngaged } from "@/lib/maintenance/upgrade-fence";
-import { countLiveRuns, effectivePoolCap, takeSchedulerLock } from "@/lib/scheduler";
+import {
+  countLiveRuns,
+  effectivePoolCap,
+  takeSchedulerLock,
+} from "@/lib/scheduler";
 
 const log = pino({
   name: "librarian.park",

@@ -11,8 +11,7 @@ import type { AuthoredFlowPackageFile } from "@/lib/catalog/authored-types";
 export type WorkingDirFile = { path: string; content: string };
 
 export type WorkingDirWrite =
-  | { op: "put"; path: string; content: string }
-  | { op: "delete"; path: string };
+  { op: "put"; path: string; content: string } | { op: "delete"; path: string };
 
 // Diff submitted files against the originals. A new or content-changed path →
 // PUT; an original path missing from the submitted set → DELETE. Paths present

@@ -6,9 +6,7 @@
 // N-deny breaker HALT and reach the escalate path; a per-call `path_guard` /
 // `capability_guard` deny is deny-and-continue (never escalates).
 export type HookTripHaltRule =
-  | "repetition"
-  | "no_progress"
-  | "capability_guard";
+  "repetition" | "no_progress" | "capability_guard";
 
 // Map a supervisor `session.hook_trip` rule to the halting rule carried on the
 // escalation. The supervisor only ever emits a `halt` disposition for the three

@@ -26,8 +26,7 @@ export const GATE_KINDS = [
 export type NodeFormError = { path: string; message: string };
 
 export type NodeFormResult =
-  | { ok: true }
-  | { ok: false; errors: NodeFormError[] };
+  { ok: true } | { ok: false; errors: NodeFormError[] };
 
 function zodIssuesToErrors(issues: z.ZodIssue[]): NodeFormError[] {
   return issues.map((issue) => ({

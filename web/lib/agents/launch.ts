@@ -234,11 +234,7 @@ const log = pino({
 const COMMENT_THREAD_TAIL_LIMIT = 6;
 
 export type AgentTriggerSource =
-  | "manual"
-  | "cron"
-  | "domain_event"
-  | "webhook"
-  | "flow";
+  "manual" | "cron" | "domain_event" | "webhook" | "flow";
 
 export type LaunchAgentRunInput = {
   agentId: string;
@@ -3402,9 +3398,7 @@ async function driveAgentSession(
   // delegation (wrong cwd / readOnlySession). Falls back to the def for rows that
   // predate agent_workspace.
   const workspace = (run.agentWorkspace ?? effective.parsed.workspace) as
-    | "none"
-    | "repo_read"
-    | "worktree";
+    "none" | "repo_read" | "worktree";
   let cwd: string;
 
   if (workspace === "repo_read" && effective.parsed.workspaceRef) {

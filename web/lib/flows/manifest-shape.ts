@@ -2,11 +2,7 @@ export const LEGACY_STEPS_REFUSAL_MESSAGE =
   "legacy steps[] flows are not supported since engine 3.0.0; republish the package with nodes[]";
 
 export type FlowManifestShape =
-  | "graph"
-  | "legacy_steps"
-  | "mixed"
-  | "missing"
-  | "invalid";
+  "graph" | "legacy_steps" | "mixed" | "missing" | "invalid";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

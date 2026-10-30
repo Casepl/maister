@@ -1,8 +1,5 @@
 export type BoardTaskGate =
-  | "flagged"
-  | "clarification_pending"
-  | "blocked"
-  | "launchable";
+  "flagged" | "clarification_pending" | "blocked" | "launchable";
 
 export function boardTaskGate(input: {
   triageStatus: "triaged" | "flagged" | null;

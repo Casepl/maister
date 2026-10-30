@@ -60,9 +60,8 @@ beforeAll(async () => {
   // every implicit resolution in this process.
   await fakeExecutionHosts(db);
 
-  ({ buildOrchestratorResumeConsumer } = await import(
-    "@/lib/domain-events/orchestrator-resume"
-  ));
+  ({ buildOrchestratorResumeConsumer } =
+    await import("@/lib/domain-events/orchestrator-resume"));
   ({ emitDomainEvent } = await import("@/lib/domain-events/outbox"));
 }, 180_000);
 

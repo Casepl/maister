@@ -486,35 +486,57 @@ describe("scratch message while the agent is busy — steering session (ADR-182)
     const { runId, done } = await launchHeld("operator message one");
 
     await runningTurn(runId);
-    const turnId = await seedLibrarianTurn(db as unknown as NodePgDatabase, USER_ID);
-    const token = await issueLibrarianTurnToken({
-      ownerUserId: USER_ID,
-      turnId,
-      scopes: ["runs:message"],
-      expiresAt: new Date(Date.now() + 60_000),
-    }, db);
-    const { POST } = await import("@/app/api/v1/ext/runs/[runId]/operator-message/route");
-    const request = () => new NextRequest(`http://localhost/api/v1/ext/runs/${runId}/operator-message`, {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${token.secret}`,
-        "content-type": "application/json",
-        "idempotency-key": `operator-${runId}`,
+    const turnId = await seedLibrarianTurn(
+      db as unknown as NodePgDatabase,
+      USER_ID,
+    );
+    const token = await issueLibrarianTurnToken(
+      {
+        ownerUserId: USER_ID,
+        turnId,
+        scopes: ["runs:message"],
+        expiresAt: new Date(Date.now() + 60_000),
       },
-      body: JSON.stringify({ message: "operator message two" }),
-    });
+      db,
+    );
+    const { POST } =
+      await import("@/app/api/v1/ext/runs/[runId]/operator-message/route");
+    const request = () =>
+      new NextRequest(
+        `http://localhost/api/v1/ext/runs/${runId}/operator-message`,
+        {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${token.secret}`,
+            "content-type": "application/json",
+            "idempotency-key": `operator-${runId}`,
+          },
+          body: JSON.stringify({ message: "operator message two" }),
+        },
+      );
 
     try {
-      const first = await POST(request(), { params: Promise.resolve({ runId }) });
+      const first = await POST(request(), {
+        params: Promise.resolve({ runId }),
+      });
       const firstBody = await first.json();
-      const replay = await POST(request(), { params: Promise.resolve({ runId }) });
+      const replay = await POST(request(), {
+        params: Promise.resolve({ runId }),
+      });
 
       expect(first.status).toBe(202);
       expect(firstBody).toMatchObject({ runId, outcome: "delivered" });
       expect(await replay.json()).toEqual(firstBody);
-      const messages = await db.select().from(schema.runMessages).where(
-        and(eq(schema.runMessages.runId, runId), eq(schema.runMessages.content, "operator message two")),
-      );
+      const messages = await db
+        .select()
+        .from(schema.runMessages)
+        .where(
+          and(
+            eq(schema.runMessages.runId, runId),
+            eq(schema.runMessages.content, "operator message two"),
+          ),
+        );
+
       expect(messages).toHaveLength(1);
       expect(messages[0].viaOperationId).toBeTruthy();
     } finally {

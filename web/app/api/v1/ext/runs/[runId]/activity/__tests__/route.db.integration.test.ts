@@ -45,9 +45,8 @@ afterAll(async () => {
 });
 
 beforeAll(async () => {
-  const routeModule = await import(
-    "@/app/api/v1/ext/runs/[runId]/activity/route"
-  );
+  const routeModule =
+    await import("@/app/api/v1/ext/runs/[runId]/activity/route");
 
   GET = routeModule.GET;
 });

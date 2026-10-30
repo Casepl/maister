@@ -1,27 +1,40 @@
 import { randomUUID } from "node:crypto";
-import { DatabaseSync } from "node:sqlite";
-import { mkdtempSync, rmSync } from "node:fs";
+import { DatabaseSync, type StatementSync } from "node:sqlite";
+import { mkdtempSync, rmSync, statSync } from "node:fs";
+import fs from "node:fs";
+import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import pino from "pino";
 
 import { HostRuntimeEventError } from "../host-runtime-errors";
 import { SupervisorHealthResponseSchema } from "../types";
+import { ACTIVE_FRAME_SCHEMA, outboxBudgetSnapshot } from "../outbox-budget";
+import { RuntimeEventPublisher } from "../runtime-event-publisher";
 import {
   openHostState,
+  HOST_STATE_FILE,
   RUNTIME_EVENT_HEALTH_SNAPSHOT_SQL,
   type CommandReceiptRow,
   type HostState,
 } from "../host-state";
 import {
   CONTROL_EVENT_MAX_BYTES,
+  SQLITE_WRITE_HEADROOM_BYTES,
   DEFAULT_RUNTIME_LIMITS,
   validateRuntimeLimits,
   runtimeLimitsFromEnv,
 } from "../runtime-limits";
 
-import { bootHost, cleanupRuntimeRoot } from "./_fixtures/boot-host";
+import {
+  bootHost,
+  cleanupRuntimeRoot,
+  createSession,
+  completePrompt,
+  envelope,
+} from "./_fixtures/boot-host";
 
 const SMALL_LIMITS = validateRuntimeLimits({
   ...DEFAULT_RUNTIME_LIMITS,
@@ -694,6 +707,413 @@ describe("Stage B durable host event outbox", () => {
       ).toEqual(["0"]);
       restarted.close();
     } finally {
+      rmSync(stateDir, { force: true, recursive: true });
+    }
+  });
+
+  it("accounts boot-scoped frames without durable commits and preserves committed event replay", () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "maister-frame-transactions-"));
+    let state = openHostState({ stateDir });
+    const receipt = createReceipt();
+    const observer = new DatabaseSync(join(stateDir, HOST_STATE_FILE));
+
+    try {
+      state.reserveProducerReceipt(receipt, 0);
+      const streamId = state.getRuntimeEventStreamId();
+      const baseline = state.runtimeFileBudget().chargedBytes;
+      const version = observer.prepare("PRAGMA data_version").get();
+
+      for (let index = 0; index < 16; index += 1) {
+        const frame = state.tryReserveRuntimeFrame(receipt.commandId, 128)!;
+
+        expect(frame).not.toBeNull();
+        expect(state.runtimeFileBudget().chargedBytes).toBe(
+          baseline + 4 * 128 + 64 * 1024,
+        );
+        expect(state.runtimeEventOutboxStats().budget.reservedRegularRows).toBe(
+          4,
+        );
+        state.releaseRuntimeFrame(frame);
+        expect(state.runtimeFileBudget().chargedBytes).toBe(baseline);
+        expect(state.runtimeEventOutboxStats().budget.reservedRegularRows).toBe(
+          0,
+        );
+      }
+      const frameOnlyVersion = observer.prepare("PRAGMA data_version").get();
+
+      state.putReceipt({
+        ...receipt,
+        phase: "completed",
+        completedAt: receipt.receivedAt,
+      });
+      const releasedFrame = state.tryReserveRuntimeFrame(
+        receipt.commandId,
+        128,
+      )!;
+      const physicalReads = vi.spyOn(fs, "statfsSync");
+
+      syncBuiltinESMExports();
+      state.releaseRuntimeFrame(releasedFrame);
+      const releaseMeasurements = physicalReads.mock.calls.length;
+
+      physicalReads.mockClear();
+      const admissionReads = vi.spyOn(
+        Object.getPrototypeOf(observer.prepare("SELECT 1")) as StatementSync,
+        "get",
+      );
+      const reservationId = state.tryReserveRuntimeFrame(
+        receipt.commandId,
+        128,
+      )!;
+      const admissionMeasurements = physicalReads.mock.calls.length;
+      const admissionStatements = admissionReads.mock.contexts.map(
+        (statement) =>
+          String(Reflect.get(statement as StatementSync, "sourceSQL")),
+      );
+
+      admissionReads.mockRestore();
+      physicalReads.mockRestore();
+      syncBuiltinESMExports();
+      const input = {
+        ...eventDraft(),
+        funding: { partition: "regular" as const, reservationId },
+      };
+
+      const reads = vi.spyOn(
+        Object.getPrototypeOf(observer.prepare("SELECT 1")) as StatementSync,
+        "get",
+      );
+
+      state.appendRuntimeEvent(input);
+      const statements = reads.mock.contexts.map((statement) =>
+        String(Reflect.get(statement as StatementSync, "sourceSQL")),
+      );
+
+      reads.mockRestore();
+      const remaining = state.runtimeEventOutboxStats().budget;
+
+      expect(remaining.reservedRegularRows).toBe(3);
+      expect(() =>
+        state.appendRuntimeEvent({
+          ...input,
+          draft: { ...input.draft, assignmentId: randomUUID() },
+        }),
+      ).toThrow(/exceeded its event reservation/);
+      expect(state.runtimeEventOutboxStats().budget).toEqual(remaining);
+      expect(
+        observer
+          .prepare("SELECT COUNT(*) AS count FROM runtime_event_outbox")
+          .get(),
+      ).toEqual({ count: 1 });
+      state.close();
+      state = openHostState({ stateDir });
+      expect(state.runtimeEventOutboxStats().budget.reservedRegularRows).toBe(
+        0,
+      );
+      expect(state.runtimeFileBudget().chargedBytes).toBe(baseline);
+      expect(
+        state.pendingRuntimeEvents(streamId).map(({ sequence }) => sequence),
+      ).toEqual(["0"]);
+      expect(frameOnlyVersion).toEqual(version);
+      // One admission measurement and one fresh post-reservation observation.
+      expect(admissionMeasurements).toBe(2);
+      expect(releaseMeasurements).toBe(1);
+      expect(
+        admissionStatements.filter((sql) =>
+          sql.includes("FROM runtime_file_budget WHERE id = 1"),
+        ),
+      ).toHaveLength(3);
+      expect(
+        statements.filter((sql) => sql.includes("regular_retained_count")),
+      ).toHaveLength(2);
+      expect(
+        statements.filter((sql) =>
+          sql.includes("FROM runtime_file_budget WHERE id = 1"),
+        ),
+      ).toHaveLength(1);
+    } finally {
+      vi.restoreAllMocks();
+      syncBuiltinESMExports();
+      observer.close();
+      state.close();
+      rmSync(stateDir, { force: true, recursive: true });
+    }
+  });
+
+  it("reads the complete persisted admission budget in one fresh SQLite statement", () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "maister-budget-snapshot-"));
+    const state = openHostState({ stateDir });
+    const observer = new DatabaseSync(join(stateDir, HOST_STATE_FILE));
+
+    try {
+      state.reserveProducerReceipt(createReceipt(), 0);
+      state.appendRuntimeEvent(eventDraft());
+      observer.exec(ACTIVE_FRAME_SCHEMA);
+      const preparation = vi.spyOn(observer, "prepare");
+      const first = outboxBudgetSnapshot(observer);
+      const reads = preparation.mock.calls.length;
+
+      preparation.mockRestore();
+      expect(first.regular.retainedCount).toBe(1);
+      expect(first.reservedControlRows).toBeGreaterThan(0);
+      state.appendRuntimeEvent(eventDraft());
+      const second = outboxBudgetSnapshot(observer);
+
+      expect(second.regular.retainedCount).toBe(2);
+      expect(second.regular.unacknowledgedCount).toBe(2);
+      expect(second.control).toEqual(first.control);
+      expect(second.emergency).toEqual(first.emergency);
+      expect(second.reservedControlRows).toBe(first.reservedControlRows);
+      expect(reads).toBe(1);
+    } finally {
+      observer.close();
+      state.close();
+      rmSync(stateDir, { force: true, recursive: true });
+    }
+  });
+
+  it("commits one bounded frame transaction and rolls back a failed second event", () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "maister-frame-pair-"));
+    let state = openHostState({ stateDir });
+    const observer = new DatabaseSync(join(stateDir, HOST_STATE_FILE));
+
+    try {
+      const receipt = createReceipt();
+
+      state.reserveProducerReceipt(receipt, 0);
+      const reservationId = state.tryReserveRuntimeFrame(receipt.commandId)!;
+      const input = {
+        ...eventDraft(),
+        funding: { partition: "regular" as const, reservationId },
+        draft: {
+          ...eventDraft().draft,
+          eventType: "session.line" as const,
+          payload: {
+            line: "x".repeat(60 * 1024),
+            padding: Array.from({ length: 14 }, () => "x".repeat(60 * 1024)),
+          },
+        },
+      };
+      const version = (): number =>
+        Number(observer.prepare("PRAGMA data_version").get()!.data_version);
+
+      observer.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+      const before = version();
+      const committed = state.appendRuntimeFrameEvents([input, input]);
+
+      expect(version() - before).toBe(1);
+      expect(committed.map((event) => event.sequence)).toEqual(["0", "1"]);
+      expect(
+        statSync(join(stateDir, `${HOST_STATE_FILE}-wal`)).size,
+      ).toBeLessThan(SQLITE_WRITE_HEADROOM_BYTES);
+      const budget = state.runtimeEventOutboxStats().budget;
+      const priorFailure = version();
+
+      expect(() =>
+        state.appendRuntimeFrameEvents([
+          input,
+          { ...input, draft: { ...input.draft, assignmentId: randomUUID() } },
+        ]),
+      ).toThrow(/reservation/);
+      expect(version()).toBe(priorFailure);
+      expect(state.runtimeEventOutboxStats().budget).toEqual(budget);
+      expect(state.nextRuntimeEventPosition().sequence).toBe("2");
+      state.close();
+      state = openHostState({ stateDir });
+      expect(state.runtimeEventOutboxStats().retainedCount).toBe(2);
+    } finally {
+      observer.close();
+      state.close();
+      rmSync(stateDir, { recursive: true, force: true });
+    }
+  });
+
+  it("commits a real text frame pair before publishing its first event", async () => {
+    const host = await bootHost({ fixtureArgs: ["--hang", "--lines", "3"] });
+    const observer = new DatabaseSync(join(host.stateDir, HOST_STATE_FILE));
+    const pairs: Array<{
+      raw: string;
+      nextType: unknown;
+      rawMonotonicId: unknown;
+      nextMonotonicId: unknown;
+    }> = [];
+    const stop = host.hostState.subscribeRuntimeEvents((event) => {
+      if (event.envelope.eventType !== "session.line") return;
+      const payload = event.envelope.payload as {
+        line?: string;
+        sourceMonotonicId?: number;
+      };
+
+      if (!payload.line || !payload.line.includes('"session/update"')) return;
+      const next = observer
+        .prepare(
+          "SELECT envelope_json FROM runtime_event_outbox WHERE stream_id = ? AND sequence = ?",
+        )
+        .get(event.streamId, (BigInt(event.sequence) + 1n).toString()) as
+        { envelope_json: string } | undefined;
+
+      const sibling = next
+        ? (JSON.parse(next.envelope_json) as {
+            eventType: string;
+            payload: { sourceMonotonicId: number };
+          })
+        : null;
+
+      pairs.push({
+        raw: payload.line,
+        nextType: sibling?.eventType ?? null,
+        rawMonotonicId: payload.sourceMonotonicId,
+        nextMonotonicId: sibling?.payload.sourceMonotonicId ?? null,
+      });
+    });
+
+    try {
+      const session = await createSession(host, { runId: "frame-pair-commit" });
+      const result = await completePrompt(
+        host,
+        session.sessionId,
+        envelope(
+          "session.prompt",
+          { hostKey: host.hostState.hostKey, runId: "frame-pair-commit" },
+          { stepId: "pair", prompt: "emit three text frames" },
+        ),
+      );
+
+      expect(result.status).toBe(200);
+      expect(pairs).toHaveLength(3);
+      expect(
+        pairs.map(
+          (pair) => Number(pair.nextMonotonicId) - Number(pair.rawMonotonicId),
+        ),
+      ).toEqual([1, 1, 1]);
+      expect(pairs.map((pair) => pair.nextType)).toEqual([
+        "session.update",
+        "session.update",
+        "session.update",
+      ]);
+    } finally {
+      stop();
+      observer.close();
+      await host.stop();
+      await cleanupRuntimeRoot(host.runtimeRoot);
+    }
+  });
+
+  it("publishes durable frame events without reading unused pressure or disabled debug counters", async () => {
+    const host = await bootHost({ fixtureArgs: ["--hang", "--lines", "0"] });
+
+    try {
+      const session = await createSession(host, { runId: "publisher-reads" });
+      const record = host.registry.get(session.sessionId)!.record;
+      const reservationId = host.hostState.tryReserveRuntimeFrame(
+        record.createdByCommandId,
+        128,
+      )!;
+
+      record.outputEventReservationId = reservationId;
+      const stats = vi.spyOn(host.hostState, "runtimeEventOutboxStats");
+      const event = {
+        type: "session.line" as const,
+        sessionId: record.sessionId,
+        monotonicId: 100,
+        line: "funded frame",
+      };
+      const publisher = new RuntimeEventPublisher(
+        host.hostState,
+        pino({ level: "silent" }),
+      );
+
+      publisher.publishSessionEvent(record, event);
+      const silentReads = stats.mock.calls.length;
+      const messages: string[] = [];
+      const debug = new RuntimeEventPublisher(
+        host.hostState,
+        pino(
+          { level: "debug" },
+          {
+            write: (message: string) => {
+              messages.push(message);
+            },
+          },
+        ),
+      );
+
+      stats.mockClear();
+      debug.publishSessionEvent(record, { ...event, monotonicId: 101 });
+      const debugReads = stats.mock.calls.length;
+
+      stats.mockRestore();
+      const rows = host.hostState.pendingRuntimeEvents(
+        host.hostState.getRuntimeEventStreamId(),
+      );
+
+      expect(
+        rows.filter(
+          ({ envelope }) =>
+            envelope.eventType === "session.line" &&
+            typeof envelope.payload === "object" &&
+            envelope.payload !== null &&
+            "line" in envelope.payload &&
+            envelope.payload.line === "funded frame",
+        ),
+      ).toHaveLength(2);
+      expect(
+        messages.some((message) => {
+          const logged = JSON.parse(message) as {
+            msg: string;
+            queueDepth: number;
+          };
+
+          return (
+            logged.msg === "runtime-event-appended" && logged.queueDepth >= 2
+          );
+        }),
+      ).toBe(true);
+      record.outputEventReservationId = undefined;
+      host.hostState.releaseRuntimeFrame(reservationId);
+      expect(silentReads).toBe(0);
+      expect(debugReads).toBe(1);
+    } finally {
+      await host.stop();
+      await cleanupRuntimeRoot(host.runtimeRoot);
+    }
+  });
+
+  it("reuses compiled SQL across durable appends without losing replay on reopen", () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "maister-outbox-statements-"));
+    // Observe real native preparation; every call still executes SQLite.
+    const preparation = vi.spyOn(DatabaseSync.prototype, "prepare");
+
+    try {
+      const first = openHostState({ stateDir });
+      const streamId = first.getRuntimeEventStreamId();
+      let repeatedPreparations = 0;
+
+      try {
+        first.appendRuntimeEvent(eventDraft());
+        preparation.mockClear();
+        for (let index = 0; index < 32; index += 1)
+          first.appendRuntimeEvent(eventDraft());
+        repeatedPreparations = preparation.mock.calls.length;
+      } finally {
+        first.close();
+      }
+      preparation.mockRestore();
+      const reopened = openHostState({ stateDir });
+
+      try {
+        expect(reopened.getRuntimeEventStreamId()).toBe(streamId);
+        expect(
+          reopened
+            .pendingRuntimeEvents(streamId)
+            .map(({ sequence }) => sequence),
+        ).toEqual(Array.from({ length: 33 }, (_, index) => String(index)));
+      } finally {
+        reopened.close();
+      }
+      expect(repeatedPreparations).toBe(0);
+    } finally {
+      preparation.mockRestore();
       rmSync(stateDir, { force: true, recursive: true });
     }
   });

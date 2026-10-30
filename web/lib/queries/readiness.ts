@@ -67,8 +67,7 @@ export async function resolveGateExternalConfig(
     for (const gate of node.pre_finish?.gates ?? []) {
       if (gate?.id === gateId) {
         const ext = gate.external as
-          | { description?: string; staleOnNewCommit?: boolean }
-          | undefined;
+          { description?: string; staleOnNewCommit?: boolean } | undefined;
 
         return {
           description: ext?.description,
@@ -83,12 +82,7 @@ export async function resolveGateExternalConfig(
 
 export type ReadinessDTO = {
   readiness:
-    | "ready"
-    | "blocked"
-    | "stale"
-    | "failed"
-    | "waiting"
-    | "overridden";
+    "ready" | "blocked" | "stale" | "failed" | "waiting" | "overridden";
   externalGates: {
     gateId: string;
     status: string;

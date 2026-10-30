@@ -61,12 +61,10 @@ beforeAll(async () => {
   await db.insert(schema.users).values({ id: userId, email: "r9-s2@test" });
   await fakeExecutionHosts(db);
   ({ POST: stop } = await import("@/app/api/scratch-runs/[runId]/stop/route"));
-  ({ POST: discard } = await import(
-    "@/app/api/scratch-runs/[runId]/discard/route"
-  ));
-  ({ POST: respond } = await import(
-    "@/app/api/runs/[runId]/hitl/[hitlRequestId]/respond/route"
-  ));
+  ({ POST: discard } =
+    await import("@/app/api/scratch-runs/[runId]/discard/route"));
+  ({ POST: respond } =
+    await import("@/app/api/runs/[runId]/hitl/[hitlRequestId]/respond/route"));
   ({ recordDrop } = await import("@/lib/workbench-lifecycle/service"));
 }, 180_000);
 

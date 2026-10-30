@@ -111,7 +111,7 @@ describe("librarian operation ledger", () => {
     await expect(
       db.execute(sql`INSERT INTO tasks (id, project_id, number, title, prompt, created_via_operation_id)
       VALUES (${randomUUID()}, ${projectId}, 2, 'Second', 'Second', ${first.id})`),
-    ).rejects.toMatchObject({ code: "23505" });
+    ).rejects.toMatchObject({ cause: { code: "23505" } });
   });
 
   it("IT-EDGE-LOP-02: a retry reuses completed batch items and leaves only the unsettled item admitted", async () => {

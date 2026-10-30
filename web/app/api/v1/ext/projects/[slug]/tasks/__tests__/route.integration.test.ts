@@ -70,9 +70,8 @@ afterAll(async () => {
 });
 
 beforeAll(async () => {
-  const routeModule = await import(
-    "@/app/api/v1/ext/projects/[slug]/tasks/route"
-  );
+  const routeModule =
+    await import("@/app/api/v1/ext/projects/[slug]/tasks/route");
 
   POST = routeModule.POST;
   GET = routeModule.GET;
@@ -208,14 +207,12 @@ describe("POST /api/v1/ext/projects/[slug]/tasks", () => {
     await db
       .insert(schema.librarianConversations)
       .values({ id: conversationId, userId });
-    await db
-      .insert(schema.librarianSegments)
-      .values({
-        id: segmentId,
-        conversationId,
-        ordinal: 0,
-        startedAt: new Date(),
-      });
+    await db.insert(schema.librarianSegments).values({
+      id: segmentId,
+      conversationId,
+      ordinal: 0,
+      startedAt: new Date(),
+    });
     await db.insert(schema.librarianMessages).values({
       id: messageId,
       conversationId,
@@ -325,9 +322,8 @@ describe("POST /api/v1/ext/projects/[slug]/tasks", () => {
       "duplicate_of_operation",
     );
 
-    const { POST: acceptStatementRoute } = await import(
-      "@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/statement/route"
-    );
+    const { POST: acceptStatementRoute } =
+      await import("@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/statement/route");
     const acceptRequest = new NextRequest("http://localhost/statement", {
       method: "POST",
       headers: {
@@ -406,9 +402,8 @@ describe("POST /api/v1/ext/projects/[slug]/tasks", () => {
 
     expect(configuredTask[0].flowId).toBe(flowId);
 
-    const { POST: sendToTriage } = await import(
-      "@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/send-to-triage/route"
-    );
+    const { POST: sendToTriage } =
+      await import("@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/send-to-triage/route");
     const triageRequest = () =>
       new NextRequest("http://localhost/send-to-triage", {
         method: "POST",
@@ -440,9 +435,8 @@ describe("POST /api/v1/ext/projects/[slug]/tasks", () => {
 
     expect(triagedTask[0].launchIntent).toBe("triage_only");
 
-    const { POST: commentPost } = await import(
-      "@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/comments/route"
-    );
+    const { POST: commentPost } =
+      await import("@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/comments/route");
     const commentRequest = () =>
       new NextRequest("http://localhost/comments", {
         method: "POST",
@@ -467,9 +461,8 @@ describe("POST /api/v1/ext/projects/[slug]/tasks", () => {
     });
     expect(await commentReplay.json()).toEqual(commentBody);
 
-    const { POST: relationAdd, DELETE: relationRemove } = await import(
-      "@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/relations/route"
-    );
+    const { POST: relationAdd, DELETE: relationRemove } =
+      await import("@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/relations/route");
     const relationRequest = (method: "POST" | "DELETE", key: string) =>
       new NextRequest("http://localhost/relations", {
         method,
@@ -497,9 +490,8 @@ describe("POST /api/v1/ext/projects/[slug]/tasks", () => {
     expect(unlinked.status).toBe(200);
     expect(await unlinked.json()).toMatchObject({ removed: true });
 
-    const { POST: publishExcerpt } = await import(
-      "@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/publish-excerpt/route"
-    );
+    const { POST: publishExcerpt } =
+      await import("@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/publish-excerpt/route");
     const excerptRequest = () =>
       new NextRequest("http://localhost/publish-excerpt", {
         method: "POST",
@@ -544,9 +536,8 @@ describe("POST /api/v1/ext/projects/[slug]/tasks", () => {
     const memberToken = await issueGlobalUserToken(otherMember, [
       "comments:read",
     ]);
-    const { GET: commentsGet } = await import(
-      "@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/comments/route"
-    );
+    const { GET: commentsGet } =
+      await import("@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/comments/route");
     const readRequest = new NextRequest("http://localhost/comments", {
       headers: { authorization: `Bearer ${memberToken.secret}` },
     });
@@ -647,6 +638,13 @@ describe("POST /api/v1/ext/projects/[slug]/tasks", () => {
 
     expect(body).toHaveProperty("taskId");
     expect(typeof body.taskId).toBe("string");
+
+    const [createdTask] = await db
+      .select({ attemptNumber: schema.tasks.attemptNumber })
+      .from(schema.tasks)
+      .where(eq(schema.tasks.id, body.taskId));
+
+    expect(createdTask.attemptNumber).toBe(0);
 
     const auditRows = await db
       .select()

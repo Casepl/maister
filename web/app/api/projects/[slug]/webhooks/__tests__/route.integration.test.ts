@@ -370,9 +370,7 @@ const deliveriesMod = () =>
 const pingMod = () =>
   import("@/app/api/projects/[slug]/webhooks/[id]/ping/route");
 const replayMod = () =>
-  import(
-    "@/app/api/projects/[slug]/webhooks/[id]/deliveries/[deliveryId]/replay/route"
-  );
+  import("@/app/api/projects/[slug]/webhooks/[id]/deliveries/[deliveryId]/replay/route");
 
 // Create a subscription through the real POST route as a writer (member) and
 // return its id — used by scenarios that need a route-created project row.

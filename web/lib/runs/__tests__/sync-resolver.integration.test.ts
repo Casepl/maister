@@ -633,7 +633,7 @@ function backgrounded(): {
     },
     // Every scheduled task, not only the last one: a task may schedule more.
     settled: async () => {
-      for (let seen = 0; seen < tasks.length; ) {
+      for (let seen = 0; seen < tasks.length;) {
         const pending = tasks.slice(seen);
 
         seen = tasks.length;

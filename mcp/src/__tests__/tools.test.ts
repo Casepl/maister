@@ -105,6 +105,7 @@ describe("TOOL_SPECS registry", () => {
         "librarian_memory_remember",
         "project_members_list",
         "runner_list",
+        "task_complete",
         "task_create",
         "task_get",
         "task_list",
@@ -186,7 +187,11 @@ describe("dispatchTool — per-tool outbound request mapping", () => {
 
     await dispatchTool({
       name: "run_operator_message",
-      args: { runId: "r1", message: "Continue with this detail", operationKey: "message-1" },
+      args: {
+        runId: "r1",
+        message: "Continue with this detail",
+        operationKey: "message-1",
+      },
       ctx: httpCtx,
       baseUrl: BASE_URL,
     });
@@ -222,7 +227,12 @@ describe("dispatchTool — per-tool outbound request mapping", () => {
 
     await dispatchTool({
       name: "task_publish_excerpt",
-      args: { slug: "demo", taskId: "t1", excerpt: "Decision text", operationKey: "excerpt-1" },
+      args: {
+        slug: "demo",
+        taskId: "t1",
+        excerpt: "Decision text",
+        operationKey: "excerpt-1",
+      },
       ctx: httpCtx,
       baseUrl: BASE_URL,
     });
@@ -230,7 +240,9 @@ describe("dispatchTool — per-tool outbound request mapping", () => {
     const { url, init } = lastRequest();
 
     expect(init.method).toBe("POST");
-    expect(url).toBe(`${BASE_URL}/api/v1/ext/projects/demo/tasks/t1/publish-excerpt`);
+    expect(url).toBe(
+      `${BASE_URL}/api/v1/ext/projects/demo/tasks/t1/publish-excerpt`,
+    );
     expect(parsedBody(init)).toEqual({ excerpt: "Decision text" });
     expect(new Headers(init.headers).get("Idempotency-Key")).toBe("excerpt-1");
   });
@@ -240,7 +252,12 @@ describe("dispatchTool — per-tool outbound request mapping", () => {
 
     await dispatchTool({
       name: "task_send_to_triage",
-      args: { slug: "demo", taskId: "t1", launchIntent: "triage_only", operationKey: "triage-1" },
+      args: {
+        slug: "demo",
+        taskId: "t1",
+        launchIntent: "triage_only",
+        operationKey: "triage-1",
+      },
       ctx: httpCtx,
       baseUrl: BASE_URL,
     });
@@ -248,7 +265,9 @@ describe("dispatchTool — per-tool outbound request mapping", () => {
     const { url, init } = lastRequest();
 
     expect(init.method).toBe("POST");
-    expect(url).toBe(`${BASE_URL}/api/v1/ext/projects/demo/tasks/t1/send-to-triage`);
+    expect(url).toBe(
+      `${BASE_URL}/api/v1/ext/projects/demo/tasks/t1/send-to-triage`,
+    );
     expect(parsedBody(init)).toEqual({ launchIntent: "triage_only" });
     expect(new Headers(init.headers).get("Idempotency-Key")).toBe("triage-1");
   });
@@ -267,7 +286,13 @@ describe("dispatchTool — per-tool outbound request mapping", () => {
 
     await dispatchTool({
       name: "task_statement_accept",
-      args: { slug: "demo", taskId: "t1", statement, expectedRevision: 1, operationKey: "accept-1" },
+      args: {
+        slug: "demo",
+        taskId: "t1",
+        statement,
+        expectedRevision: 1,
+        operationKey: "accept-1",
+      },
       ctx: httpCtx,
       baseUrl: BASE_URL,
     });
@@ -563,6 +588,26 @@ describe("dispatchTool — per-tool outbound request mapping", () => {
       title: "New title",
       prompt: "New prompt",
     });
+  });
+
+  it("task_complete → POST /api/v1/ext/projects/{slug}/tasks/{taskId}/complete", async () => {
+    mockOnce({ taskId: "task-1", status: "Done", revision: 3 }, 200);
+
+    await dispatchTool({
+      name: "task_complete",
+      args: { slug: "demo", taskId: "task-1", expectedRevision: "2" },
+      ctx: httpCtx,
+      baseUrl: BASE_URL,
+    });
+
+    const { url, init } = lastRequest();
+
+    expect(init.method).toBe("POST");
+    expect(url).toBe(
+      `${BASE_URL}/api/v1/ext/projects/demo/tasks/task-1/complete`,
+    );
+    expect(headerAuth(init)).toBe(AUTH);
+    expect(parsedBody(init)).toEqual({ expectedRevision: 2 });
   });
 
   it("ask_human → POST task-bound endpoint and omits an unspecified re-trigger mode", async () => {

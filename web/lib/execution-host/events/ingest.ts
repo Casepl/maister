@@ -6,7 +6,17 @@ import type { Db } from "@/lib/execution-host/db";
 import { createHash, randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 
-import { and, asc, eq, gt, gte, inArray, lt, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  getTableColumns,
+  gt,
+  gte,
+  inArray,
+  lt,
+  sql,
+} from "drizzle-orm";
 import { ZodError } from "zod";
 
 import { hasNativeOutputCommand } from "../runtime-object-intent";
@@ -886,6 +896,74 @@ function batchResult(
   };
 }
 
+const HOST_EVENT_INSERT_KEYS = [
+  "id",
+  "source",
+  "runId",
+  "executionHostId",
+  "eventStreamId",
+  "hostSequence",
+  "executionAssignmentId",
+  "assignmentEpoch",
+  "hostBootId",
+  "hostSessionId",
+  "envelopeVersion",
+  "eventType",
+  "payloadSchema",
+  "payload",
+  "payloadSha256",
+  "payloadBytes",
+  "occurredAt",
+  "receivedAt",
+  "ingestDisposition",
+  "ingestError",
+] as const satisfies readonly (keyof typeof executionEvents.$inferInsert)[];
+
+type HostEventInsert = Pick<
+  typeof executionEvents.$inferInsert,
+  (typeof HOST_EVENT_INSERT_KEYS)[number]
+>;
+const hostEventColumns = getTableColumns(executionEvents);
+const hostEventInsertColumns = sql.join(
+  HOST_EVENT_INSERT_KEYS.map((key) =>
+    sql.identifier(hostEventColumns[key].name),
+  ),
+  sql`, `,
+);
+
+/** PostgreSQL applies the existing table types and constraints to one bounded
+ * recordset. Omitted columns keep their defaults; bigint sequences remain exact.
+ */
+async function insertHostEventBatch(
+  tx: Db,
+  rows: readonly HostEventInsert[],
+): Promise<{ id: string }[]> {
+  const records = rows.map((row) => {
+    const record: Record<
+      string,
+      Exclude<HostEventInsert[keyof HostEventInsert], bigint>
+    > = {};
+
+    for (const key of HOST_EVENT_INSERT_KEYS) {
+      const value = row[key];
+
+      record[hostEventColumns[key].name] =
+        typeof value === "bigint" ? value.toString() : value;
+    }
+
+    return record;
+  });
+  const result = await tx.execute<{
+    id: string;
+  }>(sql`insert into ${executionEvents}
+    (${hostEventInsertColumns})
+    select ${hostEventInsertColumns}
+    from jsonb_populate_recordset(null::${executionEvents}, ${JSON.stringify(records)}::jsonb)
+    on conflict do nothing returning ${executionEvents.id}`);
+
+  return result.rows;
+}
+
 // One transaction per batch, in the order the ADR-167 2026-09-25 amendment
 // fixes: stream lock → claim check → duplicate classification → run locks
 // (ascending, before any insert) → skips → assignments → one insert → one walk
@@ -1142,44 +1220,41 @@ async function ingestPreparedBatch(input: {
     };
 
     if (storable.length > 0) {
-      const inserted = await tx
-        .insert(executionEvents)
-        .values(
-          storable.map((item) => {
-            const { envelope } = item;
-            const assignment = boundAssignment(item);
+      const inserted = await insertHostEventBatch(
+        tx,
+        storable.map((item) => {
+          const { envelope } = item;
+          const assignment = boundAssignment(item);
 
-            return {
-              id: envelope.eventId,
-              source: "host" as const,
-              runId: envelope.runId,
-              executionHostId: input.executionHostId,
-              eventStreamId: stream.id,
-              hostSequence: item.sequence,
-              executionAssignmentId: assignment?.id ?? null,
-              assignmentEpoch: envelope.assignmentEpoch,
-              hostBootId: envelope.hostBootId,
-              hostSessionId: envelope.hostSessionId,
-              envelopeVersion: envelope.envelopeVersion,
-              eventType: envelope.eventType,
-              payloadSchema: envelope.payloadSchema,
-              payload: envelope.payload,
-              payloadSha256: item.payloadSha256,
-              payloadBytes: item.payloadBytes,
-              occurredAt: new Date(envelope.occurredAt),
-              receivedAt: now,
-              ingestDisposition: "pending_gap" as const,
-              ingestError: assignment
-                ? null
-                : {
-                    reason: "stale_assignment_epoch",
-                    sourceAssignmentId: envelope.assignmentId,
-                  },
-            };
-          }),
-        )
-        .onConflictDoNothing()
-        .returning({ id: executionEvents.id });
+          return {
+            id: envelope.eventId,
+            source: "host" as const,
+            runId: envelope.runId,
+            executionHostId: input.executionHostId,
+            eventStreamId: stream.id,
+            hostSequence: item.sequence,
+            executionAssignmentId: assignment?.id ?? null,
+            assignmentEpoch: envelope.assignmentEpoch,
+            hostBootId: envelope.hostBootId,
+            hostSessionId: envelope.hostSessionId,
+            envelopeVersion: envelope.envelopeVersion,
+            eventType: envelope.eventType,
+            payloadSchema: envelope.payloadSchema,
+            payload: envelope.payload,
+            payloadSha256: item.payloadSha256,
+            payloadBytes: item.payloadBytes,
+            occurredAt: new Date(envelope.occurredAt),
+            receivedAt: now,
+            ingestDisposition: "pending_gap" as const,
+            ingestError: assignment
+              ? null
+              : {
+                  reason: "stale_assignment_epoch",
+                  sourceAssignmentId: envelope.assignmentId,
+                },
+          };
+        }),
+      );
       const insertedIds = new Set(inserted.map((row) => row.id));
 
       // Impossible under the stream lock; asserted rather than absorbed.

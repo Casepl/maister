@@ -1,6 +1,6 @@
 import type { ChildProcess } from "node:child_process";
 import type { Logger } from "pino";
-import type * as acp from "@agentclientprotocol/sdk";
+import type { AcpConnection } from "./acp-connection";
 
 import { EventEmitter } from "node:events";
 
@@ -42,12 +42,12 @@ export type RegistryEntry = {
   intentionalCause?: IntentionalCause;
   eventBuffer: SessionEvent[];
   eventBufferBytes: number;
-  connection?: acp.ClientSideConnection;
+  connection?: AcpConnection;
   acpSessionId?: string;
 };
 
 export type RegisterOptions = {
-  connection?: acp.ClientSideConnection;
+  connection?: AcpConnection;
   acpSessionId?: string;
   runtimeEventPublisher?: RuntimeEventPublisher;
 };
@@ -145,7 +145,7 @@ export class SessionRegistry {
 
   attachAcp(
     sessionId: string,
-    connection: acp.ClientSideConnection,
+    connection: AcpConnection,
     acpSessionId: string,
     capabilities?: SessionCapabilities,
   ): void {

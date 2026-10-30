@@ -55,12 +55,10 @@ vi.mock("@/lib/runs/active-run-session", async (importOriginal) => ({
           acpSessionId: (dbRows.run.acpSessionId ?? null) as string | null,
           runnerSnapshot: (dbRows.run.runnerSnapshot ?? null) as never,
           capabilityAgent: (dbRows.run.capabilityAgent ?? null) as
-            | string
-            | null,
+            string | null,
           runnerId: (dbRows.run.runnerId ?? null) as string | null,
           runnerResolutionTier: (dbRows.run.runnerResolutionTier ?? null) as
-            | string
-            | null,
+            string | null,
         }
       : null,
   ),

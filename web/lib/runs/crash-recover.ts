@@ -481,10 +481,7 @@ export const CRASH_RECOVER_BUDGET_RESET = {
 } as const;
 
 export type CrashRecoverContinuationOutcome =
-  | "resumed"
-  | "redispatched"
-  | "unresumable"
-  | "transient";
+  "resumed" | "redispatched" | "unresumable" | "transient";
 
 /**
  * Records what an automated re-entry produced.

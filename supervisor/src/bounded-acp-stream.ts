@@ -1,11 +1,11 @@
 import type { FrameAdmission, LogWriteAdmission } from "./producer-pressure";
 import type {
   AnyMessage,
-  Client,
+  SessionNotification,
   Stream,
   RequestPermissionRequest,
   RequestPermissionResponse,
-} from "@agentclientprotocol/sdk";
+} from "@agentclientprotocol/sdk/unstable";
 import type { WriteStream } from "node:fs";
 import type { FileHandle } from "node:fs/promises";
 import type {
@@ -27,7 +27,7 @@ import { setImmediate as nextTurn } from "node:timers/promises";
 import {
   zRequestPermissionRequest,
   zSessionNotification,
-} from "../node_modules/@agentclientprotocol/sdk/dist/schema/zod.gen.js";
+} from "../node_modules/@agentclientprotocol/sdk/dist/v1/unstable/schema/zod.gen.js";
 
 import { SupervisorError, type SupervisorErrorDetails } from "./types";
 
@@ -115,12 +115,18 @@ export function retainedOutputBudget(): {
   };
 }
 
-export type BoundedAcpClient = Client & {
+export type BoundedAcpClient = {
+  sessionUpdate(params: SessionNotification): Promise<void>;
   requestPermission(
     params: RequestPermissionRequest,
     onPrepared?: () => void,
   ): Promise<RequestPermissionResponse>;
 };
+
+export type BoundedAcpStream = Stream &
+  Readonly<{
+    settlePermissionCallbacks: () => Promise<void>;
+  }>;
 
 async function acquireDecoder(): Promise<() => void> {
   if (decoding)
@@ -235,11 +241,13 @@ async function readCapturedFrame(
 
 function publishCapturedFrame(
   frame: Uint8Array,
-  onLine: (line: string) => void,
+  onLine: ((line: string) => void) | undefined,
 ): void {
-  onLine(
-    new TextDecoder("utf-8", { fatal: true }).decode(frame.subarray(0, -1)),
+  const line = new TextDecoder("utf-8", { fatal: true }).decode(
+    frame.subarray(0, -1),
   );
+
+  onLine?.(line);
 }
 
 export type CapturedStdoutSegment = {
@@ -255,7 +263,7 @@ export function captureAcpFrames(input: {
   source: NodeReadable;
   directory: string;
   log: WriteStream;
-  onLine: (line: string) => void;
+  onLine?: (line: string) => void;
   onFailure: (error: SupervisorError) => void;
   onDrained: () => void;
   onStorageFailure?: (error: unknown) => void;
@@ -486,12 +494,14 @@ export function boundedAcpStream(input: {
   source: NodeReadable;
   stdin: NodeWritable;
   client: BoundedAcpClient;
+  onLine?: (line: string) => void;
+  onUpdateFrame?: (params: SessionNotification, line: string) => Promise<void>;
   onFailure: (error: SupervisorError) => void;
-}): Stream {
+}): BoundedAcpStream {
   if (input.source.readableObjectMode !== true)
     throw incomplete("producer_frame_invalid");
   const iterator = input.source[Symbol.asyncIterator]();
-  let pendingPermissions = 0;
+  const pendingPermissions = new Set<Promise<void>>();
   let stopped = false;
   const send = (message: AnyMessage): Promise<void> =>
     writeChunk(
@@ -515,19 +525,19 @@ export function boundedAcpStream(input: {
     id: string | number | null,
     params: unknown,
   ): Promise<void> {
-    if (pendingPermissions >= 32) throw incomplete("producer_permission_limit");
+    if (pendingPermissions.size >= 32)
+      throw incomplete("producer_permission_limit");
     const parsed = zRequestPermissionRequest.safeParse(params);
 
     if (!parsed.success) throw incomplete("producer_permission_invalid");
-    pendingPermissions += 1;
-    // The continuation captures only the small RPC id and the pending count.
+    // The continuation captures only the small RPC id and its bounded slot.
     let prepared: () => void = () => {};
     const admission = new Promise<void>((resolve) => {
       prepared = resolve;
     });
     const result = input.client.requestPermission(parsed.data, prepared);
 
-    void result
+    const settled: Promise<void> = result
       .then(
         (outcome) => send({ jsonrpc: "2.0", id, result: outcome }),
         () => {
@@ -536,18 +546,27 @@ export function boundedAcpStream(input: {
       )
       .catch(() => fail("producer_response_failed"))
       .finally(() => {
-        pendingPermissions -= 1;
+        pendingPermissions.delete(settled);
       });
+
+    pendingPermissions.add(settled);
 
     return admission;
   }
 
-  async function update(params: unknown): Promise<void> {
+  async function update(params: unknown, line: string): Promise<void> {
     const parsed = zSessionNotification.safeParse(params);
 
-    if (!parsed.success) throw incomplete("producer_update_invalid");
-
-    await input.client.sessionUpdate(parsed.data);
+    if (!parsed.success) {
+      input.onLine?.(line);
+      throw incomplete("producer_update_invalid");
+    }
+    if (input.onUpdateFrame) {
+      await input.onUpdateFrame(parsed.data, line);
+    } else {
+      input.onLine?.(line);
+      await input.client.sessionUpdate(parsed.data);
+    }
   }
 
   const readable = new ReadableStream<AnyMessage>(
@@ -564,19 +583,32 @@ export function boundedAcpStream(input: {
 
               return;
             }
-            let message: AnyMessage | null = parseFrame(
-              next.value as Uint8Array,
-            );
+            let frame: Uint8Array | null = next.value as Uint8Array;
+            let line: string | null = new TextDecoder("utf-8", {
+              fatal: true,
+            }).decode(frame.subarray(0, -1));
+            let message: AnyMessage | null;
 
+            try {
+              message = parseFrame(frame);
+            } catch (error) {
+              input.onLine?.(line);
+              throw error;
+            }
             next = null;
+            const textUpdate =
+              "method" in message &&
+              message.method === "session/update" &&
+              !("id" in message);
 
+            if (!textUpdate) input.onLine?.(line);
             if (!("method" in message)) {
               controller.enqueue(message);
 
               return;
             }
             if (message.method === "session/update" && !("id" in message)) {
-              await update(message.params);
+              await update(message.params, line);
             } else if (
               message.method === "session/request_permission" &&
               "id" in message
@@ -594,6 +626,10 @@ export function boundedAcpStream(input: {
               throw incomplete("producer_method_unsupported");
             }
             message = null;
+            // Release decoded output before the next iterator call gives the
+            // shared decoder permit to another producer.
+            frame = null;
+            line = null;
           }
         } catch (error) {
           const failure =
@@ -615,5 +651,14 @@ export function boundedAcpStream(input: {
   );
   const writable = new WritableStream<AnyMessage>({ write: send });
 
-  return { readable, writable } as unknown as Stream;
+  return {
+    readable,
+    writable,
+    async settlePermissionCallbacks(): Promise<void> {
+      // outputDrained proves admission finished and EOF prevents new frames.
+      // Terminal publication purges deferreds; await their actual continuations
+      // before allowing the failed prompt to classify the producer outcome.
+      await Promise.all([...pendingPermissions]);
+    },
+  } as unknown as BoundedAcpStream;
 }

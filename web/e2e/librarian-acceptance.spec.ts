@@ -121,6 +121,127 @@ test.beforeEach(async ({ page }) => {
   expect(response.ok()).toBe(true);
 });
 
+test("runner settings refresh both open panels and launch the saved executor", async ({
+  page,
+  context,
+}) => {
+  const settingsResponse = await page.request.get(
+    "/api/admin/platform/librarian",
+  );
+  const { settings } = (await settingsResponse.json()) as {
+    settings: { enabled: boolean; runnerId: string };
+  };
+  const runnerId = `librarian-switch-${randomUUID()}`;
+  const marker = randomUUID().slice(0, 8);
+  const second = await context.newPage();
+  const save = async (selected: string) => {
+    const response = await page.request.patch("/api/admin/platform/librarian", {
+      data: { enabled: true, runnerId: selected },
+    });
+
+    expect(response.ok(), await response.text()).toBe(true);
+  };
+
+  await withE2EDb(async (pool) => {
+    await pool.query(
+      `INSERT INTO platform_acp_runners
+      (id, adapter, capability_agent, model, provider, permission_policy, readiness_status, readiness_reasons, enabled)
+      SELECT $1, adapter, capability_agent, 'claude-opus-4-6', provider, permission_policy, 'NotReady', '[]'::jsonb, true
+      FROM platform_acp_runners WHERE id = $2`,
+      [runnerId, settings.runnerId],
+    );
+  });
+  try {
+    await page.goto("/");
+    const firstReply = await sendScript(
+      page,
+      [],
+      `Before runner switch ${marker}`,
+    );
+
+    expect(firstReply).toContain(marker);
+    await second.goto("/");
+    await second.getByTestId("librarian-trigger").click();
+    for (const tab of [page, second]) {
+      await tab.getByTestId("librarian-composer").fill(`draft ${marker}`);
+      await expect(tab.getByTestId("librarian-send")).toBeEnabled();
+    }
+    await save(runnerId);
+    for (const tab of [page, second]) {
+      await expect(tab.getByTestId("librarian-send")).toBeDisabled({
+        timeout: 10_000,
+      });
+      await expect(tab.getByTestId("librarian-composer")).toHaveValue(
+        `draft ${marker}`,
+      );
+      await expect(tab.getByTestId("librarian-transcript")).toContainText(
+        `Before runner switch ${marker}`,
+      );
+    }
+    const refused = await page.request.post("/api/librarian/messages", {
+      data: { clientMessageId: randomUUID(), body: `unavailable ${marker}` },
+    });
+
+    expect(refused.status()).toBe(503);
+    expect((await refused.json()).code).toBe("EXECUTOR_UNAVAILABLE");
+    await withE2EDb(async (pool) => {
+      await pool.query(
+        "UPDATE platform_acp_runners SET readiness_status = 'Ready' WHERE id = $1",
+        [runnerId],
+      );
+    });
+    for (const tab of [page, second]) {
+      await expect(tab.getByTestId("librarian-send")).toBeEnabled({
+        timeout: 10_000,
+      });
+      await expect(tab.getByTestId("librarian-composer")).toHaveValue(
+        `draft ${marker}`,
+      );
+    }
+    await sendScript(page, [], `After runner switch ${marker}`);
+    await expect(second.getByTestId("librarian-transcript")).toContainText(
+      `After runner switch ${marker}`,
+    );
+    await expect(second.getByTestId("librarian-composer")).toHaveValue(
+      `draft ${marker}`,
+    );
+    await withE2EDb(async (pool) => {
+      const commands = await pool.query<{
+        payload: {
+          executor: { model: string };
+          runner: { model: string };
+          resumeSessionId?: string;
+        };
+      }>(
+        `
+        SELECT e.payload FROM execution_commands e JOIN runs r ON r.id = e.run_id
+        JOIN users u ON u.id = r.created_by_user_id
+        WHERE r.run_kind = 'librarian' AND u.email = $1 AND e.kind = 'session.create'
+        ORDER BY e.created_at DESC LIMIT 1`,
+        [loadFixtures().adminEmail],
+      );
+
+      expect(commands.rows[0].payload).toMatchObject({
+        executor: { model: "claude-opus-4-6" },
+        runner: { model: "claude-opus-4-6" },
+      });
+      expect(commands.rows[0].payload).not.toHaveProperty("resumeSessionId");
+      const replies = await pool.query<{ count: number }>(
+        `SELECT count(*)::int AS count FROM librarian_messages
+        WHERE author_kind = 'librarian' AND body LIKE $1`,
+        [`After runner switch ${marker}%`],
+      );
+
+      expect(replies.rows[0].count).toBe(1);
+    });
+  } finally {
+    await page.request.patch("/api/admin/platform/librarian", {
+      data: settings,
+    });
+    await second.close();
+  }
+});
+
 test("E2E-L-01: a mobile owner can ask across projects and return to the same conversation", async ({
   page,
 }) => {
@@ -214,6 +335,7 @@ test("E2E-L-02 E2E-LOP-04: duplicate search precedes two accepted, linked tasks"
     ],
     "Created two tasks after duplicate check",
   );
+
   expect(reply).toContain('"tool":"task_search"');
   expect(reply).toContain(existingTitle);
   await withE2EDb(async (pool) => {
@@ -1172,6 +1294,7 @@ test("E2E-L-11: existing Flow work uses guarded operator paths", async ({
     `,
       [run.id],
     );
+
     expect(rows.rows[0].status).toBe(run.status);
   });
 });

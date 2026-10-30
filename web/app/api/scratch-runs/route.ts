@@ -70,7 +70,9 @@ function frameErrorFor(err: unknown): { code: string; message: string } {
 // side-effect failures (and client cancel) then surface as in-stream frames
 // while the generator's own compensation GCs the worktree/session.
 export async function POST(req: NextRequest): Promise<Response> {
-  let parsed: Awaited<ReturnType<typeof parseScratchRequest>>;
+  let parsed: Awaited<
+    ReturnType<typeof parseScratchRequest<typeof scratchLaunchInputSchema>>
+  >;
   let userId: string;
 
   try {

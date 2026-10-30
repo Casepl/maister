@@ -93,12 +93,25 @@ CREATE TRIGGER IF NOT EXISTS runtime_file_update AFTER UPDATE OF capacity_bytes,
 END;
 `;
 
+export const ACTIVE_FILE_PROGRESS_SCHEMA = `
+CREATE TEMP TABLE active_runtime_file_progress (
+  file_id TEXT PRIMARY KEY,
+  written_bytes INTEGER NOT NULL CHECK (written_bytes >= 0)
+);
+`;
+
+const ACTIVE_WRITTEN_DELTA_SQL = `(SELECT COALESCE(SUM(p.written_bytes - f.written_bytes), 0)
+  FROM active_runtime_file_progress p JOIN runtime_files f ON f.file_id = p.file_id)`;
+
 export function runtimeFileBudgetSnapshot(
   db: DatabaseSync,
 ): RuntimeFileBudgetSnapshot {
   const row = db
     .prepare(
-      "SELECT charged_bytes, written_bytes, pressured FROM runtime_file_budget WHERE id = 1",
+      `SELECT charged_bytes +
+       (SELECT COALESCE(SUM(remaining_bytes), 0) FROM active_runtime_frame_file_credits) AS charged_bytes,
+       written_bytes + ${ACTIVE_WRITTEN_DELTA_SQL} AS written_bytes,
+       pressured FROM runtime_file_budget WHERE id = 1`,
     )
     .get() as {
     charged_bytes: number;
@@ -114,11 +127,18 @@ export function runtimeFileBudgetSnapshot(
   };
 }
 
-export function refreshRuntimeFilePressure(
+export function refreshRuntimeFileBudget(
   db: DatabaseSync,
   limits: RuntimeLimits,
-): boolean {
-  const snapshot = runtimeFileBudgetSnapshot(db);
+): RuntimeFileBudgetSnapshot {
+  return updateRuntimeFilePressure(db, limits, runtimeFileBudgetSnapshot(db));
+}
+
+function updateRuntimeFilePressure(
+  db: DatabaseSync,
+  limits: RuntimeLimits,
+  snapshot: RuntimeFileBudgetSnapshot,
+): RuntimeFileBudgetSnapshot {
   const pressured =
     snapshot.chargedBytes >=
     (snapshot.pressured ? limits.objectLowBytes : limits.objectSoftBytes);
@@ -128,7 +148,7 @@ export function refreshRuntimeFilePressure(
       pressured ? 1 : 0,
     );
 
-  return pressured;
+  return { ...snapshot, pressured };
 }
 
 function assertFileBytes(bytes: number): void {
@@ -140,13 +160,13 @@ function assertFileBytes(bytes: number): void {
 }
 
 function assertFileHeadroom(
-  db: DatabaseSync,
+  snapshot: RuntimeFileBudgetSnapshot,
   limits: RuntimeLimits,
   freeBytes: number | null,
   additionalBytes: number,
 ): void {
   if (freeBytes === null) return;
-  const unused = runtimeFileBudgetSnapshot(db).unusedBytes;
+  const unused = snapshot.unusedBytes;
 
   if (freeBytes < limits.runtimeMinFreeBytes + unused + additionalBytes)
     throw new HostRuntimeEventError(
@@ -183,13 +203,14 @@ function fundFileCapacity(
   limits: RuntimeLimits,
   bytes: number,
   funding: RuntimeFileFunding,
+  snapshot: RuntimeFileBudgetSnapshot,
 ): void {
   assertFileBytes(bytes);
   if (bytes === 0) return;
   if (funding.kind === "frame") {
     const result = db
       .prepare(
-        `UPDATE runtime_frame_file_credits SET remaining_bytes = remaining_bytes - ?
+        `UPDATE active_runtime_frame_file_credits SET remaining_bytes = remaining_bytes - ?
       WHERE reservation_id = ? AND wallet_id = ? AND remaining_bytes >= ?`,
       )
       .run(bytes, funding.reservationId, funding.walletId, bytes);
@@ -219,12 +240,11 @@ function fundFileCapacity(
 
     return;
   }
-  const snapshot = runtimeFileBudgetSnapshot(db);
   const starting =
     funding.kind === "producer" && producerIsStarting(db, funding.walletId);
 
   if (
-    (!starting && refreshRuntimeFilePressure(db, limits)) ||
+    (!starting && updateRuntimeFilePressure(db, limits, snapshot).pressured) ||
     bytes > limits.objectMaxBytes - snapshot.chargedBytes
   ) {
     throw new HostRuntimeEventError(
@@ -251,13 +271,14 @@ export function reserveProducerFileWallet(
   const bytes =
     PRODUCER_FILE_RESERVE_BYTES +
     outputBindingCount * OUTPUT_FILE_RESERVE_BYTES;
+  const snapshot = runtimeFileBudgetSnapshot(db);
 
-  assertFileHeadroom(db, limits, freeBytes, bytes);
-  fundFileCapacity(db, limits, bytes, { kind: "regular" });
+  assertFileHeadroom(snapshot, limits, freeBytes, bytes);
+  fundFileCapacity(db, limits, bytes, { kind: "regular" }, snapshot);
   db.prepare(
     "INSERT INTO runtime_file_wallets (wallet_id, remaining_bytes) VALUES (?, ?)",
   ).run(walletId, bytes);
-  refreshRuntimeFilePressure(db, limits);
+  refreshRuntimeFileBudget(db, limits);
 }
 
 export function getRuntimeFile(
@@ -265,7 +286,13 @@ export function getRuntimeFile(
   fileId: string,
 ): RuntimeFileRow | null {
   const row = db
-    .prepare("SELECT * FROM runtime_files WHERE file_id = ?")
+    .prepare(
+      `SELECT f.file_id, f.private_path, f.temporary_path, f.kind,
+      f.wallet_id, f.capacity_bytes, f.sealed,
+      COALESCE(p.written_bytes, f.written_bytes) AS written_bytes
+      FROM runtime_files f LEFT JOIN active_runtime_file_progress p ON p.file_id = f.file_id
+      WHERE f.file_id = ?`,
+    )
     .get(fileId);
 
   if (!row) return null;
@@ -318,15 +345,17 @@ export function reserveRuntimeFile(
 
     return;
   }
+  const snapshot = runtimeFileBudgetSnapshot(db);
+
   assertFileHeadroom(
-    db,
+    snapshot,
     limits,
     filesystemFreeBytes(file.privatePath),
     funding.kind === "wallet" || funding.kind === "frame"
       ? 0
       : file.capacityBytes,
   );
-  fundFileCapacity(db, limits, file.capacityBytes, funding);
+  fundFileCapacity(db, limits, file.capacityBytes, funding, snapshot);
   db.prepare(
     `INSERT INTO runtime_files (file_id, private_path, temporary_path, kind, wallet_id, capacity_bytes, written_bytes, sealed)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -340,7 +369,7 @@ export function reserveRuntimeFile(
     file.writtenBytes,
     file.sealed ? 1 : 0,
   );
-  refreshRuntimeFilePressure(db, limits);
+  refreshRuntimeFileBudget(db, limits);
 }
 
 export function growRuntimeFile(
@@ -357,17 +386,19 @@ export function growRuntimeFile(
       "command_invariant_conflict",
       "runtime file is not open for growth",
     );
+  const snapshot = runtimeFileBudgetSnapshot(db);
+
   assertFileHeadroom(
-    db,
+    snapshot,
     limits,
     filesystemFreeBytes(file.privatePath),
     funding.kind === "wallet" || funding.kind === "frame" ? 0 : bytes,
   );
-  fundFileCapacity(db, limits, bytes, funding);
+  fundFileCapacity(db, limits, bytes, funding, snapshot);
   db.prepare(
     "UPDATE runtime_files SET capacity_bytes = capacity_bytes + ? WHERE file_id = ?",
   ).run(bytes, fileId);
-  refreshRuntimeFilePressure(db, limits);
+  refreshRuntimeFileBudget(db, limits);
 }
 
 export function recordRuntimeFileBytes(
@@ -386,6 +417,32 @@ export function recordRuntimeFileBytes(
     throw new HostRuntimeEventError(
       "runtime_storage_unavailable",
       "runtime file exceeded its promised capacity or changed state",
+    );
+  db.prepare("DELETE FROM active_runtime_file_progress WHERE file_id = ?").run(
+    fileId,
+  );
+}
+
+/** Capture progress is reconstructed from retained files before boot admission. */
+export function recordProducerFileBytes(
+  db: DatabaseSync,
+  fileId: string,
+  writtenBytes: number,
+): void {
+  assertFileBytes(writtenBytes);
+  const result = db
+    .prepare(
+      `INSERT INTO active_runtime_file_progress (file_id, written_bytes)
+    SELECT file_id, ? FROM runtime_files
+    WHERE file_id = ? AND kind IN ('log', 'spool') AND sealed = 0 AND capacity_bytes >= ?
+    ON CONFLICT (file_id) DO UPDATE SET written_bytes = excluded.written_bytes`,
+    )
+    .run(writtenBytes, fileId, writtenBytes);
+
+  if (Number(result.changes) !== 1)
+    throw new HostRuntimeEventError(
+      "runtime_storage_unavailable",
+      "producer file exceeded its promised capacity or changed state",
     );
 }
 
@@ -407,7 +464,10 @@ export function sealRuntimeFile(
       "runtime_storage_unavailable",
       "runtime file cannot be sealed within its reservation",
     );
-  refreshRuntimeFilePressure(db, limits);
+  db.prepare("DELETE FROM active_runtime_file_progress WHERE file_id = ?").run(
+    fileId,
+  );
+  refreshRuntimeFileBudget(db, limits);
 }
 
 /** Keep a zero-charge identity after a confirmed unlink; never reuse its path. */
@@ -419,7 +479,10 @@ export function releaseRuntimeFile(
   db.prepare(
     "UPDATE runtime_files SET capacity_bytes = 0, written_bytes = 0, sealed = 1 WHERE file_id = ?",
   ).run(fileId);
-  refreshRuntimeFilePressure(db, limits);
+  db.prepare("DELETE FROM active_runtime_file_progress WHERE file_id = ?").run(
+    fileId,
+  );
+  refreshRuntimeFileBudget(db, limits);
 }
 
 export function claimRuntimeFileWriter(
@@ -470,8 +533,9 @@ export function auditRuntimeFileBudget(
     .prepare(
       `SELECT COALESCE(SUM(capacity_bytes), 0) +
       (SELECT COALESCE(SUM(remaining_bytes), 0) FROM runtime_file_wallets) +
-      (SELECT COALESCE(SUM(remaining_bytes), 0) FROM runtime_frame_file_credits) AS charged,
-      COALESCE(SUM(written_bytes), 0) AS written FROM runtime_files`,
+      (SELECT COALESCE(SUM(remaining_bytes), 0) FROM runtime_frame_file_credits) +
+      (SELECT COALESCE(SUM(remaining_bytes), 0) FROM active_runtime_frame_file_credits) AS charged,
+      COALESCE(SUM(written_bytes), 0) + ${ACTIVE_WRITTEN_DELTA_SQL} AS written FROM runtime_files`,
     )
     .get() as { charged: number; written: number };
   const stored = runtimeFileBudgetSnapshot(db);
@@ -512,14 +576,18 @@ export function reserveRuntimeFrameFiles(
       "runtime frame byte count is outside its protocol bound",
     );
   const bytes = Math.min(4 * 1024 * 1024, 4 * input.frameBytes + 64 * 1024);
+  const snapshot = runtimeFileBudgetSnapshot(db);
 
-  assertFileHeadroom(db, limits, input.freeBytes, bytes);
-  fundFileCapacity(db, limits, bytes, {
-    kind: "producer",
-    walletId: input.walletId,
-  });
+  assertFileHeadroom(snapshot, limits, input.freeBytes, bytes);
+  fundFileCapacity(
+    db,
+    limits,
+    bytes,
+    { kind: "producer", walletId: input.walletId },
+    snapshot,
+  );
   db.prepare(
-    "INSERT INTO runtime_frame_file_credits (reservation_id, wallet_id, remaining_bytes) VALUES (?, ?, ?)",
+    "INSERT INTO active_runtime_frame_file_credits (reservation_id, wallet_id, remaining_bytes) VALUES (?, ?, ?)",
   ).run(input.reservationId, input.walletId, bytes);
-  refreshRuntimeFilePressure(db, limits);
+  refreshRuntimeFileBudget(db, limits);
 }

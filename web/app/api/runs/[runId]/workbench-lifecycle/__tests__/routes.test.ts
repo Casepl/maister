@@ -250,9 +250,8 @@ describe("workbench lifecycle route wrappers", () => {
   ])(
     "POST /api/runs/[runId]/export-branch refuses %s",
     async (_label, body) => {
-      const { POST } = await import(
-        "@/app/api/runs/[runId]/export-branch/route"
-      );
+      const { POST } =
+        await import("@/app/api/runs/[runId]/export-branch/route");
       const res = await POST(postRequest({ remote: "origin", ...body }), {
         params: Promise.resolve({ runId: "run-1" }),
       });
@@ -354,9 +353,8 @@ describe("workbench lifecycle route wrappers", () => {
       ],
     });
 
-    const { GET } = await import(
-      "@/app/api/runs/[runId]/handoff-metadata/route"
-    );
+    const { GET } =
+      await import("@/app/api/runs/[runId]/handoff-metadata/route");
     const res = await GET(new Request("http://localhost/api/runs/run-1"), {
       params: Promise.resolve({ runId: "run-1" }),
     });
@@ -389,9 +387,8 @@ describe("workbench lifecycle route wrappers", () => {
       snapshotCreated: true,
     });
 
-    const { POST } = await import(
-      "@/app/api/runs/[runId]/snapshot-commit/route"
-    );
+    const { POST } =
+      await import("@/app/api/runs/[runId]/snapshot-commit/route");
     const res = await POST(
       postRequest({ commitMessage: "maister: snapshot run-1" }),
       { params: Promise.resolve({ runId: "run-1" }) },
@@ -420,9 +417,8 @@ describe("workbench lifecycle route wrappers", () => {
       snapshotCreated: true,
     });
 
-    const { POST } = await import(
-      "@/app/api/runs/[runId]/snapshot-commit/route"
-    );
+    const { POST } =
+      await import("@/app/api/runs/[runId]/snapshot-commit/route");
     const res = await POST(
       postRequest({
         projectId: "attacker-project",
@@ -456,9 +452,8 @@ describe("workbench lifecycle route wrappers", () => {
       ],
     });
 
-    const { POST } = await import(
-      "@/app/api/runs/[runId]/handoff-branch/route"
-    );
+    const { POST } =
+      await import("@/app/api/runs/[runId]/handoff-branch/route");
     const res = await POST(
       postRequest({
         remote: "origin",
@@ -483,9 +478,8 @@ describe("workbench lifecycle route wrappers", () => {
   });
 
   it("POST /api/runs/[runId]/handoff-branch rejects invalid bodies", async () => {
-    const { POST } = await import(
-      "@/app/api/runs/[runId]/handoff-branch/route"
-    );
+    const { POST } =
+      await import("@/app/api/runs/[runId]/handoff-branch/route");
     const res = await POST(
       postRequest({ remote: "", handoffBranch: "../bad" }),
       { params: Promise.resolve({ runId: "run-1" }) },
@@ -505,9 +499,8 @@ describe("workbench lifecycle route wrappers", () => {
       { code: "CONFLICT", status: 409 },
       { code: "EXECUTOR_UNAVAILABLE", status: 503 },
     ];
-    const { GET } = await import(
-      "@/app/api/runs/[runId]/handoff-metadata/route"
-    );
+    const { GET } =
+      await import("@/app/api/runs/[runId]/handoff-metadata/route");
 
     for (const item of cases) {
       vi.mocked(

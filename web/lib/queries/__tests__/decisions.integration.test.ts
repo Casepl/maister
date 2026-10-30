@@ -295,9 +295,8 @@ beforeAll(async () => {
     triageStatus: "flagged",
   });
 
-  ({ getDecisionsQueue, getDecisionsCount } = await import(
-    "@/lib/queries/decisions"
-  ));
+  ({ getDecisionsQueue, getDecisionsCount } =
+    await import("@/lib/queries/decisions"));
 }, 180_000);
 
 afterAll(async () => {

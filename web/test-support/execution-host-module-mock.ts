@@ -163,8 +163,7 @@ export function executionHostModuleMock(spies: ExecutionHostSpies) {
     },
     async cancelPrompt(sessionId: string) {
       const result = (await call(spies, "cancelPrompt")(sessionId)) as
-        | { cancelled: boolean }
-        | undefined;
+        { cancelled: boolean } | undefined;
 
       return result ?? { cancelled: false };
     },

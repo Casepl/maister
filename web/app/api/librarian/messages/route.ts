@@ -58,15 +58,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 const subjectSchema = z
   .object({
     projectSlug: z.string().min(1).optional(),
-    taskIds: z.array(z.string().uuid()).max(20).optional(),
-    runId: z.string().uuid().optional(),
+    taskIds: z.array(z.string().guid()).max(20).optional(),
+    runId: z.string().guid().optional(),
   })
   .strict();
 
 // No `userId`, `conversationId` or owner field exists: `.strict()` refuses one.
 const postSchema = z
   .object({
-    clientMessageId: z.string().uuid(),
+    clientMessageId: z.string().guid(),
     body: z.string().min(1).max(20_000),
     subject: subjectSchema.optional(),
   })

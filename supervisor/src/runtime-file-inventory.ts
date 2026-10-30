@@ -8,7 +8,7 @@ import { join } from "node:path";
 import { HostRuntimeEventError } from "./host-runtime-errors";
 import {
   auditRuntimeFileBudget,
-  refreshRuntimeFilePressure,
+  refreshRuntimeFileBudget,
   runtimeFileBudgetSnapshot,
 } from "./runtime-file-budget";
 
@@ -172,5 +172,5 @@ export function inventoryRuntimeFiles(input: {
     afterDirectory = page.at(-1)!.run_dir;
   }
   auditRuntimeFileBudget(db, limits);
-  write(() => refreshRuntimeFilePressure(db, limits));
+  write(() => refreshRuntimeFileBudget(db, limits));
 }

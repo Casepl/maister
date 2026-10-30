@@ -65,9 +65,8 @@ beforeAll(async () => {
   // ADR-166: every launch places the run on the local execution host.
   await fakeExecutionHosts(db);
 
-  ({ buildAutoLaunchRunPlanConsumer } = await import(
-    "@/lib/domain-events/auto-launch"
-  ));
+  ({ buildAutoLaunchRunPlanConsumer } =
+    await import("@/lib/domain-events/auto-launch"));
   ({ emitDomainEvent } = await import("@/lib/domain-events/outbox"));
 }, 180_000);
 

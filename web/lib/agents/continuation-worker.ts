@@ -69,17 +69,15 @@ function redriveScratchContinuation(
       .where(eq(scratchRuns.runId, runId));
 
     if (scratch?.status === "Running") {
-      const { redriveRunningScratchPrompt } = await import(
-        "@/lib/scratch-runs/dispatch-recovery"
-      );
+      const { redriveRunningScratchPrompt } =
+        await import("@/lib/scratch-runs/dispatch-recovery");
 
       await redriveRunningScratchPrompt(db, runId, hosts);
 
       return;
     }
-    const { dispatchQueuedScratchMessages } = await import(
-      "@/lib/scratch-runs/service"
-    );
+    const { dispatchQueuedScratchMessages } =
+      await import("@/lib/scratch-runs/service");
     const { dispatched, skipped } = await dispatchQueuedScratchMessages(
       db as never,
       runId,

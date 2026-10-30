@@ -17,7 +17,9 @@
 import { randomUUID } from "node:crypto";
 import { Readable, Writable } from "node:stream";
 
-import * as acp from "@agentclientprotocol/sdk";
+import * as acp from "@agentclientprotocol/sdk/unstable";
+
+import { serveAgent } from "./acp-agent-app.mjs";
 
 const MODE = process.env.MOCK_ACP_MODELS_MODE ?? "ok";
 
@@ -136,7 +138,7 @@ const stream = acp.ndJsonStream(
   Readable.toWeb(process.stdin),
 );
 
-new acp.AgentSideConnection((connToAgent) => new ModelsAgent(connToAgent), stream);
+serveAgent((connToAgent) => new ModelsAgent(connToAgent), stream);
 
 // "ignore-sigterm": register a no-op handler so SIGTERM is swallowed (Node's
 // default terminate is overridden) — only SIGKILL can end the child.

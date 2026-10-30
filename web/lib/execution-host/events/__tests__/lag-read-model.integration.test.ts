@@ -671,7 +671,10 @@ describe("execution event lag read model", () => {
 
       await expect(
         collectExecutionEventLag({ db: database.db, health, now: NOW }),
-      ).rejects.toThrow(/statement timeout|canceling statement/i);
+      ).rejects.toHaveProperty(
+        "cause.message",
+        expect.stringMatching(/statement timeout|canceling statement/i),
+      );
       expect(performance.now() - startedAt).toBeLessThan(2_500);
     } finally {
       await blocker.query("ROLLBACK");

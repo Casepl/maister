@@ -138,9 +138,8 @@ packages:
   );
 
   ({ POST } = await import("@/app/api/projects/route"));
-  ({ GET: packagesGET } = await import(
-    "@/app/api/projects/[slug]/packages/route"
-  ));
+  ({ GET: packagesGET } =
+    await import("@/app/api/projects/[slug]/packages/route"));
 }, 180_000);
 
 afterAll(async () => {

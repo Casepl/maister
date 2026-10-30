@@ -26,6 +26,7 @@ import {
   rowsFromRecord,
   type KeyValueRow,
 } from "@/components/settings/key-value-rows";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 export interface McpServerRow {
   id: string;
@@ -171,9 +172,7 @@ export function McpServerModal({
 
   const dialogRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
-  const onCloseRef = useRef(onClose);
-
-  onCloseRef.current = onClose;
+  const onCloseRef = useLatestRef(onClose);
 
   useEffect(() => {
     restoreFocusRef.current = document.activeElement as HTMLElement | null;

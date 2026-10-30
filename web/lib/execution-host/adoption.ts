@@ -193,9 +193,8 @@ export async function loadWorkspaceSpecInput(
       .limit(1);
 
     if (!conversation) throw missingWorkspace(runId, "librarian conversation");
-    const { ensureLibrarianWorkspace, LIBRARIAN_PROJECT_SLUG } = await import(
-      "@/lib/librarian/workspace"
-    );
+    const { ensureLibrarianWorkspace, LIBRARIAN_PROJECT_SLUG } =
+      await import("@/lib/librarian/workspace");
     const librarianWorkdir = await ensureLibrarianWorkspace(conversation.id);
 
     return {

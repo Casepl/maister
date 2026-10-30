@@ -19,6 +19,7 @@ import {
   lockOwnerConversation,
 } from "@/lib/librarian/conversation";
 import { getVisibleProjectIds } from "@/lib/queries/visible-projects";
+import { pgErrorOf } from "@/lib/db/pg-error";
 
 type Db = ReturnType<typeof getDb>;
 
@@ -44,6 +45,9 @@ const FOLLOWUP_KINDS: ReadonlySet<string> = new Set([
 ]);
 
 function deliveryErrorCode(error: unknown): string {
+  const pg = pgErrorOf(error);
+
+  if (pg) return pg.code;
   if (
     error instanceof Error &&
     "code" in error &&

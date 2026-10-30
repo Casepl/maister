@@ -14,11 +14,7 @@ import {
 import { edgeOutcomeStyle } from "@/lib/flows/edge-style";
 
 export type FlowChipColor =
-  | "default"
-  | "success"
-  | "warning"
-  | "danger"
-  | "accent";
+  "default" | "success" | "warning" | "danger" | "accent";
 
 export const RUN_TERMINAL_STATUSES = [
   "Done",

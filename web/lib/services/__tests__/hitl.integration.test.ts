@@ -702,9 +702,8 @@ describe("respondToHitl integration — plan-review decision requests", () => {
     expect(JSON.parse(await readFile(inputPath, "utf8"))).toMatchObject(
       parent.response,
     );
-    const { scheduleResumedSessionDrive } = await import(
-      "@/lib/runs/resume-driver"
-    );
+    const { scheduleResumedSessionDrive } =
+      await import("@/lib/runs/resume-driver");
 
     await vi.waitFor(() => expect(runFlow).toHaveBeenCalledWith(runId));
     expect(scheduleResumedSessionDrive).not.toHaveBeenCalled();
@@ -1313,9 +1312,8 @@ describe("respondToHitl — an answer closed without delivery is never 'already 
   it("a boundary that closes the row while the delivery is in flight answers session_ended, not 'delivered'", async () => {
     const { runId, hitlRequestId, hosts, fake } =
       await seedScratchPermission(undefined);
-    const { closeOpenScratchPermissions } = await import(
-      "@/lib/scratch-runs/open-permissions"
-    );
+    const { closeOpenScratchPermissions } =
+      await import("@/lib/scratch-runs/open-permissions");
 
     // The scratch crash projection lands between the claim and the host's
     // answer: it closes the row, and the host no longer holds the session.
@@ -1343,9 +1341,8 @@ describe("respondToHitl — an answer closed without delivery is never 'already 
   it("a retry after the crash settled the run still answers session_ended", async () => {
     const { runId, hitlRequestId, hosts, fake } =
       await seedScratchPermission(undefined);
-    const { closeOpenScratchPermissions } = await import(
-      "@/lib/scratch-runs/open-permissions"
-    );
+    const { closeOpenScratchPermissions } =
+      await import("@/lib/scratch-runs/open-permissions");
 
     fake.onCall("deliverInput", async () => {
       await (db as unknown as ExecutionDb).transaction((tx) =>

@@ -1,6 +1,10 @@
 # Implementation Plan: Close S5.2 — process death, partitions and denied roots
 
-Created: 2026-09-22. Status: **Implementing; All local implementation and verification complete (T01–T02, T04–T12, T14); T03/T13 hosted qualification and T15 final S5.2 closure remain blocked on publishing/running CI.**
+Created: 2026-09-22. Status: **Complete. T03/T13/T15 and parent S5.2 accepted on 2026-10-20 by the exact-source CI-R9d hosted checkpoint; parent 43/45, S5.3/S5.4 open.**
+
+Current evidence: [CI-R9d / T15 hosted acceptance](s53a-linux-isolation.md#ci-r9d--t15--accepted-macos-hosted-checkpoint-2026-10-20).
+Dated local/failure records below remain historical and do not reopen this accepted checkpoint.
+
 Branch: none (existing detached worktree preserved).
 Planning HEAD: `c4216cd532c9fe7df2ca38c6045bea23ed54e8fa`.
 User-supplied qualification baseline: local `master @ 1056c5c1`.
@@ -163,8 +167,11 @@ family; implementation records its actual execution revision separately.
 
 ### CI driver: option B, with an explicit Intel runner pin
 
-Keep `sandbox-exec` and its documented `EPERM` denial. Add a dedicated mandatory
-macOS isolation job, serial within each job, Node `24.19.0`, 60-minute job limit.
+Keep `sandbox-exec` and its documented `EPERM` denial. The owner amendment of
+2026-10-20 requires two mandatory macOS isolation jobs, serial within each job,
+Node `24.19.0`, 60-minute job limit. The disjoint whole-suite parts retain all
+seven suites/50 cases and each independent preflight, with a combined exact-name
+report gate. See [CI-R9](s53a-linux-isolation.md#ci-r9--two-macos-jobs-and-explicit-object-fault-frontiers-2026-10-20). Earlier single-job evidence remains historical.
 Keep the existing Ubuntu A/B matrix (`24.15.0`, `24.19.0`) unchanged.
 Linux uid/mount-namespace isolation and the separate-user layout belong to S5.3.
 
@@ -479,7 +486,7 @@ supervisor/web `logTail`, proxy transcript and relevant ledger/PG observations.
   no schema migration. `validate:docs` and `validate:contracts` passed under
   Node 24.15.0; logs in `/private/tmp/maister-s52-20260922/`.
 
-- [ ] **T03 — Freeze runnable baseline and deployment/CI wiring inventory.**
+- [x] **T03 — Freeze runnable baseline and deployment/CI wiring inventory.**
   Files: this plan, parent-plan evidence references and analytics; no runtime
   configuration change. Record actual master/implementation SHAs, clean state,
   Node/Undici, driver, Docker, load and power/sleep conditions. Run owning
@@ -504,10 +511,9 @@ supervisor/web `logTail`, proxy transcript and relevant ledger/PG observations.
   sandbox-exec, Docker 29.4.2: 15/15, errors=0, exit=0, 372.13 s, no tagged
   survivors. Evidence `/private/tmp/maister-s52-20260922/baseline.json` and
   `baseline-isolation/vitest.json`. Master observed at `053ee078`.
-  **Open external prerequisite:** T13a requires the new workflow to be
-  published; no push is authorized. Keep this checkbox open and proceed with
-  local implementation on the verified baseline; remote qualification is not
-  replaced with this local result.
+  **External prerequisite satisfied:** the owner-pushed source, real preflights
+  and full hosted reports are independently verified at the linked CI-R9d
+  checkpoint. This local baseline remains separately attributed.
 
 Phase exit: internally consistent normative tables, no claimed unexecuted
 qualification, exact baseline and no broadened process authority. Commit C1.
@@ -677,15 +683,15 @@ fix cycle. Commit C3.
   `evidence-readiness-all-blocking-kinds`. Logging: suite, fake-host identity,
   transport-call count and exact outcome. Depends: T11.
 
-- [ ] **T13 — Wire and qualify the CI isolation job.** Files:
+- [x] **T13 — Wire and qualify the CI isolation job.** Files:
   `web/package.json`, `.github/workflows/ci.yml`, runner/report metadata and
   CI-only runtime setup helper if needed. Add
   `test:integration:isolation = node ../scripts/run-stage-ab-tests.mjs isolation`.
   **T13a prerequisite:** minimal runtime/driver/PG preflight is scheduled during
-  T03 after T02; no dependency on unimplemented fault tests. **T13b final job:**
-  mandatory macOS Intel job as decided above; explicit Colima/Lima/Docker
+  T03 after T02; no dependency on unimplemented fault tests. **T13b final jobs:**
+  both mandatory macOS Intel parts and their combined gate as decided above; explicit Colima/Lima/Docker
   provisioning and preflight, frozen pnpm install, Node runtime check, driver
-  denial/positive control, serial lane and one build. Export a job-local
+  denial/positive control, serial execution and one build per part. Export a job-local
   `MAISTER_TEST_EVIDENCE_DIR` under `RUNNER_TEMP`; runner reports its actual
   `vitest.json` location and CI copies/uploads it from that recorded location
   (macOS `tmpdir()` is not `/tmp`). `always()` uploads JSON plus safe logs,
@@ -713,7 +719,7 @@ fix cycle. Commit C3.
   completion gate. Independent local checks completed while that execution
   prerequisite was unavailable; no CI requirement is waived.
 
-- [ ] **T15 — Apply the as-built evidence and stop at S5.2.** Files:
+- [x] **T15 — Apply the as-built evidence and stop at S5.2.** Files:
   `.ai-factory/plans/stage-ab-stabilization.md`, this plan,
   `docs/system-analytics/test-infrastructure.md`, `docs/deployment.md`,
   `docs/getting-started.md`, `web/CLAUDE.md`; API/analytics contract amendments
@@ -875,12 +881,13 @@ unproven, retain S5.2 as open with that precise missing gate.
 
 ### S5.2 P4 concrete response window
 
-The current [P4 response-window contract](../../docs/system-analytics/test-infrastructure.md#s52-p4-concrete-response-window-2026-10-02-specification-amendment)
+The current [P4 response-window contract](../../docs/system-analytics/test-infrastructure.md#s52-p4-concrete-response-window)
 supersedes the original 2026-09-22 control arrangement. It preserves the delayed
 real HTTP ACK, original handler's 409, current-authority snapshot/write audit,
-and exactly-once successor completion. Successor creation is held after its
-assignment and Running attempt commit; session initialization and activation
-are verified after stale-handler rejection, outside the original wire deadline.
+and exactly-once successor completion. Successor capability publication is held
+after its assignment, Running attempt and protected metadata commit; session
+creation, initialization and activation are verified after stale-handler
+rejection, outside the original wire deadline.
 
 ### Phase 2 execution evidence in progress
 
@@ -915,10 +922,13 @@ allocator; preserve its assertions and correct the remaining writer.
 Harness contract amendment after the first 12-control execution: supervisor
 death may reset an upstream SSE connection; forward that reset without classifying
 it as a proxy defect. A single-shot client's early close remains a defect unless
-the test subsequently records its owned-process kill. D3 needs a persistent
-`hold-responses` barrier for the exact object: each upload retry is observed and
-held until explicit release, including across individual HTTP deadlines. Bound
-retained response bytes and count. This does not relax single-shot ACK controls.
+the test subsequently records its owned-process kill. The original D3 prescription
+used persistent `hold-responses` for the exact object across upload retries.
+**Superseded by [CI-R9](s53a-linux-isolation.md#ci-r9--two-macos-jobs-and-explicit-object-fault-frontiers-2026-10-20):**
+that hold exhausted the independent upload deadlines. D3 now completes the ACK
+while holding the exact seal event, proves pending/no effect, then injects its
+projection fault. Persistent response barriers remain bounded and available
+for actual response-partition controls; single-shot ACK controls remain strict.
 D1 requests the existing authenticated `POST /api/cron/gc` scheduler entrypoint
 after the unavailable permission response and again after supervisor restart;
 the scheduler owns the claim and calls the production keepalive pass. Production

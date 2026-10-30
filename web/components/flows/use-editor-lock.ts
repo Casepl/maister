@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   createLockOpQueue,
@@ -155,6 +155,12 @@ export function createHttpEditorLockTransport(
   };
 }
 
+type KeyedController = {
+  basePath: string;
+  controller: EditorLockController;
+  setLive: (live: boolean) => void;
+};
+
 export function useEditorLock(opts: {
   basePath: string;
   initialLock: EditorLockSnapshot;
@@ -178,58 +184,64 @@ export function useEditorLock(opts: {
   retry: () => void;
 } {
   const enabled = opts.enabled ?? true;
-  const sessionIdRef = useRef<string | null>(null);
-
-  if (sessionIdRef.current === null) {
-    sessionIdRef.current = createEditorSessionId();
-  }
-  const sessionId = sessionIdRef.current;
+  const [sessionId] = useState(createEditorSessionId);
 
   const [snapshot, setSnapshot] = useState<EditorLockSnapshot>(
     opts.initialLock,
   );
   const [confirmed, setConfirmed] = useState(false);
-  const controllerRef = useRef<{
-    basePath: string;
-    controller: EditorLockController;
-  } | null>(null);
-  // Monotonic controller id. A superseded controller (basePath re-key, or a
-  // StrictMode acquire that settles after its cleanup) still holds the closed-
-  // over `generation`; if it no longer matches the live ref, its late `onState`
-  // is dropped instead of clobbering the current controller's state.
-  const generationRef = useRef(0);
 
-  // One controller — and therefore ONE queue — per mount. Creating it inside the
-  // effect would give StrictMode's second cycle its own queue, so that cycle's
-  // acquire could race the first cycle's cleanup release again. A changed
-  // basePath targets a different row, so re-keying the queue there is safe.
-  if (
-    controllerRef.current === null ||
-    controllerRef.current.basePath !== opts.basePath
-  ) {
-    generationRef.current += 1;
-    const generation = generationRef.current;
+  // A superseded controller (basePath re-key) keeps running its in-flight
+  // request; once retired, its late `onState` is dropped instead of clobbering
+  // the current controller's state.
+  const keyController = (basePath: string): KeyedController => {
+    let live = true;
 
-    controllerRef.current = {
-      basePath: opts.basePath,
+    return {
+      basePath,
       controller: createEditorLockController({
-        transport: createHttpEditorLockTransport(opts.basePath, sessionId),
+        transport: createHttpEditorLockTransport(basePath, sessionId),
         onState: (next) => {
-          if (generationRef.current !== generation) return;
+          if (!live) return;
 
           setSnapshot(next);
           // A failed sync reports NOT_HELD, so this also clears confirmation.
           setConfirmed(next.heldByMe);
         },
       }),
+      setLive: (value) => {
+        live = value;
+      },
     };
+  };
+
+  // One controller — and therefore ONE queue — per mount. Creating it inside the
+  // effect would give StrictMode's second cycle its own queue, so that cycle's
+  // acquire could race the first cycle's cleanup release again. A changed
+  // basePath targets a different row, so re-keying the queue there is safe.
+  const [keyed, setKeyed] = useState(() => keyController(opts.basePath));
+
+  if (keyed.basePath !== opts.basePath) {
+    setKeyed(keyController(opts.basePath));
   }
-  const controller = controllerRef.current.controller;
+  const controller = keyed.controller;
+
+  useEffect(() => {
+    keyed.setLive(true);
+
+    return () => keyed.setLive(false);
+  }, [keyed]);
+
+  // Every (re)acquire starts unconfirmed until the server answers.
+  const [acquireKey, setAcquireKey] = useState({ controller, enabled });
+
+  if (acquireKey.controller !== controller || acquireKey.enabled !== enabled) {
+    setAcquireKey({ controller, enabled });
+    if (enabled) setConfirmed(false);
+  }
 
   useEffect(() => {
     if (!enabled) return;
-
-    setConfirmed(false);
 
     const releaseOnPageHide = (event: PageTransitionEvent): void => {
       if (!event.persisted) controller.releaseBeacon();

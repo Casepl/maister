@@ -248,9 +248,8 @@ beforeAll(async () => {
   });
 
   ({ POST } = await import("@/app/api/runs/route"));
-  ({ GET: LAUNCH_OPTIONS_GET } = await import(
-    "@/app/api/runs/launch-options/route"
-  ));
+  ({ GET: LAUNCH_OPTIONS_GET } =
+    await import("@/app/api/runs/launch-options/route"));
 }, 180_000);
 
 afterAll(async () => {

@@ -53,9 +53,8 @@ beforeAll(async () => {
   // ADR-166: every launch places the run on the local execution host.
   await fakeExecutionHosts(db);
 
-  ({ buildOrchestratorResumeConsumer } = await import(
-    "@/lib/domain-events/orchestrator-resume"
-  ));
+  ({ buildOrchestratorResumeConsumer } =
+    await import("@/lib/domain-events/orchestrator-resume"));
   ({ emitDomainEvent } = await import("@/lib/domain-events/outbox"));
 }, 180_000);
 

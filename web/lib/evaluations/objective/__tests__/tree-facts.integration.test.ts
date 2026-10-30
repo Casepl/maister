@@ -103,12 +103,10 @@ beforeAll(async () => {
   });
   pool = testDatabase.pool;
   db = testDatabase.db;
-  ({ loadObjectiveTreeFacts } = await import(
-    "@/lib/evaluations/objective/tree-source"
-  ));
-  ({ evaluateObjectiveCheck } = await import(
-    "@/lib/evaluations/objective/providers"
-  ));
+  ({ loadObjectiveTreeFacts } =
+    await import("@/lib/evaluations/objective/tree-source"));
+  ({ evaluateObjectiveCheck } =
+    await import("@/lib/evaluations/objective/providers"));
 }, 180_000);
 
 afterAll(async () => {

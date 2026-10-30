@@ -78,9 +78,8 @@ const {
 } = await import("@/lib/runs/sync-target");
 const { promoteRun } = await import("@/lib/runs/promote");
 const { markAbandoned } = await import("@/lib/runs/state-transitions");
-const { claimLifecycleOperation } = await import(
-  "@/lib/workbench-lifecycle/service"
-);
+const { claimLifecycleOperation } =
+  await import("@/lib/workbench-lifecycle/service");
 
 type LifecycleOperationName =
   import("@/lib/workbench-lifecycle/service").LifecycleOperationName;

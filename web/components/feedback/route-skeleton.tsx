@@ -1,11 +1,7 @@
 import type { ReactElement } from "react";
 
 export type RouteSkeletonVariant =
-  | "portfolio"
-  | "run"
-  | "project"
-  | "studio"
-  | "inbox";
+  "portfolio" | "run" | "project" | "studio" | "inbox";
 
 const linesByVariant: Record<RouteSkeletonVariant, number> = {
   portfolio: 6,

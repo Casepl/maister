@@ -98,8 +98,7 @@ export type PreparedPermissionContinuation = PreparedPermissionEvidence &
   );
 
 export type PreparedPermissionHandoff =
-  | PreparedPermissionResult
-  | PreparedPermissionContinuation;
+  PreparedPermissionResult | PreparedPermissionContinuation;
 
 export type PreparedPermissionRejection = PreparedPermissionEvidence &
   Readonly<{ kind: "rejected"; parentActionSha256: string }>;

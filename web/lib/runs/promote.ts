@@ -121,9 +121,7 @@ export type PromoteRunContext = {
   // CONFLICT instead of opening a human merge-conflict assignment — the
   // coordinator / auto-promote leaves the child in Review for a human to resolve.
   actor?:
-    | { kind: "user" }
-    | { kind: "agent"; agentId: string }
-    | { kind: "system" };
+    { kind: "user" } | { kind: "agent"; agentId: string } | { kind: "system" };
 };
 
 // M37 (ADR-100): the promotion owner — the session user for a human promote,
@@ -561,8 +559,7 @@ export function scratchPromotionTarget(
 // minted only by the parked finalize (`finalizeParkedPullRequest`), which never
 // enters `promoteRun`, so `PromoteRunInput.attribution` keeps its one value.
 type PromotionAttribution =
-  | NonNullable<PromoteRunInput["attribution"]>
-  | { source: "pr_finalize" };
+  NonNullable<PromoteRunInput["attribution"]> | { source: "pr_finalize" };
 
 function promotionModeForEffectiveMode(
   mode: EffectivePromotionMode,
@@ -710,6 +707,25 @@ async function promoteWorkspaceRun(
     const run = await loadRun(tx, runId);
     const workspace = await loadPromotionWorkspaceForUpdate(tx, run);
 
+    // A terminal follow-up stays PRECONDITION. A contender that read Review
+    // must instead observe the winner's ownership before its changed status/tip.
+    if (run.status !== "Review") {
+      throw new MaisterError(
+        "PRECONDITION",
+        `${run.runKind} run must be Review before promotion: ${run.status}`,
+      );
+    }
+
+    await ctx.authorize(run.projectId);
+    assertNoLiveWorkbenchClaim(workspace);
+
+    if (!canReclaim(workspace)) {
+      throw new MaisterError(
+        "CONFLICT",
+        "promotion already in progress for this run",
+      );
+    }
+
     // Re-read run.status UNDER the workspace lock for a NON-shared promote (the row the
     // rework fence also locks — see reworkChildRun). The loadRun above is lock-free, so
     // a concurrent rework that wins the workspace lock and CASes Review→Running while
@@ -717,8 +733,7 @@ async function promoteWorkspaceRun(
     // lockless-merge finalize (no status re-guard) would clobber the rework's work back
     // to Done (a lost update — Codex adversarial review). A SHARED tree relies on the C1
     // finalize re-check (countUnsettledSharedSiblings) + the F1 rework fence instead, so
-    // it keeps the first read — re-reading there would turn a concurrent-promote loser's
-    // CONFLICT (canReclaim) into PRECONDITION. Immutable run fields keep the first read.
+    // it keeps the first read. Immutable run fields keep the first read.
     const isSharedTreeClaim =
       run.workspaceMode === "shared" && run.agentWorkspace === "worktree";
     const liveRun = isSharedTreeClaim ? run : await loadRun(tx, runId);
@@ -758,8 +773,6 @@ async function promoteWorkspaceRun(
         );
       }
     }
-
-    await ctx.authorize(run.projectId);
 
     // T9 (ADR-102): promote-time settled-gate (defense in depth with the
     // orchestrator_resume wake). A shared tree is ONE branch — refuse to merge a
@@ -896,15 +909,6 @@ async function promoteWorkspaceRun(
         "PRECONDITION",
         "target advanced since review — re-review or override",
         { details: { reason: "target_drift" } },
-      );
-    }
-
-    assertNoLiveWorkbenchClaim(workspace);
-
-    if (!canReclaim(workspace)) {
-      throw new MaisterError(
-        "CONFLICT",
-        "promotion already in progress for this run",
       );
     }
 

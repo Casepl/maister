@@ -94,9 +94,8 @@ beforeAll(async () => {
     db: db as unknown as Db,
     projectors: canonicalProjectors,
   });
-  ({ launchScratchRunStaged, sendScratchUserMessage } = await import(
-    "@/lib/scratch-runs/service"
-  ));
+  ({ launchScratchRunStaged, sendScratchUserMessage } =
+    await import("@/lib/scratch-runs/service"));
   for (const key of [
     "DB_URL",
     "MAISTER_RUNTIME_ROOT",

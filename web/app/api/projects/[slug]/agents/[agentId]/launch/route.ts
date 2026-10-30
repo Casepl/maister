@@ -16,7 +16,7 @@ const { projects } = schemaModule as unknown as Record<string, any>;
 
 const bodySchema = z
   .object({
-    taskId: z.string().uuid().optional(),
+    taskId: z.string().guid().optional(),
     runnerId: z.string().min(1).max(128).optional(),
     workspace: z.enum(["none", "repo_read", "worktree"]).optional(),
   })

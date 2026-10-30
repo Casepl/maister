@@ -40,9 +40,8 @@ beforeAll(async () => {
 
   db = testDatabase.db;
 
-  ({ getSessionUser, requireGlobalRole, requireProjectAction } = await import(
-    "@/lib/authz"
-  ));
+  ({ getSessionUser, requireGlobalRole, requireProjectAction } =
+    await import("@/lib/authz"));
 }, 180_000);
 
 afterAll(async () => {

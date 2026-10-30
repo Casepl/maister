@@ -23,6 +23,7 @@ import {
   describe,
   expect,
   it,
+  type Mock,
   vi,
 } from "vitest";
 
@@ -45,7 +46,7 @@ vi.mock("@/lib/db/client", () => ({ getDb: () => db }));
 
 let consumeAgentSession: typeof ConsumeFn;
 let parkPersistentAgent: typeof ParkFn;
-let releaseSlotSpy: ReturnType<typeof vi.fn>;
+let releaseSlotSpy: Mock<(args: unknown) => Promise<{ promotedRunId: null }>>;
 
 vi.mock("@/lib/scheduler", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/scheduler")>();
@@ -68,9 +69,8 @@ beforeAll(async () => {
   pool = testDatabase.pool;
   db = testDatabase.db;
 
-  ({ consumeAgentSession, parkPersistentAgent } = await import(
-    "@/lib/agents/launch"
-  ));
+  ({ consumeAgentSession, parkPersistentAgent } =
+    await import("@/lib/agents/launch"));
 }, 180_000);
 
 afterAll(async () => {

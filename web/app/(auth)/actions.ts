@@ -21,8 +21,7 @@ const registerSchema = z.object({
 
 export type RegisterError = "duplicate" | "weak" | "invalid" | "generic";
 export type RegisterResult =
-  | { ok: true; status: "pending" }
-  | { ok: false; error: RegisterError };
+  { ok: true; status: "pending" } | { ok: false; error: RegisterError };
 
 export async function register(input: {
   name: string;
@@ -66,8 +65,7 @@ export async function register(input: {
 }
 
 export type AuthState =
-  | { error: RegisterError | "pending" | "disabled" }
-  | undefined;
+  { error: RegisterError | "pending" | "disabled" } | undefined;
 
 function authErrorType(error: unknown): string | undefined {
   if (!(error instanceof Error)) return undefined;

@@ -67,16 +67,14 @@ beforeAll(async () => {
     databaseName: "owner_agent_memory_test",
   });
 
-  const mod = await import(
-    "@/app/api/projects/[slug]/agents/[agentId]/memory/route"
-  );
+  const mod =
+    await import("@/app/api/projects/[slug]/agents/[agentId]/memory/route");
 
   GET = mod.GET;
   PUT = mod.PUT;
   DELETE = mod.DELETE;
-  ({ PATCH } = await import(
-    "@/app/api/projects/[slug]/agents/[agentId]/route"
-  ));
+  ({ PATCH } =
+    await import("@/app/api/projects/[slug]/agents/[agentId]/route"));
 }, 180_000);
 
 afterAll(async () => {

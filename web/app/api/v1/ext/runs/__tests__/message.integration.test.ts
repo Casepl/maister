@@ -109,9 +109,8 @@ beforeAll(async () => {
 
   ({ issueOrchestratorRunToken } = await import("@/lib/agents/tokens"));
   ({ POST: messagePost } = await import("@/app/api/v1/ext/runs/message/route"));
-  ({ POST: delegatePost } = await import(
-    "@/app/api/v1/ext/runs/delegate/route"
-  ));
+  ({ POST: delegatePost } =
+    await import("@/app/api/v1/ext/runs/delegate/route"));
   ({ sendAgentMessage } = await import("@/lib/agents/launch"));
 }, 180_000);
 

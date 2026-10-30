@@ -83,20 +83,10 @@ export function collapseLatestExternalPerGate<
 }
 
 export type ReadinessState =
-  | "ready"
-  | "blocked"
-  | "stale"
-  | "failed"
-  | "waiting"
-  | "overridden";
+  "ready" | "blocked" | "stale" | "failed" | "waiting" | "overridden";
 
 export type ReadinessContribution =
-  | "clear"
-  | "overridden"
-  | "waiting"
-  | "blocked"
-  | "stale"
-  | "failed";
+  "clear" | "overridden" | "waiting" | "blocked" | "stale" | "failed";
 
 // Priority: highest-severity first. The first element present in a contribution
 // set wins. "clear" is not listed — it maps to "ready" and never beats others.

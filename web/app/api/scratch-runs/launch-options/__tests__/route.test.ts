@@ -60,8 +60,7 @@ const fakeDb: FakeDb = {
               ) => TResult1 | PromiseLike<TResult1>)
             | null,
           onrejected?:
-            | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
-            | null,
+            ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
         ) => nextRows().then(onfulfilled, onrejected),
       };
 

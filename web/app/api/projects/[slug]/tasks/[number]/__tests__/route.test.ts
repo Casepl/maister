@@ -10,12 +10,10 @@ import { MaisterError } from "@/lib/errors";
 import { updateTask } from "@/lib/services/tasks";
 import { resolveProjectTaskByNumber } from "@/lib/social/task-lookup";
 
-const projectAccess = vi.hoisted(
-  (): ProjectAccess => ({
-    user: { id: "user-1", role: "admin" } as ProjectAccess["user"],
-    role: "owner",
-  }),
-);
+const projectAccess = vi.hoisted((): ProjectAccess => ({
+  user: { id: "user-1", role: "admin" } as ProjectAccess["user"],
+  role: "owner",
+}));
 
 vi.mock("@/lib/authz", () => ({
   requireActiveSession: vi.fn(async () => ({ id: "user-1" })),

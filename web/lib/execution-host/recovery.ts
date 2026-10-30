@@ -237,9 +237,8 @@ async function wakeRequeuedScratchMessage(
 ): Promise<void> {
   if (settlement?.domain !== "scratch" || settlement.kind !== "requeued")
     return;
-  const { wakeQueuedScratchDispatch } = await import(
-    "@/lib/scratch-runs/service"
-  );
+  const { wakeQueuedScratchDispatch } =
+    await import("@/lib/scratch-runs/service");
 
   logger.info(
     { runId: settlement.runId, messageId: settlement.messageId },

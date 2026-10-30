@@ -2,15 +2,15 @@ import type { RefObject } from "react";
 
 import { useEffect, useRef } from "react";
 
+import { useLatestRef } from "@/lib/use-latest-ref";
+
 export function useModalFocusTrap<T extends HTMLElement>(
   dialogRef: RefObject<T | null>,
   onClose: () => void,
   enabled = true,
 ): void {
   const restoreFocusRef = useRef<HTMLElement | null>(null);
-  const onCloseRef = useRef(onClose);
-
-  onCloseRef.current = onClose;
+  const onCloseRef = useLatestRef(onClose);
 
   useEffect(() => {
     if (!enabled) return;

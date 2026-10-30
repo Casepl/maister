@@ -159,8 +159,7 @@ export async function resumeCrashedRun(
   // needed) or the `drive` marker meaning the slot-free Crashed→Running flip
   // committed and Phase 2 must run.
   type Phase1 =
-    | RecoverResult
-    | { state: "drive"; assignment: ExecutionAssignment };
+    RecoverResult | { state: "drive"; assignment: ExecutionAssignment };
 
   const phase1: Phase1 = await db.transaction(async (tx: Db) => {
     await takeSchedulerLock(tx);

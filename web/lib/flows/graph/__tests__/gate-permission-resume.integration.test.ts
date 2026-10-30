@@ -4,7 +4,7 @@ import type { ProjectionWorker } from "@/lib/execution-host/events/projection-wo
 
 import { fork, type ChildProcess } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile } from "node:fs/promises";
 import { get, type IncomingMessage } from "node:http";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -12,6 +12,7 @@ import path from "node:path";
 import { and, asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { atomicWriteJson } from "@/lib/atomic";
 import {
   executionAssignments,
   executionCommands,
@@ -224,8 +225,7 @@ describe("Owned Flow checkpointed gate permission resume", () => {
       const occupiedReads: IncomingMessage[] = [];
       let claimProcess: ReturnType<typeof startProcess> | undefined;
       let continuation:
-        | ReturnType<typeof startFlowContinuationWorker>
-        | undefined;
+        ReturnType<typeof startFlowContinuationWorker> | undefined;
 
       try {
         if (heldRead && proxy) {
@@ -433,18 +433,15 @@ describe("Owned Flow checkpointed gate permission resume", () => {
           unknown
         >;
 
-        await writeFile(
-          file,
-          JSON.stringify({
-            ...journal,
-            completionText: JSON.stringify({
-              verdict: "pass",
-              confidence: 0.99,
-              reasons: ["resumed gate verified"],
-            }),
-            ...(window === "resume refused" ? { rejectResume: true } : {}),
+        await atomicWriteJson(file, {
+          ...journal,
+          completionText: JSON.stringify({
+            verdict: "pass",
+            confidence: 0.99,
+            reasons: ["resumed gate verified"],
           }),
-        );
+          ...(window === "resume refused" ? { rejectResume: true } : {}),
+        });
         await db
           .update(hitlRequests)
           .set({ response: { optionId: "allow" } })

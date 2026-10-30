@@ -107,7 +107,8 @@ const fakeDb: FakeDb = {
     from: (table: unknown): FromResult | LatestRunChain | RelationJoinChain => {
       if (getTableName(table as never) === "task_clarifications") {
         return {
-          then: (onFulfilled) => Promise.resolve([{ count: 0 }]).then(onFulfilled),
+          then: (onFulfilled) =>
+            Promise.resolve([{ count: 0 }]).then(onFulfilled),
           where: async () => [{ count: 0 }],
         };
       }

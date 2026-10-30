@@ -172,8 +172,7 @@ describe("rah fixture — structural safety (AC-37)", () => {
         (n) => n.type === "orchestrator",
       )) {
         const budget = node.settings?.delegation?.budget as
-          | Record<string, number>
-          | undefined;
+          Record<string, number> | undefined;
 
         expect(budget).toBeDefined();
         for (const key of [

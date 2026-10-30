@@ -1138,9 +1138,8 @@ export async function promoteNextPending(
             );
             continue;
           }
-          const { claimScratchIdleResume } = await import(
-            "@/lib/scratch-runs/idle-resume"
-          );
+          const { claimScratchIdleResume } =
+            await import("@/lib/scratch-runs/idle-resume");
           const resumed = await claimScratchIdleResume(tx, runId, { host });
 
           if (resumed.outcome !== "claimed") continue;

@@ -471,9 +471,8 @@ describe("user-origin task clarification", () => {
       },
       db,
     );
-    const route = await import(
-      "@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/clarifications/[id]/answer/route"
-    );
+    const route =
+      await import("@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/clarifications/[id]/answer/route");
     const params = {
       params: Promise.resolve({
         slug: seeded.projectSlug,
@@ -591,9 +590,8 @@ describe("user-origin task clarification", () => {
       },
       db,
     );
-    const route = await import(
-      "@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/clarifications/route"
-    );
+    const route =
+      await import("@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/clarifications/route");
     const params = {
       params: Promise.resolve({
         slug: seeded.projectSlug,
@@ -634,9 +632,8 @@ describe("user-origin task clarification", () => {
       requestedViaOperationId: expect.any(String),
     });
 
-    const cancelRoute = await import(
-      "@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/clarifications/[id]/route"
-    );
+    const cancelRoute =
+      await import("@/app/api/v1/ext/projects/[slug]/tasks/[taskId]/clarifications/[id]/route");
     const cancel = () =>
       cancelRoute.DELETE(
         new NextRequest(

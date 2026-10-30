@@ -1,10 +1,12 @@
 import type { Db } from "@/lib/execution-host/db";
 import type { ExecutionHosts } from "@/lib/execution-host/client";
 import type { RealSupervisor } from "@/test-support/real-supervisor";
+import type { FaultBarrier } from "@/test-support/supervisor-fault-proxy";
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { fork, type ChildProcess } from "node:child_process";
 import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { createServer, request as httpRequest } from "node:http";
 import { setTimeout as delay } from "node:timers/promises";
 
@@ -13,6 +15,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { DatabaseError, Pool } from "pg";
 
+import { parseCommandOutputReferenceV2 } from "../../../../runtime/command-evidence";
 import { issueOwnedPrompt } from "../ledger";
 import { defaultTransport } from "../default-transport";
 import {
@@ -92,6 +95,12 @@ import {
   useRealSupervisorUrl,
 } from "@/test-support/real-supervisor";
 import { seedNodePromptOwner } from "@/test-support/prompt-owner-fixture";
+import { startSupervisorFaultProxy } from "@/test-support/supervisor-fault-proxy";
+import { holdRuntimeObjectReads } from "@/test-support/held-http-reads";
+import {
+  invocationFromEnvironment,
+  logInvocation,
+} from "@/test-support/process-invocation";
 
 let database: StartedPostgresTestDb;
 let supervisor: RealSupervisor;
@@ -99,6 +108,36 @@ let hosts: ExecutionHosts;
 let worker: ProjectionWorker;
 let project: Awaited<ReturnType<typeof seedProjectRow>>;
 let restoreUrl: () => void = () => {};
+
+type ResponseSpool = Readonly<{
+  id: string;
+  capacity: number;
+  written: number;
+}>;
+
+function responseSpools(): ResponseSpool[] {
+  const state = new DatabaseSync(
+    path.join(supervisor.stateDir, "state.sqlite"),
+    {
+      readOnly: true,
+    },
+  );
+
+  try {
+    return state
+      .prepare(
+        "SELECT file_id, capacity_bytes, written_bytes FROM runtime_files WHERE kind = 'spool' AND private_path LIKE '%.response' ORDER BY file_id",
+      )
+      .all()
+      .map((row) => ({
+        id: String(row.file_id),
+        capacity: Number(row.capacity_bytes),
+        written: Number(row.written_bytes),
+      }));
+  } finally {
+    state.close();
+  }
+}
 
 async function createRunClient(name: string) {
   const runId = await seedRun(database.db, {
@@ -666,63 +705,367 @@ describe("AT-01 bounded output on the production supervisor", () => {
       .from(executionCommands)
       .where(eq(executionCommands.id, handle.commandId));
 
-    // The default registry stays closed until S2.7 supplies its domain adapter.
-    await expect(
-      preparePromptOwner({
-        db,
-        command,
-        registry: agentPromptOwners,
-        signal: AbortSignal.timeout(15_000),
-      }),
-    ).rejects.toMatchObject({
-      details: { causeCode: "agent_variant_not_implemented" },
-    });
-    const owners = createAgentPromptOwners({
-      prepareConsensusDraft: async ({ owner, outcome, command: original }) => {
-        expect(owner.ref).toEqual(ref);
-        if (outcome.state !== "succeeded")
-          throw new Error("fixture requires successful draft");
-        let text = "";
+    await untilIngested(handle.commandId);
+    const invocation = invocationFromEnvironment();
 
-        for await (const event of outcome.events) {
-          expect(event.payload?.sourceCommandId).toBe(original.id);
-          if (event.eventType === "session.update")
-            text += agentMessageText(event.payload?.update) ?? "";
-        }
-        expect(text).toBe(expected);
+    if (!invocation)
+      throw new Error("held response fixture requires its invocation");
+    let proxy:
+      Awaited<ReturnType<typeof startSupervisorFaultProxy>> | undefined;
+    let restoreOwnerUrl: () => void = () => {};
+    let occupiedReads:
+      Awaited<ReturnType<typeof holdRuntimeObjectReads>> | undefined;
+    const priorSpools = new Set<string>();
+    const heldSpools = (): ResponseSpool[] =>
+      responseSpools().filter((spool) => !priorSpools.has(spool.id));
+    const pendingBarriers = new Set<FaultBarrier>();
+    const pendingAssertions = new Set<Promise<unknown>>();
+    const cancellations = new Set<AbortController>();
+    const retainAssertion = (assertion: Promise<unknown>): Promise<unknown> => {
+      pendingAssertions.add(assertion);
+      void assertion.catch(() => undefined);
 
-        return {
-          apply: async (tx) => {
-            await tx.insert(runMessages).values({
-              id: `${original.id}:draft-adapter`,
-              runId: owner.ref.runId,
-              sequence: 1_000_000,
-              role: "assistant",
-              content: text,
+      return assertion;
+    };
+    let caseFailure: { error: unknown } | null = null;
+
+    try {
+      await worker.stop();
+      for (const spool of responseSpools()) priorSpools.add(spool.id);
+      const reference = parseCommandOutputReferenceV2(
+        command.receiptEvidence?.evidenceV2?.terminal?.result?.output,
+      );
+      const bytes = new Uint8Array(8 * 1024 * 1024).fill(120);
+      const objectId = randomUUID();
+      const sha256 = createHash("sha256").update(bytes).digest("hex");
+
+      await producer.client.reserveRuntimeObject({
+        objectId,
+        kind: "generated_artifact",
+        logicalName: "draft-read-cap-control.bin",
+        mimeType: "application/octet-stream",
+        sizeBytes: bytes.length,
+        sha256,
+        generation: 1,
+        retentionClass: "run",
+      });
+      await producer.client.uploadRuntimeObject({
+        objectId,
+        generation: 1,
+        bytes,
+        sha256,
+      });
+      const activeProxy = await startSupervisorFaultProxy(supervisor.url);
+
+      proxy = activeProxy;
+      restoreOwnerUrl = useRealSupervisorUrl(activeProxy.url);
+      occupiedReads = await holdRuntimeObjectReads(
+        invocation,
+        `${supervisor.url}/runtime-objects/${objectId}/content`,
+      );
+      const expectedSpools = heldSpools();
+
+      expect(expectedSpools).toHaveLength(2);
+      for (const spool of expectedSpools)
+        expect(spool).toMatchObject({
+          capacity: bytes.length,
+          written: bytes.length,
+        });
+      const assertHeldSpools = (phase: string): void => {
+        expect(heldSpools()).toEqual(expectedSpools);
+        logInvocation(invocation, "held-response-spools", {
+          phase,
+          firstId: expectedSpools[0].id,
+          secondId: expectedSpools[1].id,
+          sizeBytes: bytes.length,
+        });
+      };
+
+      assertHeldSpools("acquired");
+      const contentPath = `/runtime-objects/${reference.objectId}/content`;
+      const countReads = (): number =>
+        activeProxy.traffic.filter(
+          (request) => request.method === "GET" && request.path === contentPath,
+        ).length;
+      const beforeExhausted = countReads();
+
+      await expect(
+        readPromptOutput({
+          db,
+          commandId: command.id,
+          signal: AbortSignal.timeout(15_000),
+        }),
+      ).rejects.toMatchObject({
+        code: "PRECONDITION",
+        details: { httpStatus: 409, reason: "command_in_progress" },
+      });
+      expect(countReads() - beforeExhausted).toBe(5);
+      assertHeldSpools("retries-exhausted");
+
+      const cancelledBusy = activeProxy.arm(
+        {
+          caseId: "draft-owner-cancel-busy-response",
+          method: "GET",
+          path: /^\/runtime-objects\/[^/]+\/content$/,
+          objectId: reference.objectId,
+        },
+        "hold-response",
+      );
+
+      pendingBarriers.add(cancelledBusy);
+      const cancellation = new AbortController();
+
+      cancellations.add(cancellation);
+      const beforeCancellation = countReads();
+      const cancelled = retainAssertion(
+        expect(
+          readPromptOutput({
+            db,
+            commandId: command.id,
+            signal: cancellation.signal,
+          }),
+        ).rejects.toMatchObject({
+          code: "EXECUTOR_UNAVAILABLE",
+          details: { reason: "timeout" },
+        }),
+      );
+
+      expect((await cancelledBusy.awaitReached()).status).toBe(409);
+      const heldRetry = activeProxy.arm(
+        {
+          caseId: "draft-owner-cancel-retried-read",
+          method: "GET",
+          path: /^\/runtime-objects\/[^/]+\/content$/,
+          objectId: reference.objectId,
+        },
+        "hold-request",
+      );
+
+      pendingBarriers.add(heldRetry);
+      cancelledBusy.release();
+      pendingBarriers.delete(cancelledBusy);
+      await heldRetry.awaitReached();
+      heldRetry.release();
+      pendingBarriers.delete(heldRetry);
+      cancellation.abort();
+      await cancelled;
+      pendingAssertions.delete(cancelled);
+      expect(countReads() - beforeCancellation).toBe(2);
+      assertHeldSpools("cancelled");
+
+      const heldRead = activeProxy.arm(
+        {
+          caseId: "draft-owner-content-read",
+          method: "GET",
+          path: /^\/runtime-objects\/[^/]+\/content$/,
+          objectId: reference.objectId,
+        },
+        "hold-request",
+      );
+
+      pendingBarriers.add(heldRead);
+      // The default registry stays closed until S2.7 supplies its domain adapter.
+      const unsupported = retainAssertion(
+        expect(
+          preparePromptOwner({
+            db,
+            command,
+            registry: agentPromptOwners,
+            signal: AbortSignal.timeout(15_000),
+          }),
+        ).rejects.toMatchObject({
+          details: { causeCode: "agent_variant_not_implemented" },
+        }),
+      );
+
+      await heldRead.awaitReached();
+      const busyResponse = activeProxy.arm(
+        {
+          caseId: "draft-owner-real-busy-response",
+          method: "GET",
+          path: /^\/runtime-objects\/[^/]+\/content$/,
+          objectId: reference.objectId,
+        },
+        "hold-response",
+      );
+
+      pendingBarriers.add(busyResponse);
+      heldRead.release();
+      pendingBarriers.delete(heldRead);
+      expect((await busyResponse.awaitReached()).status).toBe(409);
+      assertHeldSpools("busy-response-held");
+      await occupiedReads.release();
+      occupiedReads = undefined;
+      await expect.poll(heldSpools, { timeout: 5_000 }).toEqual([]);
+      logInvocation(invocation, "held-response-spools-released", {
+        firstId: expectedSpools[0].id,
+        secondId: expectedSpools[1].id,
+        remaining: 0,
+      });
+      busyResponse.release();
+      pendingBarriers.delete(busyResponse);
+      await unsupported;
+      pendingAssertions.delete(unsupported);
+      const owners = createAgentPromptOwners({
+        prepareConsensusDraft: async ({
+          owner,
+          outcome,
+          command: original,
+        }) => {
+          expect(owner.ref).toEqual(ref);
+          if (outcome.state !== "succeeded")
+            throw new Error("fixture requires successful draft");
+          let text = "";
+
+          for await (const event of outcome.events) {
+            expect(event.payload?.sourceCommandId).toBe(original.id);
+            if (event.eventType === "session.update")
+              text += agentMessageText(event.payload?.update) ?? "";
+          }
+          expect(text).toBe(expected);
+
+          return {
+            apply: async (tx) => {
+              await tx.insert(runMessages).values({
+                id: `${original.id}:draft-adapter`,
+                runId: owner.ref.runId,
+                sequence: 1_000_000,
+                role: "assistant",
+                content: text,
+              });
+
+              return "applied";
+            },
+          };
+        },
+      });
+
+      await queryPrompt({ db, handle, owners });
+      await queryPrompt({ db, handle, owners });
+      const messages = await db
+        .select()
+        .from(runMessages)
+        .where(eq(runMessages.id, `${command.id}:draft-adapter`));
+      const [applied] = await db
+        .select()
+        .from(executionCommands)
+        .where(eq(executionCommands.id, command.id));
+
+      expect(messages).toHaveLength(1);
+      expect(messages[0].content).toBe(expected);
+      expect(applied.applicationState).toBe("applied");
+      expect(applied.completionAppliedAt).not.toBeNull();
+    } catch (error) {
+      caseFailure = { error };
+      throw error;
+    } finally {
+      restoreOwnerUrl();
+
+      const cleanupErrors: unknown[] = [];
+
+      const cleanup = [
+        async (): Promise<void> => {
+          for (const cancellation of cancellations) cancellation.abort();
+        },
+        async (): Promise<void> => {
+          await occupiedReads?.release();
+        },
+        ...[...pendingBarriers].map((barrier) => async (): Promise<void> => {
+          if (barrier.observations.length > 0) barrier.cut();
+        }),
+        async (): Promise<void> => {
+          await proxy?.close();
+        },
+        async (): Promise<void> => {
+          const assertions = await Promise.allSettled(pendingAssertions);
+          const failures = assertions
+            .filter((result) => result.status === "rejected")
+            .map((result) => result.reason as unknown)
+            .filter((error) => error !== caseFailure?.error);
+
+          if (failures.length > 0)
+            throw new AggregateError(
+              failures,
+              "draft owner pending assertions failed",
+            );
+        },
+        async (): Promise<void> => {
+          if (!caseFailure) return;
+          const removed = await db
+            .delete(executionCommands)
+            .where(
+              and(
+                eq(executionCommands.id, command.id),
+                eq(executionCommands.runId, producer.runId),
+                eq(executionCommands.ownerKind, "agent_turn"),
+              ),
+            )
+            .returning({
+              id: executionCommands.id,
+              applicationState: executionCommands.applicationState,
+              applicationAttempts: executionCommands.applicationAttempts,
             });
 
-            return "applied";
-          },
-        };
-      },
-    });
+          expect(removed).toHaveLength(1);
+          logInvocation(invocation, "failed-draft-command-removed", {
+            commandId: removed[0].id,
+            applicationState: removed[0].applicationState,
+            applicationAttempts: removed[0].applicationAttempts,
+          });
+        },
+        async (): Promise<void> => {
+          if (!caseFailure) return;
+          const remaining = await db
+            .select({ id: executionCommands.id })
+            .from(executionCommands)
+            .where(eq(executionCommands.id, command.id));
 
-    await queryPrompt({ db, handle, owners });
-    await queryPrompt({ db, handle, owners });
-    const messages = await db
-      .select()
-      .from(runMessages)
-      .where(eq(runMessages.id, `${command.id}:draft-adapter`));
-    const [applied] = await db
-      .select()
-      .from(executionCommands)
-      .where(eq(executionCommands.id, command.id));
+          logInvocation(
+            invocation,
+            "failed-draft-command-cleanup-observation",
+            {
+              commandId: command.id,
+              remaining: remaining.length,
+            },
+          );
+          expect(
+            remaining,
+            "failed draft command survived fixture cleanup",
+          ).toEqual([]);
+        },
+        async (): Promise<void> => {
+          worker = startProjectionWorker({
+            db,
+            projectors: canonicalProjectors,
+          });
+        },
+        async (): Promise<void> => {
+          await producer.client.deleteSession(producer.session.hostSessionId);
+        },
+      ];
 
-    expect(messages).toHaveLength(1);
-    expect(messages[0].content).toBe(expected);
-    expect(applied.applicationState).toBe("applied");
-    expect(applied.completionAppliedAt).not.toBeNull();
-    await producer.client.deleteSession(producer.session.hostSessionId);
+      for (const release of cleanup) {
+        try {
+          await release();
+        } catch (error) {
+          cleanupErrors.push(error);
+        }
+      }
+      if (cleanupErrors.length > 0) {
+        const failure = new AggregateError(
+          [...(caseFailure ? [caseFailure.error] : []), ...cleanupErrors],
+          "draft owner fixture cleanup failed",
+        );
+
+        logInvocation(invocation, "draft-owner-cleanup-failed", {
+          cleanupErrors: cleanupErrors.length,
+          originalErrorPreserved: caseFailure
+            ? failure.errors[0] === caseFailure.error
+            : null,
+        });
+        throw failure;
+      }
+    }
   });
 
   it("S2.8: domain deferral keeps the result pending without poisoning or running cleanup", async () => {

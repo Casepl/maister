@@ -163,11 +163,7 @@ export type SeedFlowOptions = {
   enablementState?: string;
   trustStatus?: "trusted" | "untrusted";
   packageStatus?:
-    | "Discovered"
-    | "Installing"
-    | "Installed"
-    | "Failed"
-    | "Removed";
+    "Discovered" | "Installing" | "Installed" | "Failed" | "Removed";
   setupStatus?: "not_required" | "pending" | "done" | "failed";
   schemaVersion?: number;
   engineMin?: string | null;

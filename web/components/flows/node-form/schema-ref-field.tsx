@@ -3,7 +3,7 @@
 import type { FormSchemaBuilderLabels } from "@/components/flows/artifact-editors/form-schema-builder";
 import type { ReactElement } from "react";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { FormSchemaBuilder } from "@/components/flows/artifact-editors/form-schema-builder";
 import { ReferenceCombobox } from "@/components/flows/node-form/reference-combobox";
@@ -74,9 +74,12 @@ export function SchemaRefField({
     [schemaFiles],
   );
 
-  useEffect(() => {
+  const [draftSource, setDraftSource] = useState(selectedContent);
+
+  if (draftSource !== selectedContent) {
+    setDraftSource(selectedContent);
     setJsonDraft(selectedContent);
-  }, [selectedContent]);
+  }
 
   function writeCreate(): void {
     if (!schemaFiles || !onWriteSchemaFile) return;

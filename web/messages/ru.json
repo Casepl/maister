@@ -871,7 +871,7 @@
     "onboardingTaskLaunched": "Запустите Flow из задачи",
     "askAdmin": "Попросите администратора подключить проект.",
     "pausedAgo": "приостановлено {time} назад",
-    "activeWorkspaces": "Активные воркспейсы",
+    "activeWorkspaces": "Активные рабочие копии",
     "seeAll": "Все",
     "runnersReadiness": "Готовность раннеров",
     "runnerReady": "Готов",
@@ -2328,6 +2328,7 @@
     "flowCenterPromptCopy": "Копировать",
     "flowCenterNoGraph": "Для этого запуска нет графа Flow.",
     "flowCenterNoNode": "Шаг не выбран.",
+    "headerRunStatus": "Запуск",
     "headerBranch": "Ветка",
     "headerChanges": "Изменения",
     "headerChangesUnavailable": "Недоступно",
@@ -3977,6 +3978,7 @@
     "scopeTasksCreate": "Создание задач",
     "scopeTasksRead": "Чтение задач",
     "scopeTasksUpdate": "Обновление задач",
+    "scopeTasksComplete": "Завершение доставленных задач",
     "scopeRunsLaunch": "Запуск прогонов",
     "scopeRunsRead": "Чтение прогонов",
     "scopeReadinessRead": "Чтение готовности",
@@ -4869,7 +4871,8 @@
       "relationRemoved": "удалил(а) связь с %ref%",
       "runLaunched": "запустил(а) попытку %attempt%",
       "experimentConcluded": "завершил(а) эксперимент",
-      "agentSummonSuppressed": "не стал(а) вызывать %agent% — он уже работает над этой задачей"
+      "agentSummonSuppressed": "не стал(а) вызывать %agent% — он уже работает над этой задачей",
+      "taskCompleted": "завершил(а) задачу после доставки результата"
     },
     "composerPlaceholder": "Напишите комментарий… KEY-N станет ссылкой, @agent вызовет агента.",
     "composerSubmit": "Комментировать",
@@ -4878,8 +4881,12 @@
     "composerMentionListLabel": "Агенты, которых можно вызвать",
     "composerMentionMatchCount": "Подходящих агентов: $count",
     "composerErrorConfig": "Комментарий должен быть от 1 до 10000 символов.",
+    "composerErrorTimeout": "Время отправки истекло. Перед повтором обновите страницу и проверьте, сохранился ли комментарий.",
     "errorForbidden": "Нужны права участника проекта.",
     "errorGeneric": "Не получилось. Попробуйте ещё раз.",
+    "completeTask": "Завершить задачу",
+    "completingTask": "Завершаем…",
+    "completeTaskFailed": "Не удалось завершить задачу. Обновите страницу и проверьте, что последний запуск доставлен.",
     "runAgain": "Запустить снова",
     "runAgainConcurrent": "Запустить ещё",
     "launchFirst": "Запустить",
@@ -4974,7 +4981,8 @@
       "relationRemoved": "связь удалена",
       "runLaunched": "запуск",
       "experimentConcluded": "эксперимент завершён",
-      "agentSummonSuppressed": "вызов пропущен"
+      "agentSummonSuppressed": "вызов пропущен",
+      "taskCompleted": "задача завершена"
     }
   },
   "agents": {
@@ -5430,15 +5438,15 @@
     "generic": "Запрос не выполнен. Повторите попытку."
   },
   "workStage": {
-    "Triage": "Триаж",
-    "Held": "Отложена",
-    "Ready": "Готова к запуску",
+    "Triage": "Ожидает разбора",
+    "Held": "Требует уточнения",
+    "Ready": "Готова к выполнению",
     "Queued": "В очереди",
-    "Executing": "Выполняется",
-    "WaitingOnHuman": "Ждёт человека",
-    "Review": "На ревью",
+    "Executing": "В работе",
+    "WaitingOnHuman": "Ждёт ответа",
+    "Review": "На проверке",
     "Crashed": "Сбой",
-    "Promoted": "Продвинута",
+    "Promoted": "Завершена",
     "Abandoned": "Отменена",
     "blocked": "Заблокирована",
     "promotedResult": "Результат опубликован",
@@ -5556,6 +5564,7 @@
     "webhookAttempts": "попыток: $count",
     "kinds": {
       "task_created": "задача создана",
+      "task_completed": "задача завершена",
       "comment_added": "комментарий",
       "task_mentioned": "упоминание",
       "relation_added": "связь добавлена",

@@ -7,12 +7,12 @@ export const SessionContentReferenceSchema = z
   .object({
     schema: z.literal("maister.session-content.v2"),
     sourcePayloadSchema: z.literal("maister.session.command.v2").optional(),
-    commandId: z.string().uuid(),
+    commandId: z.string().guid(),
     hostSessionId: z.string().regex(/^[A-Za-z0-9._-]{1,128}$/),
     source: z.enum(["raw_stdout", "session_update", "terminal_output"]),
     firstFrame: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
     frameCount: z.literal(1),
-    objectId: z.string().uuid(),
+    objectId: z.string().guid(),
     kind: z.literal("raw_transcript"),
     logicalName: z.literal("session-content.json"),
     mimeType: z.literal("application/json"),
@@ -32,7 +32,7 @@ export type SessionContentReference = z.infer<
 
 export const StdoutSegmentMetadataSchema = z
   .object({
-    commandId: z.string().uuid(),
+    commandId: z.string().guid(),
     firstLogByteOffset: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
     capturedBytes: z.number().int().min(1).max(2_097_152),
     completeFrames: z.number().int().min(0).max(2_097_152),
@@ -50,10 +50,10 @@ export const StdoutSegmentMetadataSchema = z
 const SessionContentPayloadSchema = z
   .object({
     sourceMonotonicId: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
-    sourceCommandId: z.string().uuid().optional(),
+    sourceCommandId: z.string().guid().optional(),
     sessionName: z.string().min(1).max(128),
-    nodeAttemptId: z.string().uuid().optional(),
-    commandId: z.string().uuid().optional(),
+    nodeAttemptId: z.string().guid().optional(),
+    commandId: z.string().guid().optional(),
     kind: z.literal("session.prompt").optional(),
     requestSchema: z.literal("maister.command.request.v2").optional(),
     requestSha256: z
@@ -127,12 +127,7 @@ const MAX_RUNTIME_EVENT_ARRAY = 1_024;
 const MAX_RUNTIME_EVENT_STRING_BYTES = 65_536;
 
 type JsonValue =
-  | null
-  | boolean
-  | number
-  | string
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+  null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
 const EVENT_SCHEMA_PAIRS = new Map(
   RUNTIME_EVENT_TYPES.map((eventType, index) => [
@@ -280,10 +275,10 @@ export function redactRuntimeEventPayload(
 export const RuntimeEventEnvelopeSchema = z
   .object({
     envelopeVersion: z.literal(1),
-    eventId: z.string().uuid(),
+    eventId: z.string().guid(),
     hostKey: z.string().regex(HOST_KEY),
-    hostBootId: z.string().uuid(),
-    streamId: z.string().uuid(),
+    hostBootId: z.string().guid(),
+    streamId: z.string().guid(),
     sequence: z
       .string()
       .regex(SEQUENCE)
@@ -293,7 +288,7 @@ export const RuntimeEventEnvelopeSchema = z
         "sequence exceeds signed BIGINT",
       ),
     runId: z.string().min(1).max(128),
-    assignmentId: z.string().uuid(),
+    assignmentId: z.string().guid(),
     assignmentEpoch: z.number().int().min(1).max(2_147_483_647),
     hostSessionId: z.string().regex(HOST_SESSION_ID).nullable(),
     eventType: z.enum(RUNTIME_EVENT_TYPES),
@@ -410,7 +405,7 @@ export type RuntimeEventEnvelope = z.infer<typeof RuntimeEventEnvelopeSchema>;
 
 export const RuntimeEventAckSchema = z
   .object({
-    streamId: z.string().uuid(),
+    streamId: z.string().guid(),
     throughSequence: z
       .string()
       .regex(SEQUENCE)
@@ -433,7 +428,7 @@ const RuntimeEventSequenceSchema = z
   );
 
 const RUNTIME_EVENT_SPAN_BOUNDS = {
-  streamId: z.string().uuid(),
+  streamId: z.string().guid(),
   after: RuntimeEventSequenceSchema,
   through: RuntimeEventSequenceSchema,
 };

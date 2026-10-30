@@ -669,10 +669,7 @@ export async function runCapabilityRevisionSetup(opts: {
 
     return {
       setupStatus: setupStatus as
-        | "not_required"
-        | "done"
-        | "failed"
-        | "pending",
+        "not_required" | "done" | "failed" | "pending",
     };
   }
 

@@ -71,22 +71,22 @@ export function AgentMemoryDrawer({
   // keyboard.
   useModalFocusTrap(panelRef, requestClose, !confirmingClear);
 
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch(endpoint);
+  const load = useCallback(
+    (): Promise<void> =>
+      fetch(endpoint)
+        .then(async (res) => {
+          if (!res.ok) {
+            setError(labels.loadError);
 
-      if (!res.ok) {
-        setError(labels.loadError);
+            return;
+          }
 
-        return;
-      }
-
-      setState((await res.json()) as MemoryState);
-      setError(null);
-    } catch {
-      setError(labels.loadError);
-    }
-  }, [endpoint, labels.loadError]);
+          setState((await res.json()) as MemoryState);
+          setError(null);
+        })
+        .catch(() => setError(labels.loadError)),
+    [endpoint, labels.loadError],
+  );
 
   useEffect(() => {
     void load();

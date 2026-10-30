@@ -219,9 +219,7 @@ export async function POST(
           archivedBranch: string | null;
           archivedCommit: string | null;
           preservationOutcome:
-            | "not_needed"
-            | "ref_created"
-            | "snapshot_created";
+            "not_needed" | "ref_created" | "snapshot_created";
         }
       | undefined;
 

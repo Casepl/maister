@@ -49,11 +49,7 @@ export type ListResult =
     };
 
 type ReadState =
-  | "text"
-  | "binary"
-  | "too-large"
-  | "not-found"
-  | "bundle-missing";
+  "text" | "binary" | "too-large" | "not-found" | "bundle-missing";
 
 export type ReadResult = { state: ReadState; content?: string; kind?: string };
 

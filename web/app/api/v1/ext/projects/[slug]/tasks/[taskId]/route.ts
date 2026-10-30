@@ -80,7 +80,8 @@ export async function PATCH(
       idempotency: {
         kind: "task_update",
         target: { slug, taskId },
-        parseBody: async (request) => patchBodySchema.parse(await request.json()),
+        parseBody: async (request) =>
+          patchBodySchema.parse(await request.json()),
       },
       db,
     },
@@ -125,7 +126,10 @@ export async function PATCH(
                 statusCode: 200,
                 operationId: ctx.operationId,
                 operation: ctx.operationId
-                  ? { id: ctx.operationId, result: { statusCode: 200, body: { ...task } } }
+                  ? {
+                      id: ctx.operationId,
+                      result: { statusCode: 200, body: { ...task } },
+                    }
                   : undefined,
               },
               tx,
